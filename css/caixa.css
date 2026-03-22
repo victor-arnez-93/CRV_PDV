@@ -455,11 +455,14 @@
 
 /* ===== FINALIZAR ===== */
 .pdv-finalizar {
-  width: 100%;
-  padding: 16px;
+  display: flex !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 16px !important;
   font-size: 1.05rem;
   margin-top: 4px;
   justify-content: center;
+  border-radius: var(--radius-pill);
 }
 
 /* ===== HISTÓRICO ===== */
