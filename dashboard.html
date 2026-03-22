@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRV PDV — Dashboard</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+<div class="sidebar-logo">
+  <div class="sidebar-logo-img-wrap">
+    <img src="assets/logo1.png" alt="CRV PDV" class="sidebar-logo-img" />
+  </div>
+  <span class="sidebar-logo-sub">Controle de Caixa</span>
+</div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+
+      <a href="dashboard.html" class="nav-item active">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+        Dashboard
+      </a>
+      <a href="caixa.html" class="nav-item">
+        <i data-lucide="wallet" class="nav-icon"></i>
+        Caixa / PDV
+      </a>
+      <a href="vendas.html" class="nav-item">
+        <i data-lucide="shopping-cart" class="nav-icon"></i>
+        Vendas
+      </a>
+
+      <span class="nav-section-label">Cadastros</span>
+
+      <a href="produtos.html" class="nav-item">
+        <i data-lucide="package" class="nav-icon"></i>
+        Produtos
+      </a>
+      <a href="clientes.html" class="nav-item">
+        <i data-lucide="users" class="nav-icon"></i>
+        Clientes
+      </a>
+
+      <span class="nav-section-label">Relatórios</span>
+
+      <a href="relatorios.html" class="nav-item">
+        <i data-lucide="bar-chart-2" class="nav-icon"></i>
+        Relatórios
+      </a>
+    </nav>
+
+<div class="sidebar-footer">
+  <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="sidebar-footer-link">
+    <span class="sidebar-footer-label">Desenvolvido por</span>
+    <img src="assets/logo2.png" alt="CRV Soluções TI" class="sidebar-footer-logo" />
+  </a>
+</div>
+
+  </aside>
+
+  <!-- OVERLAY MOBILE -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div style="display:flex; flex-direction:column; min-height:100vh;">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn-menu" id="btnMenu">
+          <i data-lucide="menu" width="22" height="22"></i>
+        </button>
+        <span class="topbar-title">Dashboard</span>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Status do caixa -->
+        <div class="caixa-status" id="caixaStatus">
+          <span class="status-dot closed" id="statusDot"></span>
+          <span id="statusText">Caixa fechado</span>
+        </div>
+
+        <!-- Data/hora -->
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+
+        <!-- Theme toggle -->
+        <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+          <i data-lucide="moon" id="iconTheme"></i>
+        </button>
+
+        <!-- Avatar demo -->
+        <div class="topbar-avatar">
+          <span>D</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- Saudação -->
+      <div class="dash-greeting">
+        <div>
+          <h1 id="greetingText">Bom dia 👋</h1>
+          <p id="greetingDate">Carregando data...</p>
+        </div>
+        <a href="caixa.html" class="btn-secondary" style="text-decoration:none;">
+          <span>Abrir Caixa</span>
+        </a>
+      </div>
+
+      <!-- CARDS DE RESUMO -->
+      <div class="dash-cards">
+
+        <div class="card dash-card">
+          <div class="card-title">
+            <i data-lucide="trending-up" width="13" height="13"></i>
+            Faturamento do Dia
+          </div>
+          <div class="card-value" id="faturamentoDia">R$ 0,00</div>
+          <div class="card-delta positive" id="deltaDia">— sem movimentação</div>
+        </div>
+
+        <div class="card dash-card">
+          <div class="card-title">
+            <i data-lucide="shopping-bag" width="13" height="13"></i>
+            Total de Vendas
+          </div>
+          <div class="card-value" id="totalVendas">0</div>
+          <div class="card-delta" id="deltaVendas">vendas hoje</div>
+        </div>
+
+        <div class="card dash-card">
+          <div class="card-title">
+            <i data-lucide="receipt" width="13" height="13"></i>
+            Ticket Médio
+          </div>
+          <div class="card-value" id="ticketMedio">R$ 0,00</div>
+          <div class="card-delta" id="deltaTicket">por venda</div>
+        </div>
+
+        <div class="card dash-card">
+          <div class="card-title">
+            <i data-lucide="wallet" width="13" height="13"></i>
+            Saldo em Caixa
+          </div>
+          <div class="card-value" id="saldoCaixa">R$ 0,00</div>
+          <div class="card-delta" id="deltaSaldo">caixa fechado</div>
+        </div>
+
+      </div>
+
+      <!-- GRÁFICO + PAGAMENTOS -->
+      <div class="dash-middle">
+
+        <!-- Gráfico de faturamento -->
+        <div class="card dash-chart-card">
+          <div class="dash-chart-header">
+            <h3>Faturamento — últimos 7 dias</h3>
+            <div class="chart-legend">
+              <span class="legend-dot" style="background:var(--crv-orange)"></span>
+              <span>Entradas</span>
+            </div>
+          </div>
+          <div class="dash-chart-wrap">
+            <canvas id="chartFaturamento"></canvas>
+          </div>
+        </div>
+
+        <!-- Formas de pagamento -->
+        <div class="card dash-payment-card">
+          <h3 style="margin-bottom:20px;">Pagamentos hoje</h3>
+          <div class="payment-list" id="paymentList">
+            <div class="payment-item">
+              <div class="payment-icon dinheiro">
+                <i data-lucide="banknote" width="16" height="16"></i>
+              </div>
+              <div class="payment-info">
+                <span class="payment-label">Dinheiro</span>
+                <div class="payment-bar-wrap">
+                  <div class="payment-bar" style="width:0%" id="barDinheiro"></div>
+                </div>
+              </div>
+              <span class="payment-value" id="valDinheiro">R$ 0,00</span>
+            </div>
+
+            <div class="payment-item">
+              <div class="payment-icon cartao">
+                <i data-lucide="credit-card" width="16" height="16"></i>
+              </div>
+              <div class="payment-info">
+                <span class="payment-label">Cartão</span>
+                <div class="payment-bar-wrap">
+                  <div class="payment-bar" style="width:0%" id="barCartao"></div>
+                </div>
+              </div>
+              <span class="payment-value" id="valCartao">R$ 0,00</span>
+            </div>
+
+            <div class="payment-item">
+              <div class="payment-icon pix">
+                <i data-lucide="zap" width="16" height="16"></i>
+              </div>
+              <div class="payment-info">
+                <span class="payment-label">PIX</span>
+                <div class="payment-bar-wrap">
+                  <div class="payment-bar" style="width:0%" id="barPix"></div>
+                </div>
+              </div>
+              <span class="payment-value" id="valPix">R$ 0,00</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Últimas vendas -->
+          <h3 style="margin-bottom:14px;">Últimas vendas</h3>
+          <div class="recent-sales" id="recentSales">
+            <div class="empty-state">
+              <i data-lucide="inbox" width="32" height="32"></i>
+              <p>Nenhuma venda hoje</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

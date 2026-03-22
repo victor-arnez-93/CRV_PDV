@@ -1,0 +1,297 @@
+/* ===== GREETING ===== */
+.dash-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dash-greeting h1 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  margin-bottom: 4px;
+}
+
+.dash-greeting p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ===== CARDS ===== */
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.dash-card .card-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.card-delta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}
+
+.card-delta.positive { color: var(--crv-green); }
+.card-delta.negative { color: #FF5050; }
+
+/* ===== TOPBAR EXTRAS ===== */
+.caixa-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+}
+
+.topbar-datetime {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+}
+
+.topbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--crv-orange);
+  cursor: pointer;
+}
+
+/* ===== MIDDLE ROW ===== */
+.dash-middle {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+}
+
+/* ===== GRÁFICO ===== */
+.dash-chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.dash-chart-header h3 {
+  font-size: 0.95rem;
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dash-chart-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 200px;
+}
+
+/* ===== PAGAMENTOS ===== */
+.dash-payment-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.payment-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.payment-icon.dinheiro { background: rgba(0,255,156,0.1);  color: var(--crv-green); }
+.payment-icon.cartao  { background: rgba(108,99,255,0.1); color: var(--crv-purple); }
+.payment-icon.pix     { background: rgba(0,212,255,0.1);  color: var(--crv-cyan); }
+
+.payment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.payment-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.payment-bar-wrap {
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.payment-bar {
+  height: 100%;
+  background: var(--crv-orange);
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+.payment-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  min-width: 80px;
+  text-align: right;
+}
+
+/* ===== ÚLTIMAS VENDAS ===== */
+.recent-sales {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 180px;
+}
+
+.sale-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.sale-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sale-item-hora {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.sale-item-desc {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.sale-item-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--crv-green);
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.empty-state p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+  .dash-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-middle {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dash-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .topbar-datetime { display: none; }
+  .caixa-status span:last-child { display: none; }
+}
+
+@media (max-width: 420px) {
+  .dash-cards {
+    grid-template-columns: 1fr;
+  }
+}

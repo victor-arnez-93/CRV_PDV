@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ===== TOKENS GLOBAIS (não mudam por tema) ===== */
+:root {
+  /* Marca CRV — fixos */
+  --crv-blue:       #003887;
+  --crv-blue-dim:   #002a66;
+  --crv-blue-light: #1a4f9e;
+  --crv-golden:     #D4A843;
+  --crv-golden-dim: #a8832e;
+  --crv-warm:       #816C61; /* acento quente dark */
+  --crv-warm-light: #7C6354; /* acento quente light */
+  --crv-silver:     #CFCFCF;
+
+  /* Gradiente animado — btn-secondary */
+  --grad-primary: linear-gradient(135deg, #003887 0%, #1a4f9e 40%, #7C6354 100%);
+
+  /* Tipografia */
+  --font-display: 'Rajdhani', sans-serif;
+  --font-body:    'Inter', sans-serif;
+
+  /* Radius */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-pill: 999px;
+
+  /* Transição padrão */
+  --transition: 0.25s ease;
+}
+
+/* =============================================
+   DARK MODE (padrão)
+   Base preta/carvão + prateado + azul + dourado
+   ============================================= */
+[data-theme="dark"], :root {
+
+  /* Fundos */
+  --bg-primary:   #000000;
+  --bg-secondary: #0A0A0A;
+  --bg-card:      #111111;
+  --bg-elevated:  #1A1A1A;
+  --bg-hover:     #222222;
+
+  /* Bordas */
+  --border:       #2A2A2A;
+  --border-focus: #D4A843; /* golden como foco */
+
+  /* Textos */
+  --text-primary:   #CFCFCF; /* prateado */
+  --text-secondary: #9A9A9A;
+  --text-muted:     #555555;
+  --text-accent:    #D4A843; /* golden */
+  --text-accent-2:  #003887; /* azul CRV */
+
+  /* Estrutura */
+  --sidebar-bg: #080808;
+  --topbar-bg:  #080808;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.6);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.7);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.8);
+
+  /* Glows */
+  --glow-accent:  0 0 20px rgba(212,168,67,0.2);  /* golden */
+  --glow-blue:    0 0 20px rgba(0,56,135,0.3);    /* azul CRV */
+  --glow-warm:    0 0 16px rgba(129,108,97,0.2);  /* quente */
+
+  /* Aliases de compatibilidade (usados nos outros CSS) */
+  --crv-orange:     #D4A843;   /* golden assume papel do laranja */
+  --crv-orange-dim: #a8832e;
+  --crv-purple:     #003887;   /* azul CRV assume papel do roxo */
+  --crv-cyan:       #5B8FD4;   /* azul claro */
+  --crv-green:      #CFCFCF;   /* prateado assume papel do verde terminal */
+
+  /* Botões */
+  --btn-primary-bg:     #111111;
+  --btn-primary-border: #D4A843;
+  --btn-primary-text:   #CFCFCF;
+  --btn-primary-hover:  #D4A843;
+
+  --btn-secondary-from: #0d2f6e;
+  --btn-secondary-to:   #a8832e;
+
+  --btn-ghost-border:   #2A2A2A;
+  --btn-ghost-color:    #9A9A9A;
+  --btn-ghost-hover:    #D4A843;
+
+  --btn-danger-bg:      rgba(180,40,40,0.12);
+  --btn-danger-border:  rgba(180,40,40,0.3);
+  --btn-danger-color:   #E05555;
+}
+
+/* =============================================
+   LIGHT MODE
+   Base branca + azul escuro + quente terroso
+   ============================================= */
+[data-theme="light"] {
+
+  /* Fundos */
+  --bg-primary:   #FCFCFC;
+  --bg-secondary: #FFFFFF;
+  --bg-card:      #FFFFFF;
+  --bg-elevated:  #F0F2F5;
+  --bg-hover:     #E8ECF2;
+
+  /* Bordas */
+  --border:       #D8DCE8;
+  --border-focus: #003887; /* azul CRV como foco */
+
+  /* Textos */
+  --text-primary:   #000000;
+  --text-secondary: #778DA9;
+  --text-muted:     #A0AABB;
+  --text-accent:    #003887; /* azul CRV */
+  --text-accent-2:  #7C6354; /* terroso */
+
+  /* Estrutura */
+  --sidebar-bg: #FFFFFF;
+  --topbar-bg:  #FFFFFF;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(0,56,135,0.06);
+  --shadow-md: 0 4px 20px rgba(0,56,135,0.08);
+  --shadow-lg: 0 8px 40px rgba(0,56,135,0.12);
+
+  /* Glows */
+  --glow-accent: 0 0 16px rgba(0,56,135,0.12);
+  --glow-blue:   0 0 16px rgba(0,56,135,0.15);
+  --glow-warm:   0 0 12px rgba(124,99,84,0.12);
+
+  /* Aliases de compatibilidade */
+  --crv-orange:     #003887;   /* azul assume papel do destaque */
+  --crv-orange-dim: #002a66;
+  --crv-purple:     #7C6354;   /* terroso assume papel do roxo */
+  --crv-cyan:       #778DA9;   /* azul acinzentado */
+  --crv-green:      #003887;   /* azul assume papel do terminal */
+
+  /* Botões */
+  --btn-primary-bg:     #FFFFFF;
+  --btn-primary-border: #003887;
+  --btn-primary-text:   #000000;
+  --btn-primary-hover:  #003887;
+
+  --btn-secondary-from: #003887;
+  --btn-secondary-mid:  #2a6aad;
+  -btn-secondary-to:   #7C6354;
+
+  --btn-ghost-border:   #D8DCE8;
+  --btn-ghost-color:    #778DA9;
+  --btn-ghost-hover:    #003887;
+
+  --btn-danger-bg:      rgba(180,40,40,0.06);
+  --btn-danger-border:  rgba(180,40,40,0.2);
+  --btn-danger-color:   #C0392B;
+}

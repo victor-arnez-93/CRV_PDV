@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRV PDV — Produtos</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/produtos.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F98948" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <path d="M8 21h8M12 17v4"/>
+        <path d="M7 8h3M7 11h5M14 8l2 3-2 3"/>
+      </svg>
+      <span class="sidebar-logo-text">CRV <span>PDV</span></span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-icon"></i>Dashboard</a>
+      <a href="caixa.html" class="nav-item"><i data-lucide="wallet" class="nav-icon"></i>Caixa / PDV</a>
+      <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart" class="nav-icon"></i>Vendas</a>
+      <span class="nav-section-label">Cadastros</span>
+      <a href="produtos.html" class="nav-item active"><i data-lucide="package" class="nav-icon"></i>Produtos</a>
+      <a href="clientes.html" class="nav-item"><i data-lucide="users" class="nav-icon"></i>Clientes</a>
+      <span class="nav-section-label">Relatórios</span>
+      <a href="relatorios.html" class="nav-item"><i data-lucide="bar-chart-2" class="nav-icon"></i>Relatórios</a>
+    </nav>
+    <div class="sidebar-footer">CRV PDV v1.0 · Demo</div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div style="display:flex;flex-direction:column;min-height:100vh;">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-menu" id="btnMenu"><i data-lucide="menu" width="22" height="22"></i></button>
+        <span class="topbar-title">Produtos</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="caixa-status">
+          <span class="status-dot closed" id="statusDot"></span>
+          <span id="statusText">Caixa fechado</span>
+        </div>
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon" id="iconTheme"></i></button>
+        <div class="topbar-avatar"><span>D</span></div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <div>
+          <h2>Produtos</h2>
+          <p id="subtitleProdutos">0 produtos cadastrados</p>
+        </div>
+        <button class="btn-secondary" onclick="abrirModalNovo()">
+          <i data-lucide="plus" width="16" height="16"></i>
+          <span>Novo Produto</span>
+        </button>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="produtos-filtros card">
+        <div class="filtro-search-wrap" style="flex:1;">
+          <i data-lucide="search" width="15" height="15"></i>
+          <input
+            class="input filtro-search"
+            type="text"
+            id="filtroTexto"
+            placeholder="Buscar produto ou código..."
+            oninput="renderProdutos()"
+          />
+        </div>
+        <div class="filtros-right">
+          <button class="filtro-btn active" data-filter="todos" onclick="setFiltro(this,'todos')">Todos</button>
+          <button class="filtro-btn" data-filter="ativos" onclick="setFiltro(this,'ativos')">Ativos</button>
+          <button class="filtro-btn" data-filter="inativos" onclick="setFiltro(this,'inativos')">Inativos</button>
+        </div>
+      </div>
+
+      <!-- GRID DE PRODUTOS -->
+      <div class="produtos-grid" id="produtosGrid"></div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: Novo / Editar produto -->
+<div class="modal-overlay" id="modalProduto" style="display:none;">
+  <div class="modal card" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="modalProdutoTitulo">Novo Produto</h3>
+      <button class="btn-ghost" style="padding:6px;" onclick="fecharModal()">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="produtoId" />
+
+      <div class="input-group">
+        <label class="input-label" for="produtoNome">Nome do produto *</label>
+        <input class="input" type="text" id="produtoNome" placeholder="Ex: Água Mineral 500ml" />
+      </div>
+
+      <div class="form-row">
+        <div class="input-group">
+          <label class="input-label" for="produtoPreco">Preço *</label>
+          <input class="input input-money" type="number" id="produtoPreco" placeholder="0,00" min="0" step="0.01" />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="produtoEstoque">Estoque</label>
+          <input class="input" type="number" id="produtoEstoque" placeholder="0" min="0" step="1" />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="produtoCodigo">
+          <i data-lucide="scan-line" width="11" height="11"></i>
+          Código de barras
+        </label>
+        <input class="input" type="text" id="produtoCodigo" placeholder="EAN-13 ou código interno" />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="produtoCategoria">Categoria</label>
+        <select class="input" id="produtoCategoria">
+          <option value="">Sem categoria</option>
+          <option value="bebidas">Bebidas</option>
+          <option value="alimentos">Alimentos</option>
+          <option value="combos">Combos</option>
+          <option value="servicos">Serviços</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+
+      <div class="toggle-row">
+        <span class="input-label" style="margin:0;">Produto ativo</span>
+        <label class="toggle">
+          <input type="checkbox" id="produtoAtivo" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-secondary" onclick="salvarProduto()">
+        <i data-lucide="save" width="15" height="15"></i>
+        <span>Salvar</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar exclusão -->
+<div class="modal-overlay" id="modalExcluir" style="display:none;">
+  <div class="modal card" style="max-width:360px;text-align:center;">
+    <div style="display:flex;justify-content:center;margin-bottom:16px;">
+      <div style="width:56px;height:56px;border-radius:var(--radius-lg);background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.2);display:flex;align-items:center;justify-content:center;color:#FF5050;">
+        <i data-lucide="trash-2" width="24" height="24"></i>
+      </div>
+    </div>
+    <h3 style="margin-bottom:8px;">Excluir produto?</h3>
+    <p id="msgExcluir" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:20px;"></p>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-danger" id="btnConfirmarExcluir">
+        <i data-lucide="trash-2" width="15" height="15"></i>
+        Excluir
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/produtos.js"></script>
+</body>
+</html>

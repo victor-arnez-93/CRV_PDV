@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRV PDV — Relatórios</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/relatorios.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F98948" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <path d="M8 21h8M12 17v4"/>
+        <path d="M7 8h3M7 11h5M14 8l2 3-2 3"/>
+      </svg>
+      <span class="sidebar-logo-text">CRV <span>PDV</span></span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-icon"></i>Dashboard</a>
+      <a href="caixa.html" class="nav-item"><i data-lucide="wallet" class="nav-icon"></i>Caixa / PDV</a>
+      <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart" class="nav-icon"></i>Vendas</a>
+      <span class="nav-section-label">Cadastros</span>
+      <a href="produtos.html" class="nav-item"><i data-lucide="package" class="nav-icon"></i>Produtos</a>
+      <a href="clientes.html" class="nav-item"><i data-lucide="users" class="nav-icon"></i>Clientes</a>
+      <span class="nav-section-label">Relatórios</span>
+      <a href="relatorios.html" class="nav-item active"><i data-lucide="bar-chart-2" class="nav-icon"></i>Relatórios</a>
+    </nav>
+    <div class="sidebar-footer">CRV PDV v1.0 · Demo</div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div style="display:flex;flex-direction:column;min-height:100vh;">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-menu" id="btnMenu"><i data-lucide="menu" width="22" height="22"></i></button>
+        <span class="topbar-title">Relatórios</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="caixa-status">
+          <span class="status-dot closed" id="statusDot"></span>
+          <span id="statusText">Caixa fechado</span>
+        </div>
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon" id="iconTheme"></i></button>
+        <div class="topbar-avatar"><span>D</span></div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <div>
+          <h2>Relatórios</h2>
+          <p id="subtitleRelatorio">Resumo do período atual</p>
+        </div>
+        <button class="btn-ghost" onclick="exportarCSV()">
+          <i data-lucide="download" width="15" height="15"></i>
+          <span>Exportar CSV</span>
+        </button>
+      </div>
+
+      <!-- PERÍODO -->
+      <div class="relatorio-periodo card">
+        <span class="periodo-label">Período</span>
+        <div class="periodo-btns">
+          <button class="periodo-btn active" data-periodo="hoje" onclick="setPeriodo(this,'hoje')">Hoje</button>
+          <button class="periodo-btn" data-periodo="semana" onclick="setPeriodo(this,'semana')">7 dias</button>
+          <button class="periodo-btn" data-periodo="mes" onclick="setPeriodo(this,'mes')">30 dias</button>
+        </div>
+        <div class="periodo-custom">
+          <input class="input" type="date" id="dataInicio" style="height:36px;font-size:0.85rem;" />
+          <span style="color:var(--text-muted);font-size:0.8rem;">até</span>
+          <input class="input" type="date" id="dataFim" style="height:36px;font-size:0.85rem;" />
+          <button class="btn-ghost" style="padding:7px 14px;font-size:0.8rem;" onclick="aplicarPeriodo()">
+            Filtrar
+          </button>
+        </div>
+      </div>
+
+      <!-- CARDS RESUMO -->
+      <div class="relatorio-cards">
+        <div class="card relatorio-card">
+          <div class="card-title"><i data-lucide="trending-up" width="13" height="13"></i> Faturamento</div>
+          <div class="card-value" id="relFaturamento">R$ 0,00</div>
+          <div class="card-delta" id="relFaturamentoDelta">—</div>
+        </div>
+        <div class="card relatorio-card">
+          <div class="card-title"><i data-lucide="shopping-bag" width="13" height="13"></i> Vendas</div>
+          <div class="card-value" id="relVendas">0</div>
+          <div class="card-delta">transações</div>
+        </div>
+        <div class="card relatorio-card">
+          <div class="card-title"><i data-lucide="receipt" width="13" height="13"></i> Ticket Médio</div>
+          <div class="card-value" id="relTicket">R$ 0,00</div>
+          <div class="card-delta">por venda</div>
+        </div>
+        <div class="card relatorio-card">
+          <div class="card-title"><i data-lucide="percent" width="13" height="13"></i> Descontos</div>
+          <div class="card-value" id="relDescontos">R$ 0,00</div>
+          <div class="card-delta">total concedido</div>
+        </div>
+      </div>
+
+      <!-- GRÁFICOS -->
+      <div class="relatorio-graficos">
+
+        <!-- Faturamento por hora -->
+        <div class="card grafico-card">
+          <div class="grafico-header">
+            <h3>Vendas por hora</h3>
+            <span class="badge badge-info" id="badgePeriodo">Hoje</span>
+          </div>
+          <div class="grafico-wrap">
+            <canvas id="chartHoras"></canvas>
+          </div>
+        </div>
+
+        <!-- Formas de pagamento -->
+        <div class="card grafico-card grafico-card-sm">
+          <div class="grafico-header">
+            <h3>Formas de pagamento</h3>
+          </div>
+          <div class="grafico-wrap grafico-donut-wrap">
+            <canvas id="chartPagamentos"></canvas>
+          </div>
+          <div class="pagamento-legenda" id="pagamentoLegenda"></div>
+        </div>
+
+      </div>
+
+      <!-- TOP PRODUTOS -->
+      <div class="card relatorio-top">
+        <div class="grafico-header" style="margin-bottom:16px;">
+          <h3>Produtos mais vendidos</h3>
+          <span class="badge badge-warning" id="badgeTopQtd">0 itens</span>
+        </div>
+        <div id="topProdutos"></div>
+      </div>
+
+      <!-- HISTÓRICO DE CAIXAS -->
+      <div class="card relatorio-caixas">
+        <div class="grafico-header" style="margin-bottom:16px;">
+          <h3>Histórico de caixas</h3>
+        </div>
+        <div id="historicoCaixas"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/relatorios.js"></script>
+</body>
+</html>

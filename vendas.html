@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRV PDV — Vendas</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/vendas.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F98948" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <path d="M8 21h8M12 17v4"/>
+        <path d="M7 8h3M7 11h5M14 8l2 3-2 3"/>
+      </svg>
+      <span class="sidebar-logo-text">CRV <span>PDV</span></span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-icon"></i>Dashboard</a>
+      <a href="caixa.html" class="nav-item"><i data-lucide="wallet" class="nav-icon"></i>Caixa / PDV</a>
+      <a href="vendas.html" class="nav-item active"><i data-lucide="shopping-cart" class="nav-icon"></i>Vendas</a>
+      <span class="nav-section-label">Cadastros</span>
+      <a href="produtos.html" class="nav-item"><i data-lucide="package" class="nav-icon"></i>Produtos</a>
+      <a href="clientes.html" class="nav-item"><i data-lucide="users" class="nav-icon"></i>Clientes</a>
+      <span class="nav-section-label">Relatórios</span>
+      <a href="relatorios.html" class="nav-item"><i data-lucide="bar-chart-2" class="nav-icon"></i>Relatórios</a>
+    </nav>
+    <div class="sidebar-footer">CRV PDV v1.0 · Demo</div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div style="display:flex;flex-direction:column;min-height:100vh;">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-menu" id="btnMenu"><i data-lucide="menu" width="22" height="22"></i></button>
+        <span class="topbar-title">Vendas</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="caixa-status">
+          <span class="status-dot closed" id="statusDot"></span>
+          <span id="statusText">Caixa fechado</span>
+        </div>
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon" id="iconTheme"></i></button>
+        <div class="topbar-avatar"><span>D</span></div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- HEADER DA PÁGINA -->
+      <div class="page-header">
+        <div>
+          <h2>Histórico de Vendas</h2>
+          <p id="subtitleVendas">Carregando...</p>
+        </div>
+        <a href="caixa.html" class="btn-secondary" style="text-decoration:none;">
+          <i data-lucide="plus" width="16" height="16"></i>
+          <span>Nova Venda</span>
+        </a>
+      </div>
+
+      <!-- RESUMO RÁPIDO -->
+      <div class="vendas-resumo" id="vendasResumo">
+        <div class="card resumo-card">
+          <div class="card-title"><i data-lucide="trending-up" width="13" height="13"></i> Total do dia</div>
+          <div class="card-value" id="resumoTotal">R$ 0,00</div>
+        </div>
+        <div class="card resumo-card">
+          <div class="card-title"><i data-lucide="hash" width="13" height="13"></i> Nº de vendas</div>
+          <div class="card-value" id="resumoQtd">0</div>
+        </div>
+        <div class="card resumo-card">
+          <div class="card-title"><i data-lucide="receipt" width="13" height="13"></i> Ticket médio</div>
+          <div class="card-value" id="resumoTicket">R$ 0,00</div>
+        </div>
+        <div class="card resumo-card">
+          <div class="card-title"><i data-lucide="banknote" width="13" height="13"></i> Dinheiro</div>
+          <div class="card-value" id="resumoDinheiro">R$ 0,00</div>
+        </div>
+        <div class="card resumo-card">
+          <div class="card-title"><i data-lucide="credit-card" width="13" height="13"></i> Cartão</div>
+          <div class="card-value" id="resumoCartao">R$ 0,00</div>
+        </div>
+        <div class="card resumo-card">
+          <div class="card-title"><i data-lucide="zap" width="13" height="13"></i> PIX</div>
+          <div class="card-value" id="resumoPix">R$ 0,00</div>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="vendas-filtros card">
+        <div class="filtros-left">
+          <div class="filtro-search-wrap">
+            <i data-lucide="search" width="15" height="15"></i>
+            <input
+              class="input filtro-search"
+              type="text"
+              id="filtroTexto"
+              placeholder="Buscar por item ou valor..."
+              oninput="filtrarVendas()"
+            />
+          </div>
+        </div>
+        <div class="filtros-right">
+          <button class="filtro-btn active" data-filter="todos" onclick="setFiltro(this,'todos')">Todos</button>
+          <button class="filtro-btn" data-filter="dinheiro" onclick="setFiltro(this,'dinheiro')">
+            <i data-lucide="banknote" width="13" height="13"></i> Dinheiro
+          </button>
+          <button class="filtro-btn" data-filter="cartao" onclick="setFiltro(this,'cartao')">
+            <i data-lucide="credit-card" width="13" height="13"></i> Cartão
+          </button>
+          <button class="filtro-btn" data-filter="pix" onclick="setFiltro(this,'pix')">
+            <i data-lucide="zap" width="13" height="13"></i> PIX
+          </button>
+        </div>
+      </div>
+
+      <!-- TABELA DE VENDAS -->
+      <div class="card vendas-table-card">
+        <table class="vendas-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Horário</th>
+              <th>Itens</th>
+              <th>Pagamento</th>
+              <th>Desconto</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="vendasTableBody">
+            <tr>
+              <td colspan="7" class="table-empty">
+                <i data-lucide="inbox" width="28" height="28"></i>
+                <p>Nenhuma venda encontrada</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: Detalhe da venda -->
+<div class="modal-overlay" id="modalDetalhe" style="display:none;">
+  <div class="modal card" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Detalhe da Venda</h3>
+      <button class="btn-ghost" style="padding:6px;" onclick="fecharModal()">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+    <div class="modal-body" id="modalDetalheBody"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/vendas.js"></script>
+</body>
+</html>

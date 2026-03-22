@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRV PDV — Caixa</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/caixa.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F98948" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <path d="M8 21h8M12 17v4"/>
+        <path d="M7 8h3M7 11h5M14 8l2 3-2 3"/>
+      </svg>
+      <span class="sidebar-logo-text">CRV <span>PDV</span></span>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+      <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-icon"></i>Dashboard</a>
+      <a href="caixa.html" class="nav-item active"><i data-lucide="wallet" class="nav-icon"></i>Caixa / PDV</a>
+      <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart" class="nav-icon"></i>Vendas</a>
+      <span class="nav-section-label">Cadastros</span>
+      <a href="produtos.html" class="nav-item"><i data-lucide="package" class="nav-icon"></i>Produtos</a>
+      <a href="clientes.html" class="nav-item"><i data-lucide="users" class="nav-icon"></i>Clientes</a>
+      <span class="nav-section-label">Relatórios</span>
+      <a href="relatorios.html" class="nav-item"><i data-lucide="bar-chart-2" class="nav-icon"></i>Relatórios</a>
+    </nav>
+    <div class="sidebar-footer">CRV PDV v1.0 · Demo</div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div style="display:flex;flex-direction:column;min-height:100vh;">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-menu" id="btnMenu"><i data-lucide="menu" width="22" height="22"></i></button>
+        <span class="topbar-title">Caixa / PDV</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="caixa-status" id="caixaStatus">
+          <span class="status-dot closed" id="statusDot"></span>
+          <span id="statusText">Caixa fechado</span>
+        </div>
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon" id="iconTheme"></i></button>
+        <div class="topbar-avatar"><span>D</span></div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+
+      <!-- ===== ESTADO: CAIXA FECHADO ===== -->
+      <div id="viewCaixaFechado">
+        <div class="caixa-closed-wrap">
+          <div class="caixa-closed-card card">
+
+            <div class="closed-icon">
+              <i data-lucide="lock" width="40" height="40"></i>
+            </div>
+
+            <h2>Caixa está fechado</h2>
+            <p>Informe o valor inicial para iniciar as operações do dia.</p>
+
+            <div class="input-group" style="max-width:280px;width:100%;">
+              <label class="input-label" for="valorInicial">Valor inicial (troco)</label>
+              <input
+                class="input input-money"
+                type="number"
+                id="valorInicial"
+                placeholder="0,00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <button class="btn-secondary" id="btnAbrirCaixa" onclick="abrirCaixa()">
+              <span>Abrir Caixa</span>
+            </button>
+
+            <!-- Histórico resumido -->
+            <div class="closed-history" id="closedHistory"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ESTADO: CAIXA ABERTO — PDV ===== -->
+      <div id="viewCaixaAberto" style="display:none;">
+
+        <!-- Info bar do caixa -->
+        <div class="caixa-infobar">
+          <div class="caixa-info-item">
+            <span class="caixa-info-label">Abertura</span>
+            <span class="caixa-info-value" id="infoAbertura">—</span>
+          </div>
+          <div class="caixa-info-item">
+            <span class="caixa-info-label">Valor inicial</span>
+            <span class="caixa-info-value" id="infoValorInicial">—</span>
+          </div>
+          <div class="caixa-info-item">
+            <span class="caixa-info-label">Vendas</span>
+            <span class="caixa-info-value" id="infoQtdVendas">0</span>
+          </div>
+          <div class="caixa-info-item highlight">
+            <span class="caixa-info-label">Saldo atual</span>
+            <span class="caixa-info-value green" id="infoSaldo">R$ 0,00</span>
+          </div>
+          <button class="btn-danger" id="btnFecharCaixa" onclick="confirmarFechamento()">
+            <i data-lucide="lock" width="15" height="15"></i>
+            <span>Fechar Caixa</span>
+          </button>
+        </div>
+
+        <!-- PDV GRID -->
+        <div class="pdv-grid">
+
+          <!-- COLUNA ESQUERDA: busca + produtos rápidos -->
+          <div class="pdv-left">
+
+            <!-- Busca / código de barras -->
+            <div class="pdv-search-wrap">
+              <i data-lucide="scan-line" class="pdv-search-icon" width="18" height="18"></i>
+              <input
+                class="input pdv-search"
+                type="text"
+                id="inputBusca"
+                placeholder="Buscar produto ou código de barras..."
+                autocomplete="off"
+                autofocus
+              />
+              <kbd class="pdv-kbd">Enter</kbd>
+            </div>
+
+            <!-- Sugestões de busca -->
+            <div class="pdv-suggestions" id="pdvSuggestions"></div>
+
+            <!-- Produtos rápidos -->
+            <div class="pdv-quick-header">
+              <span>Produtos rápidos</span>
+              <a href="produtos.html" style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;">Gerenciar</a>
+            </div>
+            <div class="pdv-quick-grid" id="produtosRapidos"></div>
+
+            <!-- Entrada manual -->
+            <div class="pdv-manual card">
+              <h3 style="font-size:0.85rem;margin-bottom:12px;color:var(--text-muted);">
+                <i data-lucide="pencil" width="13" height="13"></i>
+                Adicionar item manual
+              </h3>
+              <div class="pdv-manual-row">
+                <div class="input-group" style="flex:2;margin:0;">
+                  <input class="input" type="text" id="manualNome" placeholder="Nome do item" />
+                </div>
+                <div class="input-group" style="flex:1;margin:0;">
+                  <input class="input input-money" type="number" id="manualPreco" placeholder="R$ 0,00" min="0" step="0.01" />
+                </div>
+                <div class="input-group" style="width:70px;margin:0;">
+                  <input class="input" type="number" id="manualQtd" placeholder="Qtd" value="1" min="1" />
+                </div>
+                <button class="btn-ghost" onclick="adicionarManual()">
+                  <i data-lucide="plus" width="16" height="16"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- COLUNA DIREITA: carrinho + pagamento -->
+          <div class="pdv-right">
+
+            <div class="pdv-cart card">
+
+              <!-- Header carrinho -->
+              <div class="cart-header">
+                <h3>
+                  <i data-lucide="shopping-cart" width="16" height="16"></i>
+                  Carrinho
+                  <span class="cart-count" id="cartCount">0</span>
+                </h3>
+                <button class="btn-ghost" style="padding:6px 12px;font-size:0.75rem;" onclick="limparCarrinho()">
+                  <i data-lucide="trash-2" width="13" height="13"></i>
+                  Limpar
+                </button>
+              </div>
+
+              <!-- Lista de itens -->
+              <div class="cart-items" id="cartItems">
+                <div class="empty-state">
+                  <i data-lucide="shopping-cart" width="28" height="28"></i>
+                  <p>Carrinho vazio</p>
+                </div>
+              </div>
+
+              <!-- Desconto -->
+              <div class="cart-discount">
+                <span class="cart-discount-label">Desconto</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <input
+                    class="input"
+                    type="number"
+                    id="inputDesconto"
+                    placeholder="R$ 0,00"
+                    min="0"
+                    step="0.01"
+                    style="width:110px;padding:8px 12px;font-size:0.85rem;"
+                    oninput="atualizarTotais()"
+                  />
+                </div>
+              </div>
+
+              <div class="divider" style="margin:12px 0;"></div>
+
+              <!-- Totais -->
+              <div class="cart-totals">
+                <div class="cart-total-row">
+                  <span>Subtotal</span>
+                  <span id="subtotal">R$ 0,00</span>
+                </div>
+                <div class="cart-total-row discount">
+                  <span>Desconto</span>
+                  <span id="descontoTotal">- R$ 0,00</span>
+                </div>
+                <div class="cart-total-row total">
+                  <span>TOTAL</span>
+                  <span id="totalGeral">R$ 0,00</span>
+                </div>
+              </div>
+
+              <!-- Formas de pagamento -->
+              <div class="cart-payment">
+                <span class="cart-payment-label">Forma de pagamento</span>
+                <div class="payment-methods">
+                  <button class="pay-btn active" data-method="dinheiro" onclick="selecionarPagamento(this)">
+                    <i data-lucide="banknote" width="18" height="18"></i>
+                    <span>Dinheiro</span>
+                  </button>
+                  <button class="pay-btn" data-method="cartao" onclick="selecionarPagamento(this)">
+                    <i data-lucide="credit-card" width="18" height="18"></i>
+                    <span>Cartão</span>
+                  </button>
+                  <button class="pay-btn" data-method="pix" onclick="selecionarPagamento(this)">
+                    <i data-lucide="zap" width="18" height="18"></i>
+                    <span>PIX</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Troco (só dinheiro) -->
+              <div class="cart-troco" id="cartTroco" style="display:none;">
+                <div class="input-group" style="margin:0;">
+                  <label class="input-label">Valor recebido</label>
+                  <input class="input input-money" type="number" id="valorRecebido" placeholder="R$ 0,00" min="0" step="0.01" oninput="calcularTroco()" />
+                </div>
+                <div class="troco-result" id="trocoResult">
+                  Troco: <strong>R$ 0,00</strong>
+                </div>
+              </div>
+
+              <!-- Botão finalizar -->
+              <button class="btn-secondary pdv-finalizar" id="btnFinalizar" onclick="finalizarVenda()">
+                <i data-lucide="check-circle" width="20" height="20"></i>
+                <span>Finalizar Venda</span>
+              </button>
+
+            </div>
+
+            <!-- Histórico rápido do dia -->
+            <div class="card pdv-historico">
+              <div class="pdv-historico-header">
+                <h3 style="font-size:0.85rem;">Vendas do dia</h3>
+                <span class="badge badge-success" id="badgeVendas">0 vendas</span>
+              </div>
+              <div class="historico-list" id="historicoList">
+                <div class="empty-state" style="padding:16px;">
+                  <p>Nenhuma venda ainda</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar fechamento -->
+<div class="modal-overlay" id="modalFechamento" style="display:none;">
+  <div class="modal card">
+    <div class="modal-header">
+      <h3>Fechar Caixa</h3>
+      <button class="btn-ghost" style="padding:6px;" onclick="fecharModal()">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fechamento-row">
+        <span>Valor inicial</span>
+        <strong id="fechValorInicial">R$ 0,00</strong>
+      </div>
+      <div class="fechamento-row">
+        <span>Total vendido</span>
+        <strong id="fechTotalVendido" class="green">R$ 0,00</strong>
+      </div>
+      <div class="fechamento-row">
+        <span>Nº de vendas</span>
+        <strong id="fechQtdVendas">0</strong>
+      </div>
+      <div class="divider"></div>
+      <div class="fechamento-row total">
+        <span>Saldo esperado</span>
+        <strong id="fechSaldoEsperado" class="green">R$ 0,00</strong>
+      </div>
+      <div class="input-group" style="margin-top:16px;">
+        <label class="input-label">Valor em caixa (contagem física)</label>
+        <input class="input input-money" type="number" id="valorFechamento" placeholder="R$ 0,00" min="0" step="0.01" oninput="calcularDiferenca()" />
+      </div>
+      <div class="fechamento-diferenca" id="fechDiferenca"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-danger" onclick="fecharCaixa()">
+        <i data-lucide="lock" width="15" height="15"></i>
+        Confirmar Fechamento
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Venda finalizada -->
+<div class="modal-overlay" id="modalSucesso" style="display:none;">
+  <div class="modal card" style="text-align:center;max-width:340px;">
+    <div class="sucesso-icon">
+      <i data-lucide="check-circle" width="48" height="48" style="color:var(--crv-green);"></i>
+    </div>
+    <h2 style="margin:12px 0 6px;">Venda Finalizada!</h2>
+    <p id="sucessoMsg" style="color:var(--text-muted);margin-bottom:20px;"></p>
+    <div class="sucesso-troco" id="sucessoTroco" style="display:none;"></div>
+    <button class="btn-secondary" style="width:100%;" onclick="novaVenda()">
+      <span>Nova Venda</span>
+    </button>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/caixa.js"></script>
+</body>
+</html>

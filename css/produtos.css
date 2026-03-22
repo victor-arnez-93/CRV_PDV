@@ -1,0 +1,299 @@
+/* ===== FILTROS ===== */
+.produtos-filtros {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filtro-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filtro-search-wrap i {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.filtro-search {
+  padding-left: 36px;
+  font-size: 0.9rem;
+  height: 40px;
+}
+
+.filtros-right {
+  display: flex;
+  gap: 6px;
+}
+
+.filtro-btn {
+  all: unset;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.filtro-btn:hover { border-color: var(--crv-orange); color: var(--text-primary); }
+.filtro-btn.active {
+  background: rgba(249,137,72,0.1);
+  border-color: var(--crv-orange);
+  color: var(--crv-orange);
+}
+
+/* ===== GRID ===== */
+.produtos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+/* ===== CARD PRODUTO ===== */
+.produto-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.produto-card:hover {
+  border-color: var(--crv-orange);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.produto-card.inativo {
+  opacity: 0.5;
+}
+
+/* Badge categoria */
+.produto-categoria {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  align-self: flex-start;
+}
+
+.produto-nome {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.produto-codigo {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  align-self: flex-start;
+}
+
+.produto-preco {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--crv-orange);
+  letter-spacing: 0.02em;
+}
+
+.produto-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.produto-estoque {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.estoque-ok   { color: var(--crv-green); }
+.estoque-low  { color: var(--crv-orange); }
+.estoque-zero { color: #FF5050; }
+
+.produto-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.produto-btn {
+  all: unset;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.produto-btn:hover { border-color: var(--crv-orange); color: var(--crv-orange); }
+.produto-btn.danger:hover { border-color: #FF5050; color: #FF5050; }
+
+/* ===== EMPTY STATE ===== */
+.produtos-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.produtos-empty p { font-size: 0.9rem; color: var(--text-muted); }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  width: 100%;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-body  { display: flex; flex-direction: column; gap: 4px; }
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Form row */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: rgba(249,137,72,0.15);
+  border-color: var(--crv-orange);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translate(20px, -50%);
+  background: var(--crv-orange);
+}
+
+/* ===== PAGE HEADER ===== */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-header h2 { font-size: 1.6rem; margin-bottom: 4px; }
+.page-header p  { font-size: 0.85rem; color: var(--text-muted); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .produtos-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .form-row { grid-template-columns: 1fr; }
+  .produtos-filtros { flex-direction: column; align-items: flex-start; }
+}
