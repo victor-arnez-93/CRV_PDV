@@ -202,6 +202,29 @@ p { line-height: 1.6; color: var(--text-secondary); }
   gap: 12px;
 }
 
+.topbar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--text-accent);
+  font-size: 0.9rem;
+
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.topbar-avatar:hover {
+  border-color: var(--text-accent);
+  box-shadow: var(--glow-accent);
+}
+
 /* Hamburguer mobile */
 .btn-menu {
   display: none;
@@ -538,15 +561,15 @@ p { line-height: 1.6; color: var(--text-secondary); }
 
 .sidebar-logo-sub {
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #000000;           /* ← preto fixo nos dois temas */
+  color: var(--text-accent);
 }
 
 [data-theme="dark"] .sidebar-logo-sub {
-  color: var(--text-muted); /* ← cinza no dark para não sumir */
+  color: var(--text-accent); /* ← cinza no dark para não sumir */
 }
 
 /* ===== SIDEBAR FOOTER ATUALIZADO ===== */
@@ -576,7 +599,7 @@ p { line-height: 1.6; color: var(--text-secondary); }
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-accent);
 }
 
 .sidebar-footer-logo {

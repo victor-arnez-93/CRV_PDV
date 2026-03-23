@@ -4,7 +4,7 @@ const mockData = {
   totalVendas:  23,
   ticketMedio:  80.33,
   saldoCaixa:   2_150.00,
-  caixaAberto:  true,
+  saldoCaixa:   2_150.00,
   pagamentos: {
     dinheiro: 620.00,
     cartao:   780.50,
@@ -39,11 +39,17 @@ function initDashboard() {
   // Status caixa
   const dot  = document.getElementById('statusDot');
   const text = document.getElementById('statusText');
-  if (mockData.caixaAberto) {
-    dot.classList.replace('closed', 'open');
-    text.textContent = 'Caixa aberto';
-    text.style.color = 'var(--crv-green)';
-  }
+  const caixa = JSON.parse(localStorage.getItem('crv-caixa'));
+
+if (caixa?.status === 'aberto') {
+  dot.classList.replace('closed', 'open');
+  text.textContent = 'Caixa aberto';
+  text.style.color = 'var(--crv-green)';
+} else {
+  dot.classList.replace('open', 'closed');
+  text.textContent = 'Caixa fechado';
+  text.style.color = '';
+}
 
   // Pagamentos
   const total = mockData.pagamentos.dinheiro + mockData.pagamentos.cartao + mockData.pagamentos.pix;

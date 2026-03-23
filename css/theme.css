@@ -47,9 +47,9 @@
   --border-focus: #D4A843; /* golden como foco */
 
   /* Textos */
-  --text-primary:   #CFCFCF; /* prateado */
-  --text-secondary: #9A9A9A;
-  --text-muted:     #555555;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #FFFFFF;
+  --text-muted:     #FFFFFF;
   --text-accent:    #D4A843; /* golden */
   --text-accent-2:  #003887; /* azul CRV */
 
@@ -111,8 +111,8 @@
 
   /* Textos */
   --text-primary:   #000000;
-  --text-secondary: #778DA9;
-  --text-muted:     #A0AABB;
+  --text-secondary: #000000;
+  --text-muted:     #000000;
   --text-accent:    #003887; /* azul CRV */
   --text-accent-2:  #7C6354; /* terroso */
 
