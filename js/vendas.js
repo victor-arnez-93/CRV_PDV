@@ -1,31 +1,94 @@
 // ===== ESTADO =====
 const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-let vendasData = JSON.parse(localStorage.getItem('crv-vendas')) || [];
+
+let vendasData = [];
 let filtroAtivo = 'todos';
 
 const labelPagto = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX' };
 const iconPagto  = { dinheiro: 'banknote', cartao: 'credit-card', pix: 'zap' };
 
+
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
-  carregarVendas();
+document.addEventListener('DOMContentLoaded', async () => {
+  logSistema("VENDAS", "Inicializando...");
+
+  await carregarVendas();
+
   renderResumo();
   renderTabela();
   atualizarStatusCaixa();
 });
 
-function carregarVendas() {
-  vendasData = JSON.parse(localStorage.getItem('crv-vendas')) || [];
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  document.getElementById('subtitleVendas').textContent =
-    `${vendasData.length} venda(s) registrada(s) hoje · ${hoje}`;
+
+// ===== CARREGAR =====
+async function carregarVendas() {
+
+  try {
+
+    if (APP_STATUS.online && APP_STATUS.supabase_ok) {
+
+      logSistema("VENDAS", "Buscando do Supabase...");
+
+      const { data: vendas, error } = await sb
+        .from("vendas")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // buscar itens
+      const { data: itens } = await sb
+        .from("vendas_itens")
+        .select("*");
+
+      // montar estrutura igual antiga
+      vendasData = vendas.map(v => ({
+        id: v.id,
+        hora: new Date(v.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        total: v.total,
+        desconto: 0,
+        formaPagamento: v.pagamento,
+        itens: itens
+          .filter(i => i.venda_id === v.id)
+          .map(i => ({
+            nome: `Produto ${i.produto_id}`,
+            quantidade: i.quantidade,
+            preco: i.preco
+          }))
+      }));
+
+      localDB.salvar("vendas", vendasData);
+
+      logSistema("VENDAS", "Dados carregados", "success");
+
+    } else {
+
+      logSistema("VENDAS", "Modo offline", "warn");
+
+      vendasData = localDB.obter("vendas") || [];
+    }
+
+    const hoje = new Date().toLocaleDateString('pt-BR');
+
+    document.getElementById('subtitleVendas').textContent =
+      `${vendasData.length} venda(s) registrada(s) hoje · ${hoje}`;
+
+  } catch (err) {
+
+    logSistema("VENDAS", "Erro: " + err.message, "error");
+
+    vendasData = localDB.obter("vendas") || [];
+  }
 }
+
 
 // ===== RESUMO =====
 function renderResumo() {
+
   const total    = vendasData.reduce((a, v) => a + v.total, 0);
   const qtd      = vendasData.length;
   const ticket   = qtd > 0 ? total / qtd : 0;
+
   const dinheiro = vendasData.filter(v => v.formaPagamento === 'dinheiro').reduce((a, v) => a + v.total, 0);
   const cartao   = vendasData.filter(v => v.formaPagamento === 'cartao').reduce((a, v) => a + v.total, 0);
   const pix      = vendasData.filter(v => v.formaPagamento === 'pix').reduce((a, v) => a + v.total, 0);
@@ -37,6 +100,7 @@ function renderResumo() {
   document.getElementById('resumoCartao').textContent   = fmt(cartao);
   document.getElementById('resumoPix').textContent      = fmt(pix);
 }
+
 
 // ===== FILTROS =====
 function setFiltro(btn, filtro) {
@@ -50,19 +114,24 @@ function filtrarVendas() { renderTabela(); }
 
 function getVendasFiltradas() {
   const texto = document.getElementById('filtroTexto')?.value.toLowerCase().trim() || '';
+
   return vendasData.filter(v => {
     const passaFiltro = filtroAtivo === 'todos' || v.formaPagamento === filtroAtivo;
+
     const passaTexto  = !texto ||
       v.itens.some(i => i.nome.toLowerCase().includes(texto)) ||
       fmt(v.total).includes(texto);
+
     return passaFiltro && passaTexto;
   });
 }
 
+
 // ===== TABELA =====
 function renderTabela() {
-  const tbody   = document.getElementById('vendasTableBody');
-  const lista   = getVendasFiltradas();
+
+  const tbody = document.getElementById('vendasTableBody');
+  const lista = getVendasFiltradas();
   const reversed = [...lista].reverse();
 
   if (!reversed.length) {
@@ -78,8 +147,9 @@ function renderTabela() {
   }
 
   tbody.innerHTML = reversed.map((v, idx) => {
-    const num       = reversed.length - idx;
-    const primeiro  = v.itens[0];
+
+    const num = reversed.length - idx;
+    const primeiro = v.itens[0];
     const maisItens = v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '';
 
     return `
@@ -111,17 +181,21 @@ function renderTabela() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+
 // ===== DETALHE =====
 function verDetalhe(id) {
+
   const venda = vendasData.find(v => v.id === id);
   if (!venda) return;
 
   const body = document.getElementById('modalDetalheBody');
+
   body.innerHTML = `
     <div class="detalhe-row">
       <span>Horário</span>
       <span style="font-family:'Courier New',monospace;">${venda.hora}</span>
     </div>
+
     <div class="detalhe-row" style="margin-bottom:12px;">
       <span>Pagamento</span>
       <span class="pagto-badge ${venda.formaPagamento}">
@@ -144,19 +218,17 @@ function verDetalhe(id) {
 
     <div class="detalhe-row">
       <span>Subtotal</span>
-      <span>${fmt(venda.subtotal)}</span>
+      <span>${fmt(venda.subtotal || venda.total)}</span>
     </div>
+
     ${venda.desconto > 0 ? `
     <div class="detalhe-row">
       <span>Desconto</span>
       <span style="color:#FF5050;">- ${fmt(venda.desconto)}</span>
     </div>` : ''}
-    ${venda.troco > 0 ? `
-    <div class="detalhe-row">
-      <span>Troco</span>
-      <span style="color:var(--crv-green);">${fmt(venda.troco)}</span>
-    </div>` : ''}
+
     <div class="divider" style="margin:8px 0;"></div>
+
     <div class="detalhe-row total">
       <span>TOTAL</span>
       <span>${fmt(venda.total)}</span>
@@ -164,21 +236,22 @@ function verDetalhe(id) {
   `;
 
   document.getElementById('modalDetalhe').style.display = 'flex';
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function fecharModal() {
-  document.getElementById('modalDetalhe').style.display = 'none';
-}
 
 // ===== STATUS CAIXA =====
 function atualizarStatusCaixa() {
-  const caixa = JSON.parse(localStorage.getItem('crv-caixa'));
+
+  const caixa = localDB.obter('caixa');
+
   const dot  = document.getElementById('statusDot');
   const text = document.getElementById('statusText');
+
   if (caixa?.status === 'aberto') {
     dot.classList.replace('closed', 'open');
     text.textContent = 'Caixa aberto';
-    text.style.color = 'var(--crv-green)';
+    text.style.color = 'var(--crv-green)');
   }
 }

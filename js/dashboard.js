@@ -1,136 +1,229 @@
-// ===== DADOS MOCK =====
-const mockData = {
-  faturamento:  1_847.50,
-  totalVendas:  23,
-  ticketMedio:  80.33,
-  saldoCaixa:   2_150.00,
-  saldoCaixa:   2_150.00,
-  pagamentos: {
-    dinheiro: 620.00,
-    cartao:   780.50,
-    pix:      447.00
-  },
-  ultimas: [
-    { hora: '11:48', desc: '3 itens', valor: 94.00,  pagto: 'PIX' },
-    { hora: '11:32', desc: '1 item',  valor: 25.00,  pagto: 'Dinheiro' },
-    { hora: '11:10', desc: '5 itens', valor: 187.50, pagto: 'Cartão' },
-    { hora: '10:55', desc: '2 itens', valor: 48.00,  pagto: 'PIX' },
-    { hora: '10:30', desc: '1 item',  valor: 32.00,  pagto: 'Dinheiro' },
-  ],
-  semana: [980, 1240, 760, 1580, 2100, 1430, 1847]
-};
-
 // ===== FORMATAÇÃO =====
 const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-// ===== INICIALIZAR DASHBOARD =====
-function initDashboard() {
-  // Cards
-  document.getElementById('faturamentoDia').textContent = fmt(mockData.faturamento);
-  document.getElementById('totalVendas').textContent    = mockData.totalVendas;
-  document.getElementById('ticketMedio').textContent    = fmt(mockData.ticketMedio);
-  document.getElementById('saldoCaixa').textContent     = fmt(mockData.saldoCaixa);
-  document.getElementById('deltaDia').textContent       = '↑ 12% em relação a ontem';
-  document.getElementById('deltaDia').classList.add('positive');
-  document.getElementById('deltaVendas').textContent    = 'vendas hoje';
-  document.getElementById('deltaTicket').textContent    = 'por venda';
-  document.getElementById('deltaSaldo').textContent     = mockData.caixaAberto ? 'caixa aberto' : 'caixa fechado';
+// ===== INIT =====
+async function initDashboard() {
+  logSistema("DASHBOARD", "Inicializando dashboard...");
 
-  // Status caixa
-  const dot  = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-  const caixa = JSON.parse(localStorage.getItem('crv-caixa'));
+  try {
 
-if (caixa?.status === 'aberto') {
-  dot.classList.replace('closed', 'open');
-  text.textContent = 'Caixa aberto';
-  text.style.color = 'var(--crv-green)';
-} else {
-  dot.classList.replace('open', 'closed');
-  text.textContent = 'Caixa fechado';
-  text.style.color = '';
+    // ==========================================
+    // 🔍 BUSCAR DADOS REAIS
+    // ==========================================
+
+    let vendas = [];
+    let itens = [];
+    let caixaAtual = null;
+
+    if (APP_STATUS.online && APP_STATUS.supabase_ok) {
+
+      logSistema("DASHBOARD", "Buscando dados do Supabase...");
+
+      // Buscar vendas do dia
+      const { data: vendasData, error: vendasError } = await sb
+        .from("vendas")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (vendasError) throw vendasError;
+
+      vendas = vendasData || [];
+
+      // Buscar itens
+      const { data: itensData } = await sb
+        .from("vendas_itens")
+        .select("*");
+
+      itens = itensData || [];
+
+      // Buscar caixa
+      const { data: caixaData } = await sb
+        .from("caixa")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(1);
+
+      caixaAtual = caixaData?.[0] || null;
+
+      logSistema("DASHBOARD", "Dados carregados do Supabase", "success");
+
+      // salvar fallback
+      localDB.salvar("vendas", vendas);
+      localDB.salvar("itens", itens);
+      localDB.salvar("caixa", caixaAtual);
+
+    } else {
+
+      logSistema("DASHBOARD", "Modo offline - usando localStorage", "warn");
+
+      vendas = localDB.obter("vendas");
+      itens = localDB.obter("itens");
+      caixaAtual = localDB.obter("caixa");
+
+    }
+
+
+    // ==========================================
+    // 📊 PROCESSAMENTO
+    // ==========================================
+
+    const hoje = new Date().toISOString().slice(0, 10);
+
+    const vendasHoje = vendas.filter(v => v.created_at?.startsWith(hoje));
+
+    const faturamento = vendasHoje.reduce((acc, v) => acc + (v.total || 0), 0);
+    const totalVendas = vendasHoje.length;
+    const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
+
+    // pagamentos
+    const pagamentos = {
+      dinheiro: 0,
+      cartao: 0,
+      pix: 0
+    };
+
+    vendasHoje.forEach(v => {
+      const tipo = (v.pagamento || "").toLowerCase();
+
+      if (tipo.includes("dinheiro")) pagamentos.dinheiro += v.total || 0;
+      else if (tipo.includes("cart")) pagamentos.cartao += v.total || 0;
+      else if (tipo.includes("pix")) pagamentos.pix += v.total || 0;
+    });
+
+
+    // últimas vendas
+    const ultimas = vendas.slice(0, 5).map(v => ({
+      hora: new Date(v.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      desc: `${v.total_itens || 1} itens`,
+      valor: v.total,
+      pagto: v.pagamento
+    }));
+
+
+    // ==========================================
+    // 🧾 UI (SEM ALTERAR ESTRUTURA)
+    // ==========================================
+
+    document.getElementById('faturamentoDia').textContent = fmt(faturamento);
+    document.getElementById('totalVendas').textContent    = totalVendas;
+    document.getElementById('ticketMedio').textContent    = fmt(ticketMedio);
+    document.getElementById('saldoCaixa').textContent     = fmt(caixaAtual?.saldo_atual || 0);
+
+    document.getElementById('deltaDia').textContent       = 'dados reais';
+    document.getElementById('deltaDia').classList.add('positive');
+    document.getElementById('deltaVendas').textContent    = 'vendas hoje';
+    document.getElementById('deltaTicket').textContent    = 'por venda';
+    document.getElementById('deltaSaldo').textContent     = caixaAtual?.status === 'aberto' ? 'caixa aberto' : 'caixa fechado';
+
+
+    // ==========================================
+    // 🟢 STATUS CAIXA (CORRIGIDO)
+    // ==========================================
+
+    const dot  = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+
+    if (caixaAtual?.status === 'aberto') {
+      dot.classList.replace('closed', 'open');
+      text.textContent = 'Caixa aberto';
+      text.style.color = 'var(--crv-green)';
+    } else {
+      dot.classList.replace('open', 'closed');
+      text.textContent = 'Caixa fechado';
+      text.style.color = '';
+    }
+
+
+    // ==========================================
+    // 💳 PAGAMENTOS
+    // ==========================================
+
+    const totalPag = pagamentos.dinheiro + pagamentos.cartao + pagamentos.pix;
+    const pct = v => totalPag > 0 ? (v / totalPag * 100).toFixed(1) + '%' : '0%';
+
+    document.getElementById('valDinheiro').textContent = fmt(pagamentos.dinheiro);
+    document.getElementById('valCartao').textContent   = fmt(pagamentos.cartao);
+    document.getElementById('valPix').textContent      = fmt(pagamentos.pix);
+
+    setTimeout(() => {
+      document.getElementById('barDinheiro').style.width = pct(pagamentos.dinheiro);
+      document.getElementById('barCartao').style.width   = pct(pagamentos.cartao);
+      document.getElementById('barPix').style.width      = pct(pagamentos.pix);
+    }, 300);
+
+
+    // ==========================================
+    // 🧾 ÚLTIMAS VENDAS
+    // ==========================================
+
+    const container = document.getElementById('recentSales');
+    container.innerHTML = '';
+
+    ultimas.forEach(v => {
+      container.innerHTML += `
+        <div class="sale-item">
+          <div class="sale-item-left">
+            <span class="sale-item-hora">${v.hora} · ${v.pagto}</span>
+            <span class="sale-item-desc">${v.desc}</span>
+          </div>
+          <span class="sale-item-value">${fmt(v.valor)}</span>
+        </div>`;
+    });
+
+
+    // ==========================================
+    // 📈 GRÁFICO (mantido)
+    // ==========================================
+
+    initChart(vendas);
+
+
+  } catch (err) {
+    logSistema("DASHBOARD", "Erro: " + err.message, "error");
+  }
 }
 
-  // Pagamentos
-  const total = mockData.pagamentos.dinheiro + mockData.pagamentos.cartao + mockData.pagamentos.pix;
-  const pct = v => total > 0 ? (v / total * 100).toFixed(1) + '%' : '0%';
 
-  document.getElementById('valDinheiro').textContent = fmt(mockData.pagamentos.dinheiro);
-  document.getElementById('valCartao').textContent   = fmt(mockData.pagamentos.cartao);
-  document.getElementById('valPix').textContent      = fmt(mockData.pagamentos.pix);
+// ===== CHART =====
+function initChart(vendas) {
 
-  setTimeout(() => {
-    document.getElementById('barDinheiro').style.width = pct(mockData.pagamentos.dinheiro);
-    document.getElementById('barCartao').style.width   = pct(mockData.pagamentos.cartao);
-    document.getElementById('barPix').style.width      = pct(mockData.pagamentos.pix);
-  }, 300);
+  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const semana = [0,0,0,0,0,0,0];
 
-  // Últimas vendas
-  const container = document.getElementById('recentSales');
-  container.innerHTML = '';
-  mockData.ultimas.forEach(v => {
-    container.innerHTML += `
-      <div class="sale-item">
-        <div class="sale-item-left">
-          <span class="sale-item-hora">${v.hora} · ${v.pagto}</span>
-          <span class="sale-item-desc">${v.desc}</span>
-        </div>
-        <span class="sale-item-value">${fmt(v.valor)}</span>
-      </div>`;
+  vendas.forEach(v => {
+    const d = new Date(v.created_at).getDay();
+    semana[d] += v.total || 0;
   });
 
-  // Gráfico
-  initChart();
-}
-
-// ===== CHART.JS =====
-function initChart() {
-  const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-  const ctx    = document.getElementById('chartFaturamento').getContext('2d');
+  const ctx = document.getElementById('chartFaturamento').getContext('2d');
 
   const gradient = ctx.createLinearGradient(0, 0, 0, 260);
-  gradient.addColorStop(0,   'rgba(249,137,72,0.35)');
-  gradient.addColorStop(1,   'rgba(249,137,72,0)');
+  gradient.addColorStop(0, 'rgba(249,137,72,0.35)');
+  gradient.addColorStop(1, 'rgba(249,137,72,0)');
 
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels,
+      labels: dias,
       datasets: [{
-        data:            mockData.semana,
-        borderColor:     '#F98948',
+        data: semana,
+        borderColor: '#F98948',
         backgroundColor: gradient,
-        borderWidth:     2,
+        borderWidth: 2,
         pointBackgroundColor: '#F98948',
-        pointRadius:     4,
-        pointHoverRadius: 6,
-        tension:         0.4,
-        fill:            true
+        pointRadius: 4,
+        tension: 0.4,
+        fill: true
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: {
-        backgroundColor: 'rgba(22,22,31,0.95)',
-        borderColor:     'rgba(249,137,72,0.3)',
-        borderWidth:     1,
-        titleColor:      '#F98948',
-        bodyColor:       '#F0F0F5',
-        padding:         10,
-        callbacks: {
-          label: ctx => ' ' + fmt(ctx.parsed.y)
-        }
-      }},
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#55556A', font: { family: 'Inter', size: 11 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#55556A', font: { family: 'Inter', size: 11 },
-          callback: v => 'R$ ' + (v/1000).toFixed(1) + 'k'
-        }}
-      }
+      plugins: { legend: { display: false } }
     }
   });
 }
 
-// Inicializa quando DOM estiver pronto
+
+// ===== INIT =====
 document.addEventListener('DOMContentLoaded', initDashboard);
