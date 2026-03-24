@@ -14,7 +14,7 @@ html { font-size: 16px; scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-body);
-  background: var(--bg-primary);
+  background: transparent;
   color: var(--text-primary);
   min-height: 100vh;
   transition: background var(--transition), color var(--transition);
@@ -613,6 +613,50 @@ p { line-height: 1.6; color: var(--text-secondary); }
 
 .sidebar-footer-link:hover .sidebar-footer-logo {
   opacity: 1;
+}
+
+/* ============================================================
+BACKGROUND GLOBAL COM BLUR (SUBSTITUINDO BG)
+============================================================ */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* CAMADA DE LEITURA */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ===== TEMA CLARO ===== */
+html[data-theme="light"] body::before {
+  background-image: url("../assets/imgfundo.png");
+}
+
+html[data-theme="light"] body::after {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ===== TEMA ESCURO ===== */
+html[data-theme="dark"] body::before {
+  background-image: url("../assets/imgfundo1.png");
+}
+
+html[data-theme="dark"] body::after {
+  background: rgba(0, 0, 0, 0.15);
 }
 
 /* ===== RESPONSIVE — MOBILE ===== */
