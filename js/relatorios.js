@@ -298,3 +298,157 @@ function atualizarStatusCaixa() {
     text.style.color = 'var(--crv-green)';
   }
 }
+
+// ===== EXPORTAÇÃO CSV =====
+function exportarCSV() {
+
+  const vendas = getTodasVendas();
+
+  if (!vendas.length) {
+    alert("Sem dados para exportar");
+    return;
+  }
+
+  const linhas = [
+    ["Data", "Hora", "Total", "Pagamento"]
+  ];
+
+  vendas.forEach(v => {
+    linhas.push([
+      new Date().toLocaleDateString('pt-BR'),
+      v.hora,
+      v.total.toFixed(2).replace('.', ','),
+      v.formaPagamento
+    ]);
+  });
+
+  const csv = linhas.map(l => l.join(";")).join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "relatorio.csv";
+  link.click();
+}
+
+
+// ===== EXPORTAÇÃO PDF (SIMPLES) =====
+document.getElementById('btnExportPDF')?.addEventListener('click', exportarPDF);
+
+function exportarPDF() {
+
+  const vendas = getTodasVendas();
+
+  if (!vendas.length) {
+    alert("Sem dados para exportar");
+    return;
+  }
+
+  const total = vendas.reduce((a, v) => a + v.total, 0);
+  const qtd   = vendas.length;
+  const ticket= qtd > 0 ? total / qtd : 0;
+
+  const html = `
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Relatório</title>
+
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          padding: 40px;
+          color: #000;
+        }
+
+        .logo {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+
+        .logo img {
+          height: 70px;
+        }
+
+        h1 {
+          text-align: center;
+          margin-bottom: 5px;
+        }
+
+        .data {
+          text-align: center;
+          font-size: 12px;
+          margin-bottom: 25px;
+          color: #555;
+        }
+
+        .box {
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 10px;
+        }
+
+        .label {
+          font-size: 12px;
+          color: #777;
+        }
+
+        .value {
+          font-size: 18px;
+          font-weight: bold;
+        }
+
+        .footer {
+          margin-top: 30px;
+          font-size: 11px;
+          text-align: center;
+          color: #888;
+        }
+      </style>
+    </head>
+
+    <body>
+
+      <div class="logo">
+        <img src="assets/logo1.png">
+      </div>
+
+      <h1>Relatório Financeiro</h1>
+
+      <div class="data">
+        Gerado em: ${new Date().toLocaleString('pt-BR')}
+      </div>
+
+      <div class="box">
+        <div class="label">Faturamento</div>
+        <div class="value">${fmt(total)}</div>
+      </div>
+
+      <div class="box">
+        <div class="label">Total de vendas</div>
+        <div class="value">${qtd}</div>
+      </div>
+
+      <div class="box">
+        <div class="label">Ticket médio</div>
+        <div class="value">${fmt(ticket)}</div>
+      </div>
+
+      <div class="footer">
+        CRV PDV • Sistema profissional
+      </div>
+
+    </body>
+    </html>
+  `;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+
+  win.onload = () => {
+    win.print();
+  };
+}

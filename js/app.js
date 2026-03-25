@@ -59,3 +59,23 @@ document.addEventListener('DOMContentLoaded', () => {
     greetDate.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
 });
+
+const avatar = document.querySelector('.topbar-avatar');
+const modal = document.getElementById('userModal');
+const closeBtn = document.getElementById('closeUserModal');
+
+if (avatar && modal) {
+  avatar.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+  });
+
+  closeBtn.addEventListener('click', () => {
+    modal.classList.add('hidden');
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+    }
+  });
+}
