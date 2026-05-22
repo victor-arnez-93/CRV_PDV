@@ -27,6 +27,10 @@
       <span class="nav-section-label">Principal</span>
       <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-icon"></i>Dashboard</a>
       <a href="caixa.html" class="nav-item"><i data-lucide="wallet" class="nav-icon"></i>Caixa / PDV</a>
+      <a href="comandas.html" class="nav-item">
+        <i data-lucide="ticket" class="nav-icon"></i>
+        Comandas
+      </a>
       <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart" class="nav-icon"></i>Vendas</a>
       <span class="nav-section-label">Cadastros</span>
       <a href="produtos.html" class="nav-item"><i data-lucide="package" class="nav-icon"></i>Produtos</a>
@@ -108,28 +112,45 @@
       </div>
 
       <!-- CARDS RESUMO -->
-      <div class="relatorio-cards">
-        <div class="card relatorio-card">
-          <div class="card-title"><i data-lucide="trending-up" width="13" height="13"></i> Faturamento</div>
-          <div class="card-value" id="relFaturamento">R$ 0,00</div>
-          <div class="card-delta" id="relFaturamentoDelta">—</div>
-        </div>
-        <div class="card relatorio-card">
-          <div class="card-title"><i data-lucide="shopping-bag" width="13" height="13"></i> Vendas</div>
-          <div class="card-value" id="relVendas">0</div>
-          <div class="card-delta">transações</div>
-        </div>
-        <div class="card relatorio-card">
-          <div class="card-title"><i data-lucide="receipt" width="13" height="13"></i> Ticket Médio</div>
-          <div class="card-value" id="relTicket">R$ 0,00</div>
-          <div class="card-delta">por venda</div>
-        </div>
-        <div class="card relatorio-card">
-          <div class="card-title"><i data-lucide="percent" width="13" height="13"></i> Descontos</div>
-          <div class="card-value" id="relDescontos">R$ 0,00</div>
-          <div class="card-delta">total concedido</div>
-        </div>
-      </div>
+<div class="relatorio-cards">
+
+  <div class="card relatorio-card">
+    <div class="card-title">
+      <i data-lucide="trending-up" width="13" height="13"></i>
+      Faturamento
+    </div>
+    <div class="card-value" id="relFaturamento">R$ 0,00</div>
+    <div class="card-delta" id="relFaturamentoDelta">—</div>
+  </div>
+
+  <div class="card relatorio-card">
+    <div class="card-title">
+      <i data-lucide="coins" width="13" height="13"></i>
+      Lucro Bruto
+    </div>
+    <div class="card-value lucro" id="relLucro">R$ 0,00</div>
+    <div class="card-delta" id="relMargem">Margem: 0%</div>
+  </div>
+
+  <div class="card relatorio-card">
+    <div class="card-title">
+      <i data-lucide="shopping-bag" width="13" height="13"></i>
+      Vendas
+    </div>
+    <div class="card-value" id="relVendas">0</div>
+    <div class="card-delta">transações</div>
+  </div>
+
+  <div class="card relatorio-card">
+    <div class="card-title">
+      <i data-lucide="receipt" width="13" height="13"></i>
+      Ticket Médio
+    </div>
+    <div class="card-value" id="relTicket">R$ 0,00</div>
+    <div class="card-delta">por venda</div>
+  </div>
+
+</div>
 
       <!-- GRÁFICOS -->
       <div class="relatorio-graficos">
@@ -158,14 +179,26 @@
 
       </div>
 
-      <!-- TOP PRODUTOS -->
-      <div class="card relatorio-top">
-        <div class="grafico-header" style="margin-bottom:16px;">
-          <h3>Produtos mais vendidos</h3>
-          <span class="badge badge-warning" id="badgeTopQtd">0 itens</span>
-        </div>
-        <div id="topProdutos"></div>
-      </div>
+<!-- TOP PRODUTOS -->
+<div class="relatorio-top-grid">
+
+  <div class="card relatorio-top">
+    <div class="grafico-header" style="margin-bottom:16px;">
+      <h3>Produtos mais vendidos</h3>
+      <span class="badge badge-warning" id="badgeTopQtd">0 itens</span>
+    </div>
+    <div id="topProdutos"></div>
+  </div>
+
+  <div class="card relatorio-top">
+    <div class="grafico-header" style="margin-bottom:16px;">
+      <h3>Produtos mais lucrativos</h3>
+      <span class="badge badge-success" id="badgeTopLucro">0 itens</span>
+    </div>
+    <div id="topProdutosLucro"></div>
+  </div>
+
+</div>
 
       <!-- HISTÓRICO DE CAIXAS -->
       <div class="card relatorio-caixas">
@@ -242,9 +275,6 @@
 
 <script src="js/app.js"></script>
 <script src="js/relatorios.js"></script>
-
-</body>
-</html>
 
 </body>
 </html>

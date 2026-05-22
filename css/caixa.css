@@ -97,6 +97,124 @@
   align-items: start;
 }
 
+/* ===== MODO VENDA / COMANDA ===== */
+
+.pdv-mode-switch{
+  display:flex;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.pdv-mode-btn{
+  all:unset;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  padding:12px 18px;
+
+  border-radius:var(--radius-pill);
+
+  border:1px solid var(--border);
+
+  background:var(--bg-card);
+
+  cursor:pointer;
+
+  transition:all var(--transition);
+
+  font-size:0.82rem;
+  font-weight:600;
+
+  color:var(--text-secondary);
+}
+
+.pdv-mode-btn:hover{
+  border-color:var(--crv-orange);
+  color:var(--text-primary);
+}
+
+.pdv-mode-btn.active{
+  border-color:var(--crv-orange);
+  background:rgba(249,137,72,0.08);
+  color:var(--crv-orange);
+  box-shadow:var(--glow-orange);
+}
+
+/* ===== COMANDA CARD ===== */
+
+.comanda-card{
+  padding:16px;
+  margin-bottom:14px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.comanda-card-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.comanda-label{
+  display:block;
+
+  font-size:0.7rem;
+
+  letter-spacing:0.08em;
+
+  text-transform:uppercase;
+
+  color:var(--text-muted);
+
+  margin-bottom:4px;
+}
+
+.comanda-codigo{
+  font-family:var(--font-display);
+  font-size:1.2rem;
+  color:var(--text-primary);
+}
+
+.comanda-status{
+  padding:6px 10px;
+
+  border-radius:999px;
+
+  background:rgba(84,205,22,0.12);
+
+  border:1px solid rgba(84,205,22,0.25);
+
+  color:#54CD16;
+
+  font-size:0.72rem;
+
+  font-weight:700;
+
+  text-transform:uppercase;
+
+  letter-spacing:0.06em;
+}
+
+.comanda-total{
+  font-size:0.85rem;
+  color:var(--text-secondary);
+}
+
+.comanda-total strong{
+  color:var(--crv-green);
+  font-family:var(--font-display);
+}
+
+.comanda-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
 /* ===== BUSCA ===== */
 .pdv-search-wrap {
   position: relative;

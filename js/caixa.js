@@ -12,6 +12,8 @@ let vendas = [];
 let produtos = [];
 let produtosRapidos = [];
 let metodoPagamento = "dinheiro";
+let modoPDV = "venda";
+let comandaAtiva = null;
 let caixaInicializado = false;
 let vendaEmProcessamento = false;
 
@@ -164,6 +166,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupBusca();
   setupAtalhos();
   setupInputs();
+  setupModoPDV();
 
   caixaInicializado = true;
 
@@ -563,13 +566,32 @@ function renderProdutosRapidos() {
 // BUSCA
 // ======================================================
 function setupBusca() {
+
   const input = document.getElementById("inputBusca");
 
   if (!input) return;
 
+  // ====================================================
+  // BUSCA VISUAL
+  // ====================================================
+
   input.addEventListener("input", () => {
-    const termo = input.value.toLowerCase().trim();
-    const sugestoes = document.getElementById("pdvSuggestions");
+
+    // Em modo comanda sem ativa:
+    // não mostra sugestão ainda
+    if (
+      modoPDV === "comanda" &&
+      !comandaAtiva
+    ) {
+      return;
+    }
+
+    const termo = input.value
+      .toLowerCase()
+      .trim();
+
+    const sugestoes =
+      document.getElementById("pdvSuggestions");
 
     if (!sugestoes) return;
 
@@ -580,9 +602,18 @@ function setupBusca() {
     }
 
     const encontrados = produtos.filter(produto => {
-      const nome = String(produto.nome || "").toLowerCase();
-      const codigo = String(produto.codigo || "").toLowerCase();
-      const codigoBarras = String(produto.codigo_barras || "").toLowerCase();
+
+      const nome =
+        String(produto.nome || "")
+        .toLowerCase();
+
+      const codigo =
+        String(produto.codigo || "")
+        .toLowerCase();
+
+      const codigoBarras =
+        String(produto.codigo_barras || "")
+        .toLowerCase();
 
       return (
         nome.includes(termo) ||
@@ -594,38 +625,88 @@ function setupBusca() {
     renderSugestoes(encontrados);
   });
 
-  input.addEventListener("keydown", event => {
+  // ====================================================
+  // ENTER / LEITOR USB
+  // ====================================================
+
+  input.addEventListener("keydown", async event => {
+
     if (event.key !== "Enter") return;
 
-    const termo = input.value.toLowerCase().trim();
+    event.preventDefault();
+
+    const termo = input.value
+      .trim();
 
     if (!termo) return;
 
-    const produtoExato = produtos.find(produto => {
-      const codigo = String(produto.codigo || "").toLowerCase();
-      const codigoBarras = String(produto.codigo_barras || "").toLowerCase();
-      const nome = String(produto.nome || "").toLowerCase();
+    // =========================================
+    // MODO VENDA
+    // =========================================
 
-      return (
-        codigo === termo ||
-        codigoBarras === termo ||
-        nome === termo
-      );
-    });
+    if (modoPDV === "venda") {
 
-    if (produtoExato) {
-      adicionarCarrinho(produtoExato);
+      await processarLeituraProduto(termo);
 
-      input.value = "";
-
-      const sugestoes = document.getElementById("pdvSuggestions");
-
-      if (sugestoes) {
-        sugestoes.innerHTML = "";
-        sugestoes.classList.remove("open");
-      }
+      return;
     }
+
+    // =========================================
+    // MODO COMANDA SEM ATIVA
+    // =========================================
+
+    if (
+      modoPDV === "comanda" &&
+      !comandaAtiva
+    ) {
+
+      await processarLeituraComanda(termo);
+
+      return;
+    }
+
+    // =========================================
+    // MODO COMANDA COM ATIVA
+    // =========================================
+
+    if (
+      modoPDV === "comanda" &&
+      comandaAtiva
+    ) {
+
+      await processarLeituraProduto(termo);
+
+      return;
+    }
+
   });
+
+  // =========================================
+  // FOCO AUTOMÁTICO
+  // =========================================
+
+  setInterval(() => {
+
+    const modalAberto =
+      document.querySelector(".modal-overlay[style*='flex']");
+
+    if (modalAberto) return;
+
+    const ativo =
+      document.activeElement;
+
+    const digitandoInput =
+      ativo &&
+      (
+        ativo.tagName === "INPUT" ||
+        ativo.tagName === "TEXTAREA"
+      );
+
+    if (!digitandoInput) {
+      input.focus();
+    }
+
+  }, 1200);
 }
 
 function renderSugestoes(lista) {
@@ -717,6 +798,7 @@ function adicionarCarrinho(produto) {
       id: produto.id,
       nome: produto.nome,
       preco: preco,
+      preco_custo: Number(produto.preco_custo || 0),
       codigo: produto.codigo || null,
       codigo_barras: produto.codigo_barras || null,
       quantidade: 1,
@@ -809,9 +891,11 @@ function renderCarrinho() {
         ${item.nome}
       </div>
 
-      <div class="cart-item-qty">
-        x${item.quantidade}
-      </div>
+    <div class="cart-item-qty">
+      <button class="qty-btn qty-minus" type="button">−</button>
+      <span class="qty-num">${item.quantidade}</span>
+      <button class="qty-btn qty-plus" type="button">+</button>
+    </div>
 
       <div class="cart-item-price">
         ${fmt(item.preco * item.quantidade)}
@@ -824,10 +908,24 @@ function renderCarrinho() {
 
     const remover = div.querySelector(".cart-item-remove");
 
+    const btnMinus = div.querySelector(".qty-minus");
+const btnPlus = div.querySelector(".qty-plus");
+
+if (btnMinus) {
+  btnMinus.onclick = async () => {
+    await alterarQuantidadeCarrinho(index, -1);
+  };
+}
+
+if (btnPlus) {
+  btnPlus.onclick = async () => {
+    await alterarQuantidadeCarrinho(index, 1);
+  };
+}
+
     if (remover) {
-      remover.onclick = () => {
-        carrinho.splice(index, 1);
-        renderCarrinho();
+      remover.onclick = async () => {
+        await removerItemCarrinho(index);
       };
     }
 
@@ -838,6 +936,11 @@ function renderCarrinho() {
 }
 
 function limparCarrinho() {
+  if (modoPDV === "comanda" && comandaAtiva) {
+    alert("Para sair da comanda, use o botão Limpar do card da comanda ativa.");
+    return;
+  }
+
   if (!carrinho.length) return;
 
   const confirmar = confirm("Deseja limpar o carrinho atual?");
@@ -1116,13 +1219,27 @@ async function finalizarVenda() {
     vendaCriadaId = vendaData.id;
 
     const itensPayload = carrinho.map(item => {
+
+      const precoVenda = Number(item.preco || 0);
+      const precoCusto = Number(item.preco_custo || 0);
+      const quantidade = Number(item.quantidade || 0);
+
+      const lucroUnitario =
+        precoVenda - precoCusto;
+
+      const lucroTotal =
+        lucroUnitario * quantidade;
+
       return {
         empresa_id: empresaId,
         venda_id: vendaData.id,
         produto_id: item.produto_manual ? null : item.id,
         nome: item.nome,
-        preco: item.preco,
-        quantidade: item.quantidade
+        preco: precoVenda,
+        preco_custo: precoCusto,
+        lucro_unitario: lucroUnitario,
+        lucro_total: lucroTotal,
+        quantidade: quantidade
       };
     });
 
@@ -1376,4 +1493,883 @@ function setupAtalhos() {
       }
     }
   });
+}
+
+// ======================================================
+// MODO PDV
+// ======================================================
+
+function setupModoPDV() {
+
+  const btnVenda = document.getElementById("btnModoVenda");
+  const btnComanda = document.getElementById("btnModoComanda");
+
+  if (btnVenda) {
+    btnVenda.onclick = () => alterarModoPDV("venda");
+  }
+
+  if (btnComanda) {
+    btnComanda.onclick = () => alterarModoPDV("comanda");
+  }
+
+  atualizarInterfaceModoPDV();
+}
+
+function alterarModoPDV(modo) {
+
+  modoPDV = modo;
+
+  const btnVenda = document.getElementById("btnModoVenda");
+  const btnComanda = document.getElementById("btnModoComanda");
+
+  btnVenda?.classList.remove("active");
+  btnComanda?.classList.remove("active");
+
+  if (modo === "venda") {
+    btnVenda?.classList.add("active");
+  } else {
+    btnComanda?.classList.add("active");
+  }
+
+  atualizarInterfaceModoPDV();
+}
+
+function atualizarInterfaceModoPDV() {
+
+  const inputBusca = document.getElementById("inputBusca");
+  const comandaCard = document.getElementById("comandaCard");
+  const btnFinalizar = document.getElementById("btnFinalizar");
+
+  if (!inputBusca) return;
+
+  // =========================
+  // VENDA RÁPIDA
+  // =========================
+
+  if (modoPDV === "venda") {
+      if (btnFinalizar) {
+      btnFinalizar.onclick = finalizarVenda;
+
+      const span = btnFinalizar.querySelector("span");
+
+      if (span) {
+        span.textContent = "Finalizar Venda";
+      }
+    }
+
+    if (comandaCard) {
+      comandaCard.style.display = "none";
+    }
+
+    inputBusca.placeholder =
+      "Buscar produto ou código de barras...";
+
+    inputBusca.focus();
+
+    return;
+  }
+
+  // =========================
+  // COMANDA SEM ATIVA
+  // =========================
+
+  if (!comandaAtiva) {
+      if (btnFinalizar) {
+      btnFinalizar.onclick = null;
+
+      const span = btnFinalizar.querySelector("span");
+
+      if (span) {
+        span.textContent = "Abra uma comanda";
+      }
+    }
+
+    if (comandaCard) {
+      comandaCard.style.display = "none";
+    }
+
+    inputBusca.placeholder =
+      "Ler ou digitar código da comanda...";
+
+    inputBusca.focus();
+
+    return;
+  }
+
+  // =========================
+  // COMANDA ATIVA
+  // =========================
+
+  if (comandaCard) {
+    comandaCard.style.display = "flex";
+  }
+
+  const codigo = document.getElementById("comandaCodigo");
+  const total = document.getElementById("comandaTotal");
+  const status = document.getElementById("comandaStatus");
+
+  if (codigo) {
+    codigo.textContent = comandaAtiva.codigo || "—";
+  }
+
+  if (status) {
+    status.textContent = comandaAtiva.status || "aberta";
+  }
+
+  if (total) {
+    total.textContent = fmt(comandaAtiva.total || 0);
+  }
+
+    if (btnFinalizar) {
+    btnFinalizar.onclick = fecharComanda;
+
+    const span = btnFinalizar.querySelector("span");
+
+    if (span) {
+      span.textContent = "Fechar Comanda";
+    }
+  }
+
+  inputBusca.placeholder =
+    "Ler produto para adicionar na comanda...";
+
+  inputBusca.focus();
+}
+
+// ======================================================
+// LEITOR PRODUTO
+// ======================================================
+async function processarLeituraProduto(codigoLido) {
+
+  const termo = String(codigoLido || "")
+    .trim()
+    .toLowerCase();
+
+  const input =
+    document.getElementById("inputBusca");
+
+  const sugestoes =
+    document.getElementById("pdvSuggestions");
+
+  try {
+
+    const produto = produtos.find(produto => {
+
+      const codigo =
+        String(produto.codigo || "")
+        .trim()
+        .toLowerCase();
+
+      const codigoBarras =
+        String(produto.codigo_barras || "")
+        .trim()
+        .toLowerCase();
+
+      const nome =
+        String(produto.nome || "")
+        .trim()
+        .toLowerCase();
+
+      return (
+        codigoBarras === termo ||
+        codigo === termo ||
+        nome === termo
+      );
+    });
+
+    if (!produto) {
+
+      alert(
+        "Produto não encontrado."
+      );
+
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+
+      return;
+    }
+
+    if (produto.ativo !== true) {
+
+      alert(
+        `Produto inativo: ${produto.nome}`
+      );
+
+      return;
+    }
+
+    const estoque =
+      Number(produto.estoque || 0);
+
+    if (estoque <= 0) {
+
+      alert(
+        `Produto sem estoque: ${produto.nome}`
+      );
+
+      return;
+    }
+
+    const preco =
+      Number(produto.preco || 0);
+
+    if (preco <= 0) {
+
+      alert(
+        `Produto sem preço válido: ${produto.nome}`
+      );
+
+      return;
+    }
+
+    if (modoPDV === "comanda" && comandaAtiva) {
+  await adicionarProdutoNaComanda(produto);
+} else {
+  adicionarCarrinho(produto);
+}
+
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+
+    if (sugestoes) {
+      sugestoes.innerHTML = "";
+      sugestoes.classList.remove("open");
+    }
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert(
+      "Erro ao processar leitura."
+    );
+  }
+}
+
+// ======================================================
+// LEITOR COMANDA
+// ======================================================
+
+async function processarLeituraComanda(codigoLido) {
+
+  const codigo =
+    String(codigoLido || "")
+    .trim();
+
+  const input =
+    document.getElementById("inputBusca");
+
+  try {
+
+    const { data, error } = await sb
+      .from("comandas")
+      .select("*")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("codigo", codigo)
+      .limit(1);
+
+    if (error) {
+      throw error;
+    }
+
+    let comanda =
+      data?.[0] || null;
+
+    // =========================================
+    // NÃO EXISTE
+    // =========================================
+
+    if (!comanda) {
+
+      const criar =
+        confirm(
+          `Comanda ${codigo} não existe.\n\nDeseja criar agora?`
+        );
+
+      if (!criar) {
+
+        if (input) {
+          input.value = "";
+          input.focus();
+        }
+
+        return;
+      }
+
+      const { data: novaComanda, error: erroNova } =
+        await sb
+          .from("comandas")
+          .insert([
+            {
+              empresa_id: obterEmpresaId(),
+              codigo: codigo,
+              status: "aberta",
+              data_abertura: new Date().toISOString(),
+              total: 0
+            }
+          ])
+          .select("*")
+          .single();
+
+      if (erroNova) {
+        throw erroNova;
+      }
+
+      comanda = novaComanda;
+    }
+
+    // =========================================
+    // LIVRE
+    // =========================================
+
+    else if (
+      comanda.status === "livre"
+    ) {
+
+      const { data: aberta, error: erroAbrir } =
+        await sb
+          .from("comandas")
+          .update({
+            status: "aberta",
+            data_abertura: new Date().toISOString()
+          })
+          .eq("id", comanda.id)
+          .eq("empresa_id", obterEmpresaId())
+          .select("*")
+          .single();
+
+      if (erroAbrir) {
+        throw erroAbrir;
+      }
+
+      comanda = aberta;
+    }
+
+    // =========================================
+    // FECHADA
+    // =========================================
+
+    else if (
+      comanda.status === "fechada"
+    ) {
+
+      alert(
+        `Comanda ${codigo} já está fechada.`
+      );
+
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+
+      return;
+    }
+
+    // =========================================
+    // ATIVA
+    // =========================================
+
+    comandaAtiva = comanda;
+
+    await carregarItensComanda();
+
+    atualizarInterfaceModoPDV();
+
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert(
+      "Erro ao carregar comanda."
+    );
+  }
+}
+
+// ======================================================
+// ITENS DA COMANDA
+// ======================================================
+
+async function adicionarProdutoNaComanda(produto) {
+
+  if (!comandaAtiva?.id) {
+    alert("Nenhuma comanda ativa.");
+    return;
+  }
+
+  const preco = normalizarNumero(produto.preco);
+  const estoque = Number(produto.estoque || 0);
+
+  if (preco <= 0) {
+    alert(`Produto sem preço válido: ${produto.nome}`);
+    return;
+  }
+
+  if (estoque <= 0) {
+    alert(`Produto sem estoque: ${produto.nome}`);
+    return;
+  }
+
+  const empresaId = obterEmpresaId();
+
+  const { data: itemExistente, error: erroBusca } = await sb
+    .from("comanda_itens")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("comanda_id", comandaAtiva.id)
+    .eq("produto_id", produto.id)
+    .limit(1);
+
+  if (erroBusca) {
+    alert("Erro ao verificar item da comanda.");
+    console.error(erroBusca);
+    return;
+  }
+
+  const existente = itemExistente?.[0] || null;
+
+  if (existente) {
+    const novaQtd = Number(existente.quantidade || 0) + 1;
+
+    if (novaQtd > estoque) {
+      alert(`Estoque insuficiente para ${produto.nome}. Disponível: ${estoque}`);
+      return;
+    }
+
+    const novoTotal = novaQtd * preco;
+
+    const { error: erroUpdate } = await sb
+      .from("comanda_itens")
+      .update({
+        quantidade: novaQtd,
+        preco: preco,
+        total: novoTotal
+      })
+      .eq("id", existente.id)
+      .eq("empresa_id", empresaId);
+
+    if (erroUpdate) {
+      alert("Erro ao atualizar item da comanda.");
+      console.error(erroUpdate);
+      return;
+    }
+  } else {
+    const { error: erroInsert } = await sb
+      .from("comanda_itens")
+      .insert([
+        {
+          empresa_id: empresaId,
+          comanda_id: comandaAtiva.id,
+          produto_id: produto.id,
+          nome: produto.nome,
+          preco: preco,
+          preco_custo: Number(produto.preco_custo || 0),
+          quantidade: 1,
+          total: preco
+        }
+      ]);
+
+    if (erroInsert) {
+      alert("Erro ao adicionar item na comanda.");
+      console.error(erroInsert);
+      return;
+    }
+  }
+
+  await carregarItensComanda();
+}
+
+async function carregarItensComanda() {
+
+  if (!comandaAtiva?.id) return;
+
+  const { data, error } = await sb
+    .from("comanda_itens")
+    .select("*")
+    .eq("empresa_id", obterEmpresaId())
+    .eq("comanda_id", comandaAtiva.id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    alert("Erro ao carregar itens da comanda.");
+    console.error(error);
+    return;
+  }
+
+  carrinho = (data || []).map(item => {
+    return {
+      id: item.produto_id || item.id,
+      comanda_item_id: item.id,
+      nome: item.nome,
+      preco: Number(item.preco || 0),
+      preco_custo: Number(item.preco_custo || 0),
+      quantidade: Number(item.quantidade || 0),
+      produto_manual: item.produto_id ? false : true
+    };
+  });
+
+  const total = carrinho.reduce((acc, item) => {
+    return acc + Number(item.preco || 0) * Number(item.quantidade || 0);
+  }, 0);
+
+  comandaAtiva.total = total;
+
+  await sb
+    .from("comandas")
+    .update({
+      total: total
+    })
+    .eq("id", comandaAtiva.id)
+    .eq("empresa_id", obterEmpresaId());
+
+  renderCarrinho();
+  atualizarInterfaceModoPDV();
+}
+
+// ======================================================
+// LIMPAR COMANDA ATIVA
+// ======================================================
+
+function limparComandaAtiva() {
+  comandaAtiva = null;
+  carrinho = [];
+
+  renderCarrinho();
+  atualizarInterfaceModoPDV();
+
+  const input = document.getElementById("inputBusca");
+
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
+}
+
+document.addEventListener("click", event => {
+  const btnLimpar = event.target.closest("#btnCancelarComanda");
+
+  if (btnLimpar) {
+    limparComandaAtiva();
+  }
+});
+
+// ======================================================
+// FECHAR COMANDA
+// ======================================================
+
+document.addEventListener("click", event => {
+  const btnFechar = event.target.closest("#btnFecharComanda");
+
+  if (btnFechar) {
+    fecharComanda();
+  }
+});
+
+async function fecharComanda() {
+
+  if (vendaEmProcessamento) return;
+
+  if (!sistemaOnline()) {
+    alert("Sistema sem conexão com Supabase.");
+    return;
+  }
+
+  if (!caixa || caixa.status !== "aberto") {
+    alert("Abra o caixa antes de fechar uma comanda.");
+    return;
+  }
+
+  if (!comandaAtiva?.id) {
+    alert("Nenhuma comanda ativa.");
+    return;
+  }
+
+  await carregarItensComanda();
+
+  if (!carrinho.length) {
+    alert("Esta comanda não possui itens.");
+    return;
+  }
+
+  const confirmar = confirm(
+    `Fechar comanda ${comandaAtiva.codigo}?\n\nTotal: ${fmt(calcularTotalCarrinho())}`
+  );
+
+  if (!confirmar) return;
+
+  const subtotal = calcularSubtotalCarrinho();
+  const desconto = calcularDesconto();
+  const total = calcularTotalCarrinho();
+
+  if (desconto > subtotal) {
+    alert("O desconto não pode ser maior que o subtotal.");
+    return;
+  }
+
+  if (total <= 0) {
+    alert("Total da comanda inválido.");
+    return;
+  }
+
+  const valorRecebido = normalizarNumero(
+    document.getElementById("valorRecebido")?.value || 0
+  );
+
+  if (
+    metodoPagamento === "dinheiro" &&
+    valorRecebido > 0 &&
+    valorRecebido < total
+  ) {
+    alert("Valor recebido menor que o total da comanda.");
+    return;
+  }
+
+  const troco =
+    metodoPagamento === "dinheiro"
+      ? Math.max(0, valorRecebido - total)
+      : 0;
+
+  let vendaCriadaId = null;
+
+  try {
+    vendaEmProcessamento = true;
+    bloquearBotaoFinalizar(true);
+
+    await validarCarrinhoComEstoque();
+
+    const empresaId = obterEmpresaId();
+
+    const vendaPayload = {
+      empresa_id: empresaId,
+      caixa_id: caixa.id,
+      cliente_id: null,
+      subtotal: subtotal,
+      desconto: desconto,
+      total: total,
+      forma_pagamento: metodoPagamento,
+      troco: troco,
+      data: new Date().toISOString()
+    };
+
+    const { data: vendaData, error: vendaError } = await sb
+      .from("vendas")
+      .insert([vendaPayload])
+      .select("*")
+      .single();
+
+    if (vendaError) throw vendaError;
+
+    vendaCriadaId = vendaData.id;
+
+    const itensPayload = carrinho.map(item => {
+
+      const precoVenda = Number(item.preco || 0);
+      const precoCusto = Number(item.preco_custo || 0);
+      const quantidade = Number(item.quantidade || 0);
+
+      const lucroUnitario =
+        precoVenda - precoCusto;
+
+      const lucroTotal =
+        lucroUnitario * quantidade;
+
+      return {
+        empresa_id: empresaId,
+        venda_id: vendaData.id,
+        produto_id: item.produto_manual ? null : item.id,
+        nome: item.nome,
+        preco: precoVenda,
+        preco_custo: precoCusto,
+        lucro_unitario: lucroUnitario,
+        lucro_total: lucroTotal,
+        quantidade: quantidade
+      };
+    });
+
+    const { error: itensError } = await sb
+      .from("vendas_itens")
+      .insert(itensPayload);
+
+    if (itensError) throw itensError;
+
+    await baixarEstoqueProdutos();
+
+    const { error: erroComanda } = await sb
+      .from("comandas")
+      .update({
+        status: "fechada",
+        data_fechamento: new Date().toISOString(),
+        total: total
+      })
+      .eq("id", comandaAtiva.id)
+      .eq("empresa_id", empresaId);
+
+    if (erroComanda) throw erroComanda;
+
+    vendas.unshift(vendaData);
+
+    exibirModalSucesso(total, troco);
+
+    comandaAtiva = null;
+    carrinho = [];
+
+    const descontoInput = document.getElementById("inputDesconto");
+    const valorRecebidoInput = document.getElementById("valorRecebido");
+
+    if (descontoInput) descontoInput.value = "";
+    if (valorRecebidoInput) valorRecebidoInput.value = "";
+
+    await carregarProdutos();
+
+    renderProdutosRapidos();
+    renderCarrinho();
+    atualizarInfobar();
+    renderHistorico();
+    atualizarInterfaceModoPDV();
+
+    logVenda("Comanda fechada e venda salva no Supabase.", "success");
+
+  } catch (err) {
+
+    if (vendaCriadaId) {
+      try {
+        await sb
+          .from("vendas_itens")
+          .delete()
+          .eq("venda_id", vendaCriadaId)
+          .eq("empresa_id", obterEmpresaId());
+
+        await sb
+          .from("vendas")
+          .delete()
+          .eq("id", vendaCriadaId)
+          .eq("empresa_id", obterEmpresaId());
+      } catch (rollbackErr) {
+        logVenda("Falha ao desfazer venda incompleta: " + rollbackErr.message, "error");
+      }
+    }
+
+    logVenda("Erro ao fechar comanda: " + err.message, "error");
+    alert("Erro ao fechar comanda: " + err.message);
+
+  } finally {
+    vendaEmProcessamento = false;
+    bloquearBotaoFinalizar(false);
+  }
+}
+
+// ======================================================
+// REMOVER ITEM DO CARRINHO / COMANDA
+// ======================================================
+
+async function removerItemCarrinho(index) {
+
+  const item = carrinho[index];
+
+  if (!item) return;
+
+  if (modoPDV === "comanda" && comandaAtiva) {
+
+    if (!item.comanda_item_id) {
+      alert("Item da comanda sem identificação.");
+      return;
+    }
+
+    const confirmar = confirm(`Remover "${item.nome}" da comanda?`);
+
+    if (!confirmar) return;
+
+    const { error } = await sb
+      .from("comanda_itens")
+      .delete()
+      .eq("id", item.comanda_item_id)
+      .eq("empresa_id", obterEmpresaId());
+
+    if (error) {
+      alert("Erro ao remover item da comanda.");
+      console.error(error);
+      return;
+    }
+
+    await carregarItensComanda();
+
+    return;
+  }
+
+  carrinho.splice(index, 1);
+  renderCarrinho();
+}
+
+// ======================================================
+// ALTERAR QUANTIDADE DO CARRINHO / COMANDA
+// ======================================================
+
+async function alterarQuantidadeCarrinho(index, delta) {
+
+  const item = carrinho[index];
+
+  if (!item) return;
+
+  const novaQuantidade =
+    Number(item.quantidade || 0) + Number(delta || 0);
+
+  if (novaQuantidade <= 0) {
+    await removerItemCarrinho(index);
+    return;
+  }
+
+  if (!item.produto_manual) {
+
+    const produto = produtos.find(produto => {
+      return produto.id === item.id;
+    });
+
+    const estoqueDisponivel = Number(produto?.estoque || 0);
+
+    if (novaQuantidade > estoqueDisponivel) {
+      alert(`Estoque insuficiente para ${item.nome}. Disponível: ${estoqueDisponivel}`);
+      return;
+    }
+  }
+
+  if (modoPDV === "comanda" && comandaAtiva) {
+
+    if (!item.comanda_item_id) {
+      alert("Item da comanda sem identificação.");
+      return;
+    }
+
+    const novoTotal =
+      Number(item.preco || 0) * novaQuantidade;
+
+    const { error } = await sb
+      .from("comanda_itens")
+      .update({
+        quantidade: novaQuantidade,
+        total: novoTotal
+      })
+      .eq("id", item.comanda_item_id)
+      .eq("empresa_id", obterEmpresaId());
+
+    if (error) {
+      alert("Erro ao atualizar quantidade da comanda.");
+      console.error(error);
+      return;
+    }
+
+    await carregarItensComanda();
+
+    return;
+  }
+
+  item.quantidade = novaQuantidade;
+  renderCarrinho();
 }

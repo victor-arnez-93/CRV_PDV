@@ -329,6 +329,40 @@
   color: var(--crv-orange);
 }
 
+/* ===== CUSTO / LUCRO ===== */
+
+.produto-custo-info {
+  margin-top: -4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.produto-margem-preview {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.produto-margem-preview.lucro-positivo {
+  color: var(--crv-green);
+  border-color: rgba(84, 205, 22, 0.28);
+  background: rgba(84, 205, 22, 0.08);
+}
+
+.produto-margem-preview.lucro-negativo {
+  color: #FF5050;
+  border-color: rgba(255, 80, 80, 0.28);
+  background: rgba(255, 80, 80, 0.08);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .produtos-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }

@@ -26,6 +26,10 @@
       <span class="nav-section-label">Principal</span>
       <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-icon"></i>Dashboard</a>
       <a href="caixa.html" class="nav-item active"><i data-lucide="wallet" class="nav-icon"></i>Caixa / PDV</a>
+      <a href="comandas.html" class="nav-item">
+        <i data-lucide="ticket" class="nav-icon"></i>
+        Comandas
+      </a>
       <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart" class="nav-icon"></i>Vendas</a>
       <span class="nav-section-label">Cadastros</span>
       <a href="produtos.html" class="nav-item"><i data-lucide="package" class="nav-icon"></i>Produtos</a>
@@ -135,8 +139,96 @@
           <!-- COLUNA ESQUERDA: busca + produtos rápidos -->
           <div class="pdv-left">
 
-            <!-- Busca / código de barras -->
-            <div class="pdv-search-wrap">
+<!-- ========================================= -->
+<!-- MODO VENDA / COMANDA -->
+<!-- ========================================= -->
+
+<div class="pdv-mode-switch">
+
+  <button
+    class="pdv-mode-btn active"
+    id="btnModoVenda"
+    data-mode="venda"
+    type="button"
+  >
+    <i data-lucide="shopping-cart" width="16" height="16"></i>
+    <span>Venda rápida</span>
+  </button>
+
+  <button
+    class="pdv-mode-btn"
+    id="btnModoComanda"
+    data-mode="comanda"
+    type="button"
+  >
+    <i data-lucide="ticket" width="16" height="16"></i>
+    <span>Comanda</span>
+  </button>
+
+</div>
+
+<!-- ========================================= -->
+<!-- CARD COMANDA ATIVA -->
+<!-- ========================================= -->
+
+<div
+  class="comanda-card card"
+  id="comandaCard"
+  style="display:none;"
+>
+
+  <div class="comanda-card-top">
+    <div>
+      <span class="comanda-label">
+        Comanda ativa
+      </span>
+
+      <strong class="comanda-codigo" id="comandaCodigo">
+        —
+      </strong>
+    </div>
+
+    <span class="comanda-status" id="comandaStatus">
+      aberta
+    </span>
+  </div>
+
+  <div class="comanda-total">
+    Total atual:
+    <strong id="comandaTotal">
+      R$ 0,00
+    </strong>
+  </div>
+
+  <div class="comanda-actions">
+
+    <button
+      class="btn-secondary"
+      type="button"
+      id="btnFecharComanda"
+    >
+      <i data-lucide="check-circle" width="15" height="15"></i>
+      <span>Fechar comanda</span>
+    </button>
+
+    <button
+      class="btn-ghost"
+      type="button"
+      id="btnCancelarComanda"
+    >
+      <i data-lucide="x" width="15" height="15"></i>
+      <span>Limpar</span>
+    </button>
+
+  </div>
+
+</div>
+
+<!-- ========================================= -->
+<!-- Busca / código de barras -->
+<!-- ========================================= -->
+
+<div class="pdv-search-wrap">
               <i data-lucide="scan-line" class="pdv-search-icon" width="18" height="18"></i>
               <input
                 class="input pdv-search"

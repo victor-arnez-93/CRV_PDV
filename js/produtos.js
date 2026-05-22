@@ -53,13 +53,65 @@ function sistemaOnline() {
 }
 
 function normalizarPreco(valor) {
-  const numero = Number(valor);
+  let texto = String(valor || "")
+    .trim()
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const numero = Number(texto);
 
   if (Number.isNaN(numero) || numero < 0) {
     return 0;
   }
 
-  return numero;
+  return Number(numero.toFixed(2));
+}
+
+function formatarMoedaInput(valor) {
+  let somenteNumeros = String(valor || "").replace(/\D/g, "");
+
+  if (!somenteNumeros) {
+    return "";
+  }
+
+  while (somenteNumeros.length < 3) {
+    somenteNumeros = "0" + somenteNumeros;
+  }
+
+  const centavos = somenteNumeros.slice(-2);
+  const reais = somenteNumeros.slice(0, -2);
+
+  const reaisFormatado = Number(reais).toLocaleString("pt-BR");
+
+  return `${reaisFormatado},${centavos}`;
+}
+
+function aplicarMascaraMoedaInput(input) {
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    input.value = formatarMoedaInput(input.value);
+    atualizarPreviewMargemProduto();
+  });
+
+  input.addEventListener("blur", () => {
+    input.value = formatarMoedaInput(input.value);
+    atualizarPreviewMargemProduto();
+  });
+}
+
+function valorParaInputMoeda(valor) {
+  const numero = Number(valor || 0);
+
+  if (Number.isNaN(numero) || numero <= 0) {
+    return "";
+  }
+
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 function normalizarEstoque(valor) {
@@ -93,6 +145,8 @@ async function aguardarContextoSistema() {
 // ======================================================
 document.addEventListener("DOMContentLoaded", async () => {
   logProdutos("Inicializando...");
+
+  setupMascarasProdutos();
 
   const pronto = await aguardarContextoSistema();
 
@@ -140,6 +194,7 @@ async function carregarProdutos() {
           empresa_id: produto.empresa_id,
           nome: produto.nome || "",
           preco: Number(produto.preco || 0),
+          preco_custo: Number(produto.preco_custo || 0),
           estoque: Number(produto.estoque || 0),
           codigo: produto.codigo || "",
           codigo_barras: produto.codigo_barras || produto.codigo || "",
@@ -293,6 +348,11 @@ function renderProdutos() {
 
         <div class="produto-preco">${fmt(produto.preco)}</div>
 
+        <div class="produto-custo-info">
+          Custo: ${fmt(produto.preco_custo || 0)}
+          · Lucro un.: ${fmt(Number(produto.preco || 0) - Number(produto.preco_custo || 0))}
+        </div>
+
         <div class="produto-footer">
           <div class="produto-estoque ${estoqueClass}">
             <i data-lucide="${estoqueIcon}" width="13" height="13"></i>
@@ -331,7 +391,9 @@ function abrirModalNovo() {
   document.getElementById("produtoId").value = "";
   document.getElementById("produtoNome").value = "";
   document.getElementById("produtoPreco").value = "";
+  document.getElementById("produtoPrecoCusto").value = "";
   document.getElementById("produtoEstoque").value = "";
+  atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = "";
   document.getElementById("produtoCategoria").value = "";
   document.getElementById("produtoAtivo").checked = true;
@@ -372,8 +434,10 @@ function abrirModalEditar(id) {
 
   document.getElementById("produtoId").value = produto.id;
   document.getElementById("produtoNome").value = produto.nome;
-  document.getElementById("produtoPreco").value = produto.preco;
+  document.getElementById("produtoPreco").value = valorParaInputMoeda(produto.preco);
+  document.getElementById("produtoPrecoCusto").value = valorParaInputMoeda(produto.preco_custo || 0);
   document.getElementById("produtoEstoque").value = produto.estoque;
+  atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = produto.codigo || "";
   document.getElementById("produtoCategoria").value = produto.categoria || "";
   document.getElementById("produtoAtivo").checked = produto.ativo === true;
@@ -397,6 +461,7 @@ function abrirModalEditar(id) {
 async function salvarProduto() {
   const nome = String(document.getElementById("produtoNome")?.value || "").trim();
   const preco = normalizarPreco(document.getElementById("produtoPreco")?.value);
+  const precoCusto = normalizarPreco(document.getElementById("produtoPrecoCusto")?.value);
   const estoque = normalizarEstoque(document.getElementById("produtoEstoque")?.value);
   const codigo = String(document.getElementById("produtoCodigo")?.value || "").trim();
   const categoria = String(document.getElementById("produtoCategoria")?.value || "");
@@ -426,6 +491,7 @@ async function salvarProduto() {
       empresa_id: empresaId,
       nome: nome,
       preco: preco,
+      preco_custo: precoCusto,
       estoque: estoque,
       codigo: codigo || null,
       codigo_barras: codigo || null,
@@ -585,4 +651,65 @@ async function atualizarStatusCaixa() {
   } catch (err) {
     logProdutos("Erro ao atualizar status do caixa: " + err.message, "error");
   }
+}
+
+// ======================================================
+// PREVIEW DE MARGEM / LUCRO
+// ======================================================
+
+function atualizarPreviewMargemProduto() {
+  const precoVenda = normalizarPreco(
+    document.getElementById("produtoPreco")?.value
+  );
+
+  const precoCusto = normalizarPreco(
+    document.getElementById("produtoPrecoCusto")?.value
+  );
+
+  const preview = document.getElementById("produtoMargemPreview");
+
+  if (!preview) return;
+
+  if (precoVenda <= 0) {
+    preview.textContent = "Informe venda e custo";
+    preview.classList.remove("lucro-negativo", "lucro-positivo");
+    return;
+  }
+
+  const lucro = precoVenda - precoCusto;
+  const margem = precoVenda > 0
+    ? (lucro / precoVenda) * 100
+    : 0;
+
+  preview.textContent =
+    `Lucro un.: ${fmt(lucro)} · Margem: ${margem.toFixed(1)}%`;
+
+  preview.classList.remove("lucro-negativo", "lucro-positivo");
+
+  if (lucro < 0) {
+    preview.classList.add("lucro-negativo");
+  } else {
+    preview.classList.add("lucro-positivo");
+  }
+}
+
+document.addEventListener("input", event => {
+  if (
+    event.target &&
+    (
+      event.target.id === "produtoPreco" ||
+      event.target.id === "produtoPrecoCusto"
+    )
+  ) {
+    atualizarPreviewMargemProduto();
+  }
+});
+
+// ======================================================
+// MÁSCARAS DO FORMULÁRIO DE PRODUTOS
+// ======================================================
+
+function setupMascarasProdutos() {
+  aplicarMascaraMoedaInput(document.getElementById("produtoPreco"));
+  aplicarMascaraMoedaInput(document.getElementById("produtoPrecoCusto"));
 }

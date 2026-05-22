@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>CRV PDV — Comandas</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/comandas.css" />
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  >
+</head>
+
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-img-wrap">
+        <img src="assets/logo1.png" alt="CRV PDV" class="sidebar-logo-img" />
+      </div>
+      <span class="sidebar-logo-sub">Controle de Caixa</span>
+    </div>
+
+    <nav class="sidebar-nav">
+
+      <span class="nav-section-label">Principal</span>
+
+      <a href="dashboard.html" class="nav-item">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+        Dashboard
+      </a>
+
+      <a href="caixa.html" class="nav-item">
+        <i data-lucide="wallet" class="nav-icon"></i>
+        Caixa / PDV
+      </a>
+      <a href="comandas.html" class="nav-item active">
+        <i data-lucide="ticket" class="nav-icon"></i>
+        Comandas
+      </a>
+
+      <a href="vendas.html" class="nav-item">
+        <i data-lucide="shopping-cart" class="nav-icon"></i>
+        Vendas
+      </a>
+
+      <span class="nav-section-label">Cadastros</span>
+
+      <a href="produtos.html" class="nav-item">
+        <i data-lucide="package" class="nav-icon"></i>
+        Produtos
+      </a>
+
+      <a href="clientes.html" class="nav-item">
+        <i data-lucide="users" class="nav-icon"></i>
+        Clientes
+      </a>
+
+      <span class="nav-section-label">Relatórios</span>
+
+      <a href="relatorios.html" class="nav-item">
+        <i data-lucide="bar-chart-2" class="nav-icon"></i>
+        Relatórios
+      </a>
+
+    </nav>
+
+    <div class="sidebar-footer">
+      <a
+        href="https://crvsolucoesti.com"
+        target="_blank"
+        rel="noopener"
+        class="sidebar-footer-link"
+      >
+        <span class="sidebar-footer-label">Desenvolvido por</span>
+        <img src="assets/logo2.png" alt="CRV Soluções TI" class="sidebar-footer-logo" />
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- OVERLAY MOBILE -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div style="display:flex; flex-direction:column; min-height:100vh;">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn-menu" id="btnMenu">
+          <i data-lucide="menu" width="22" height="22"></i>
+        </button>
+
+        <span class="topbar-title">Comandas</span>
+      </div>
+
+      <div class="topbar-actions">
+
+        <div class="caixa-status" id="caixaStatus">
+          <span class="status-dot closed" id="statusDot"></span>
+          <span id="statusText">Verificando caixa...</span>
+        </div>
+
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+
+        <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+          <i data-lucide="moon" id="iconTheme"></i>
+        </button>
+
+        <div class="topbar-avatar">
+          <i class="fa-solid fa-user"></i>
+        </div>
+
+      </div>
+
+    </header>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- CABEÇALHO -->
+      <div class="comandas-header">
+
+        <div>
+          <h1>Gestão de Comandas</h1>
+          <p>
+            Cadastre, acompanhe e organize cartões, mesas ou comandas usadas no caixa.
+          </p>
+        </div>
+
+        <div class="comandas-header-actions">
+
+          <button class="btn-secondary" id="btnGerarLote">
+            <i data-lucide="copy-plus" width="17" height="17"></i>
+            <span>Gerar Lote</span>
+          </button>
+
+          <button class="btn-primary" id="btnNovaComanda">
+            <i data-lucide="plus" width="17" height="17"></i>
+            <span>Nova Comanda</span>
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- CARDS RESUMO -->
+      <div class="comandas-cards">
+
+        <div class="card comandas-card">
+          <div class="comandas-card-label">Total</div>
+          <div class="comandas-card-value" id="cardTotalComandas">0</div>
+          <div class="comandas-card-sub">comandas cadastradas</div>
+        </div>
+
+        <div class="card comandas-card">
+          <div class="comandas-card-label">Livres</div>
+          <div class="comandas-card-value green" id="cardLivres">0</div>
+          <div class="comandas-card-sub">prontas para uso</div>
+        </div>
+
+        <div class="card comandas-card">
+          <div class="comandas-card-label">Abertas</div>
+          <div class="comandas-card-value orange" id="cardAbertas">0</div>
+          <div class="comandas-card-sub">em atendimento</div>
+        </div>
+
+        <div class="card comandas-card">
+          <div class="comandas-card-label">Faturamento aberto</div>
+          <div class="comandas-card-value" id="cardTotalAberto">R$ 0,00</div>
+          <div class="comandas-card-sub">em comandas abertas</div>
+        </div>
+
+      </div>
+
+      <!-- FILTROS -->
+      <div class="card comandas-toolbar">
+
+        <div class="comandas-search-wrap">
+          <i data-lucide="search" width="17" height="17"></i>
+          <input
+            class="input"
+            type="text"
+            id="inputBuscaComanda"
+            placeholder="Pesquisar por código, cliente, mesa ou observação..."
+            autocomplete="off"
+          />
+        </div>
+
+        <select class="input" id="filtroStatusComanda">
+          <option value="todos">Todos os status</option>
+          <option value="livre">Livre</option>
+          <option value="aberta">Aberta</option>
+          <option value="fechada">Fechada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+
+      </div>
+
+      <!-- TABELA -->
+      <div class="card comandas-table-card">
+
+        <div class="comandas-table-header">
+          <h3>Comandas cadastradas</h3>
+          <span id="totalListaComandas">0 registros</span>
+        </div>
+
+        <div class="comandas-table-wrap">
+
+          <table class="comandas-table">
+
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Tipo / Cliente</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Abertura</th>
+                <th>Fechamento</th>
+                <th class="text-right">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody id="tbodyComandas">
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <i data-lucide="ticket" width="32" height="32"></i>
+                    <p>Carregando comandas...</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<!-- MODAL NOVA / EDITAR COMANDA -->
+<div class="modal-overlay" id="modalComanda" style="display:none;">
+  <div class="modal card">
+
+    <div class="modal-header">
+      <h3 id="modalComandaTitulo">Nova Comanda</h3>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharModalComanda">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <input type="hidden" id="comandaId" />
+
+      <div class="input-group">
+        <label class="input-label" for="comandaCodigoInput">Código da comanda</label>
+        <input
+          class="input"
+          type="text"
+          id="comandaCodigoInput"
+          placeholder="Ex: 001, 002, MESA-01"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="comandaNomeInput">Cliente / Identificação</label>
+        <input
+          class="input"
+          type="text"
+          id="comandaNomeInput"
+          placeholder="Ex: Mesa 05, Campo 1, João"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="comandaObservacoesInput">Observações</label>
+        <textarea
+          class="input"
+          id="comandaObservacoesInput"
+          placeholder="Observações opcionais"
+          rows="3"
+        ></textarea>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnCancelarModalComanda">
+        Cancelar
+      </button>
+
+      <button class="btn-secondary" id="btnSalvarComanda">
+        <i data-lucide="save" width="15" height="15"></i>
+        <span>Salvar Comanda</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL GERAR LOTE -->
+<div class="modal-overlay" id="modalLoteComandas" style="display:none;">
+  <div class="modal card">
+
+    <div class="modal-header">
+      <h3>Gerar Lote de Comandas</h3>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharModalLote">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="input-group">
+        <label class="input-label" for="loteInicio">Número inicial</label>
+        <input
+          class="input"
+          type="number"
+          id="loteInicio"
+          placeholder="1"
+          min="1"
+          value="1"
+        />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="loteFim">Número final</label>
+        <input
+          class="input"
+          type="number"
+          id="loteFim"
+          placeholder="100"
+          min="1"
+          value="100"
+        />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="lotePrefixo">Prefixo opcional</label>
+        <input
+          class="input"
+          type="text"
+          id="lotePrefixo"
+          placeholder="Ex: MESA-, CARD- ou vazio"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="loteDigitos">Quantidade de dígitos</label>
+        <input
+          class="input"
+          type="number"
+          id="loteDigitos"
+          min="1"
+          max="6"
+          value="3"
+        />
+      </div>
+
+      <div class="lote-preview" id="lotePreview">
+        Exemplo: 001, 002, 003...
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnCancelarModalLote">
+        Cancelar
+      </button>
+
+      <button class="btn-secondary" id="btnConfirmarLote">
+        <i data-lucide="copy-plus" width="15" height="15"></i>
+        <span>Gerar Comandas</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL USUÁRIO -->
+<div class="modal-overlay hidden" id="userModal">
+  <div class="user-modal">
+
+    <div class="user-modal-header">
+      <div class="user-info">
+        <div class="user-avatar">
+          <i class="fa-solid fa-user"></i>
+        </div>
+
+        <div>
+          <strong>admin</strong>
+          <span>admin@admin.com</span>
+        </div>
+      </div>
+
+      <button class="modal-close" id="closeUserModal">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="user-modal-body">
+
+      <div class="user-row">
+        <span>Último acesso:</span>
+        <strong>24/03/2026, 20:42:33</strong>
+      </div>
+
+      <div class="user-row">
+        <span>Perfil:</span>
+        <strong>Operador</strong>
+      </div>
+
+      <div class="user-row">
+        <span>Sessão ativa há:</span>
+        <strong>0 min</strong>
+      </div>
+
+      <div class="user-actions">
+        <button class="btn-secondary">
+          <span>Configurações</span>
+        </button>
+
+        <button class="btn-secondary">
+          <span>Alterar Senha</span>
+        </button>
+
+        <button class="btn-primary">
+          Sair do Sistema
+        </button>
+      </div>
+
+    </div>
+
+    <div class="user-modal-footer">
+      Sistema seguro • CRV PDV
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+
+<script src="js/app.js"></script>
+<script src="js/comandas.js"></script>
+
+</body>
+</html>

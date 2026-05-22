@@ -215,6 +215,28 @@
   text-align: right;
 }
 
+/* ===== TOP GRID ===== */
+
+.relatorio-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.relatorio-card .card-value.lucro {
+  color: var(--crv-green);
+}
+
+.top-produto-lucro {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--crv-green);
+  min-width: 90px;
+  text-align: right;
+}
+
 /* ===== HISTÓRICO CAIXAS ===== */
 .relatorio-caixas { margin-bottom: 20px; }
 
@@ -280,6 +302,7 @@
 @media (max-width: 1100px) {
   .relatorio-cards   { grid-template-columns: repeat(2,1fr); }
   .relatorio-graficos { grid-template-columns: 1fr; }
+  .relatorio-top-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
