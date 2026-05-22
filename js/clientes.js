@@ -12,7 +12,10 @@ let filtroAtivo = 'todos';
 document.addEventListener('DOMContentLoaded', () => {
   salvarLocal();
   renderClientes();
-  atualizarStatusCaixa();
+
+  if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+    crvAtualizarStatusCaixaGlobal();
+  }
 });
 
 function salvarLocal() {
@@ -193,14 +196,11 @@ function mascaraTelefone(input) {
 }
 
 // ===== STATUS CAIXA =====
+// Status agora é controlado globalmente pelo app.js via Supabase.
+// Mantido apenas para evitar erro em chamadas antigas.
 function atualizarStatusCaixa() {
-  const caixa = JSON.parse(localStorage.getItem('crv-caixa'));
-  const dot  = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-  if (caixa?.status === 'aberto') {
-    dot.classList.replace('closed', 'open');
-    text.textContent = 'Caixa aberto';
-    text.style.color = 'var(--crv-green)';
+  if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+    crvAtualizarStatusCaixaGlobal();
   }
 }
 

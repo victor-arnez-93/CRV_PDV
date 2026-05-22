@@ -242,16 +242,10 @@ function verDetalhe(id) {
 
 
 // ===== STATUS CAIXA =====
+// Status agora é controlado globalmente pelo app.js via Supabase.
+// Mantido apenas para evitar erro em chamadas antigas.
 function atualizarStatusCaixa() {
-
-  const caixa = localDB.obter('caixa');
-
-  const dot  = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-
-  if (caixa?.status === 'aberto') {
-    dot.classList.replace('closed', 'open');
-    text.textContent = 'Caixa aberto';
-    text.style.color = 'var(--crv-green)');
+  if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+    crvAtualizarStatusCaixaGlobal();
   }
 }

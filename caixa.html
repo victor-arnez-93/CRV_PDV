@@ -55,7 +55,7 @@
       <div class="topbar-actions">
         <div class="caixa-status" id="caixaStatus">
           <span class="status-dot closed" id="statusDot"></span>
-          <span id="statusText">Caixa fechado</span>
+          <span id="statusText">Carregando caixa...</span>
         </div>
         <div class="topbar-datetime" id="topbarDatetime"></div>
         <button class="theme-toggle" id="themeToggle"><i data-lucide="moon" id="iconTheme"></i></button>
@@ -69,7 +69,7 @@
     <main class="main-content" id="mainContent">
 
       <!-- ===== ESTADO: CAIXA FECHADO ===== -->
-      <div id="viewCaixaFechado">
+      <div id="viewCaixaFechado" style="display:none;">
         <div class="caixa-closed-wrap">
           <div class="caixa-closed-card card">
 
@@ -107,8 +107,8 @@
 
         <!-- Info bar do caixa -->
         <div class="caixa-infobar">
-          <div class="caixa-info-item">
-            <span class="caixa-info-label">Abertura</span>
+          <div class="caixa-info-item caixa-info-abertura">
+            <span class="caixa-info-label">Aberto em</span>
             <span class="caixa-info-value" id="infoAbertura">—</span>
           </div>
           <div class="caixa-info-item">
@@ -313,18 +313,30 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="fechamento-row">
-        <span>Valor inicial</span>
-        <strong id="fechValorInicial">R$ 0,00</strong>
-      </div>
-      <div class="fechamento-row">
-        <span>Total vendido</span>
-        <strong id="fechTotalVendido" class="green">R$ 0,00</strong>
-      </div>
-      <div class="fechamento-row">
-        <span>Nº de vendas</span>
-        <strong id="fechQtdVendas">0</strong>
-      </div>
+  <div class="fechamento-row">
+    <span>Aberto em</span>
+    <strong id="fechDataAbertura">—</strong>
+  </div>
+
+  <div class="fechamento-row">
+    <span>Valor inicial</span>
+    <strong id="fechValorInicial">R$ 0,00</strong>
+  </div>
+
+  <div class="fechamento-row">
+    <span>Total vendido</span>
+    <strong id="fechTotalVendido" class="green">R$ 0,00</strong>
+  </div>
+
+  <div class="fechamento-row">
+    <span>Vendas em dinheiro</span>
+    <strong id="fechTotalDinheiro" class="green">R$ 0,00</strong>
+  </div>
+
+  <div class="fechamento-row">
+    <span>Nº de vendas</span>
+    <strong id="fechQtdVendas">0</strong>
+  </div>
       <div class="divider"></div>
       <div class="fechamento-row total">
         <span>Saldo esperado</span>

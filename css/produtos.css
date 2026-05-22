@@ -291,6 +291,44 @@
 .page-header h2 { font-size: 1.6rem; margin-bottom: 4px; }
 .page-header p  { font-size: 0.85rem; color: var(--text-muted); }
 
+/* ===== PRODUTO RÁPIDO / ATIVO ===== */
+.toggle-row-info {
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.toggle-row-info small {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.produto-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge-rapido {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: rgba(249,137,72,0.12);
+  border: 1px solid rgba(249,137,72,0.28);
+  color: var(--crv-orange);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .produtos-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }

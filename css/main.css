@@ -530,8 +530,31 @@ p { line-height: 1.6; color: var(--text-secondary); }
   border-radius: 50%;
   display: inline-block;
 }
-.status-dot.open  { background: var(--crv-green); box-shadow: 0 0 6px var(--crv-green); }
-.status-dot.closed { background: var(--text-muted); }
+
+.status-dot.open {
+  background: #54CD16 !important;
+  box-shadow: 0 0 8px rgba(84, 205, 22, 0.9) !important;
+}
+
+.status-dot.closed {
+  background: #ff5050 !important;
+  box-shadow: 0 0 8px rgba(255, 80, 80, 0.85) !important;
+}
+
+.caixa-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+.caixa-status.open #statusText {
+  color: #54CD16 !important;
+}
+
+.caixa-status.closed #statusText {
+  color: #ff5050 !important;
+}
 
 /* ===== SIDEBAR LOGO ATUALIZADA ===== */
 .sidebar-logo {

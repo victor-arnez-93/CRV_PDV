@@ -13,6 +13,7 @@ let produtos = [];
 let produtosRapidos = [];
 let metodoPagamento = "dinheiro";
 let caixaInicializado = false;
+let vendaEmProcessamento = false;
 
 // ===== FORMATADORES =====
 const fmt = valor => {
@@ -290,7 +291,7 @@ function renderEstado() {
     const infoValorInicial = document.getElementById("infoValorInicial");
 
     if (infoAbertura) {
-      infoAbertura.textContent = formatarHoraBrasil(caixa.data_abertura);
+      infoAbertura.textContent = formatarDataHoraBrasil(caixa.data_abertura);
     }
 
     if (infoValorInicial) {
@@ -399,19 +400,24 @@ function confirmarFechamento() {
 
 function preencherModalFechamento() {
   const totalVendido = calcularTotalVendido();
+  const totalDinheiro = calcularTotalVendidoDinheiro();
   const qtdVendas = vendas.length;
   const valorInicial = Number(caixa?.valor_inicial || 0);
-  const saldoEsperado = valorInicial + totalVendido;
+  const saldoEsperado = valorInicial + totalDinheiro;
 
+  const fechDataAbertura = document.getElementById("fechDataAbertura");
   const fechValorInicial = document.getElementById("fechValorInicial");
   const fechTotalVendido = document.getElementById("fechTotalVendido");
+  const fechTotalDinheiro = document.getElementById("fechTotalDinheiro");
   const fechQtdVendas = document.getElementById("fechQtdVendas");
   const fechSaldoEsperado = document.getElementById("fechSaldoEsperado");
   const valorFechamento = document.getElementById("valorFechamento");
   const fechDiferenca = document.getElementById("fechDiferenca");
 
+  if (fechDataAbertura) fechDataAbertura.textContent = formatarDataHoraBrasil(caixa?.data_abertura);
   if (fechValorInicial) fechValorInicial.textContent = fmt(valorInicial);
   if (fechTotalVendido) fechTotalVendido.textContent = fmt(totalVendido);
+  if (fechTotalDinheiro) fechTotalDinheiro.textContent = fmt(totalDinheiro);
   if (fechQtdVendas) fechQtdVendas.textContent = qtdVendas;
   if (fechSaldoEsperado) fechSaldoEsperado.textContent = fmt(saldoEsperado);
   if (valorFechamento) valorFechamento.value = saldoEsperado.toFixed(2);
@@ -427,7 +433,7 @@ function calcularDiferenca() {
 
   const saldoEsperado =
     Number(caixa?.valor_inicial || 0) +
-    calcularTotalVendido();
+    calcularTotalVendidoDinheiro();
 
   const diferenca = valorFisico - saldoEsperado;
 
@@ -688,10 +694,24 @@ function adicionarCarrinho(produto) {
     return;
   }
 
+  const estoqueDisponivel = Number(produto.estoque || 0);
+
+  if (estoqueDisponivel <= 0) {
+    alert(`Produto sem estoque: ${produto.nome}`);
+    return;
+  }
+
   const existente = carrinho.find(item => item.id === produto.id);
 
   if (existente) {
-    existente.quantidade += 1;
+    const novaQuantidade = Number(existente.quantidade || 0) + 1;
+
+    if (novaQuantidade > estoqueDisponivel) {
+      alert(`Estoque insuficiente para ${produto.nome}. Disponível: ${estoqueDisponivel}`);
+      return;
+    }
+
+    existente.quantidade = novaQuantidade;
   } else {
     carrinho.push({
       id: produto.id,
@@ -856,6 +876,18 @@ function calcularTotalVendido() {
   }, 0);
 }
 
+function calcularTotalVendidoDinheiro() {
+  return vendas.reduce((acc, venda) => {
+    const forma = String(venda.forma_pagamento || "").toLowerCase();
+
+    if (forma !== "dinheiro") {
+      return acc;
+    }
+
+    return acc + Number(venda.total || 0);
+  }, 0);
+}
+
 function atualizarTotais() {
   const subtotal = calcularSubtotalCarrinho();
   const desconto = calcularDesconto();
@@ -876,13 +908,13 @@ function atualizarInfobar() {
   const infoQtdVendas = document.getElementById("infoQtdVendas");
   const infoSaldo = document.getElementById("infoSaldo");
 
-  const totalVendas = calcularTotalVendido();
+  const totalDinheiro = calcularTotalVendidoDinheiro();
 
   if (infoQtdVendas) {
     infoQtdVendas.textContent = vendas.length;
   }
 
-  const saldo = Number(caixa?.valor_inicial || 0) + totalVendas;
+  const saldo = Number(caixa?.valor_inicial || 0) + totalDinheiro;
 
   if (infoSaldo) {
     infoSaldo.textContent = fmt(saldo);
@@ -927,10 +959,88 @@ function calcularTroco() {
   return troco;
 }
 
+function bloquearBotaoFinalizar(bloquear) {
+  const botao = document.getElementById("btnFinalizar");
+
+  if (!botao) return;
+
+  botao.disabled = bloquear;
+  botao.style.opacity = bloquear ? "0.65" : "";
+  botao.style.pointerEvents = bloquear ? "none" : "";
+
+  const texto = botao.querySelector("span");
+
+  if (texto) {
+    texto.textContent = bloquear ? "Finalizando..." : "Finalizar Venda";
+  }
+}
+
+async function validarCarrinhoComEstoque() {
+  const idsProdutos = carrinho
+    .filter(item => !item.produto_manual && item.id)
+    .map(item => item.id);
+
+  if (!idsProdutos.length) {
+    return true;
+  }
+
+  const idsUnicos = [...new Set(idsProdutos)];
+
+  const { data, error } = await sb
+    .from("produtos")
+    .select("id, nome, preco, estoque, ativo")
+    .eq("empresa_id", obterEmpresaId())
+    .in("id", idsUnicos);
+
+  if (error) throw error;
+
+  const mapaProdutos = new Map();
+
+  (data || []).forEach(produto => {
+    mapaProdutos.set(produto.id, produto);
+  });
+
+  for (const id of idsUnicos) {
+    const produtoBanco = mapaProdutos.get(id);
+
+    if (!produtoBanco) {
+      throw new Error("Um produto do carrinho não foi encontrado no Supabase.");
+    }
+
+    if (produtoBanco.ativo !== true) {
+      throw new Error(`Produto inativo no caixa: ${produtoBanco.nome}`);
+    }
+
+    const quantidadeCarrinho = carrinho
+      .filter(item => item.id === id)
+      .reduce((acc, item) => acc + Number(item.quantidade || 0), 0);
+
+    const estoqueAtual = Number(produtoBanco.estoque || 0);
+
+    if (estoqueAtual < quantidadeCarrinho) {
+      throw new Error(`Estoque insuficiente para ${produtoBanco.nome}. Disponível: ${estoqueAtual}`);
+    }
+
+    const produtoLocal = produtos.find(produto => produto.id === id);
+
+    if (produtoLocal) {
+      produtoLocal.preco = produtoBanco.preco;
+      produtoLocal.estoque = produtoBanco.estoque;
+      produtoLocal.ativo = produtoBanco.ativo;
+    }
+  }
+
+  return true;
+}
+
 // ======================================================
 // FINALIZAR VENDA
 // ======================================================
 async function finalizarVenda() {
+  if (vendaEmProcessamento) {
+    return;
+  }
+
   if (!sistemaOnline()) {
     alert("Sistema sem conexão com Supabase.");
     return;
@@ -950,6 +1060,11 @@ async function finalizarVenda() {
   const desconto = calcularDesconto();
   const total = calcularTotalCarrinho();
 
+  if (desconto > subtotal) {
+    alert("O desconto não pode ser maior que o subtotal.");
+    return;
+  }
+
   if (total <= 0) {
     alert("Total da venda inválido.");
     return;
@@ -968,7 +1083,14 @@ async function finalizarVenda() {
     ? Math.max(0, valorRecebido - total)
     : 0;
 
+  let vendaCriadaId = null;
+
   try {
+    vendaEmProcessamento = true;
+    bloquearBotaoFinalizar(true);
+
+    await validarCarrinhoComEstoque();
+
     const empresaId = obterEmpresaId();
 
     const vendaPayload = {
@@ -990,6 +1112,8 @@ async function finalizarVenda() {
       .single();
 
     if (vendaError) throw vendaError;
+
+    vendaCriadaId = vendaData.id;
 
     const itensPayload = carrinho.map(item => {
       return {
@@ -1022,6 +1146,9 @@ async function finalizarVenda() {
     if (descontoInput) descontoInput.value = "";
     if (valorRecebidoInput) valorRecebidoInput.value = "";
 
+    await carregarProdutos();
+
+    renderProdutosRapidos();
     renderCarrinho();
     atualizarInfobar();
     renderHistorico();
@@ -1029,8 +1156,30 @@ async function finalizarVenda() {
     logVenda("Venda salva no Supabase.", "success");
 
   } catch (err) {
+    if (vendaCriadaId) {
+      try {
+        await sb
+          .from("vendas_itens")
+          .delete()
+          .eq("venda_id", vendaCriadaId)
+          .eq("empresa_id", obterEmpresaId());
+
+        await sb
+          .from("vendas")
+          .delete()
+          .eq("id", vendaCriadaId)
+          .eq("empresa_id", obterEmpresaId());
+      } catch (rollbackErr) {
+        logVenda("Falha ao desfazer venda incompleta: " + rollbackErr.message, "error");
+      }
+    }
+
     logVenda("Erro ao finalizar venda: " + err.message, "error");
     alert("Erro ao finalizar venda: " + err.message);
+
+  } finally {
+    vendaEmProcessamento = false;
+    bloquearBotaoFinalizar(false);
   }
 }
 
@@ -1039,13 +1188,35 @@ async function baixarEstoqueProdutos() {
     return !item.produto_manual && item.id;
   });
 
-  for (const item of itensComProduto) {
+  const quantidadesPorProduto = {};
+
+  itensComProduto.forEach(item => {
+    if (!quantidadesPorProduto[item.id]) {
+      quantidadesPorProduto[item.id] = {
+        id: item.id,
+        nome: item.nome,
+        quantidade: 0
+      };
+    }
+
+    quantidadesPorProduto[item.id].quantidade += Number(item.quantidade || 0);
+  });
+
+  for (const item of Object.values(quantidadesPorProduto)) {
     const produtoOriginal = produtos.find(produto => produto.id === item.id);
 
-    if (!produtoOriginal) continue;
+    if (!produtoOriginal) {
+      throw new Error(`Produto não encontrado para baixar estoque: ${item.nome}`);
+    }
 
     const estoqueAtual = Number(produtoOriginal.estoque || 0);
-    const novoEstoque = Math.max(0, estoqueAtual - Number(item.quantidade || 0));
+    const quantidadeVendida = Number(item.quantidade || 0);
+
+    if (estoqueAtual < quantidadeVendida) {
+      throw new Error(`Estoque insuficiente para ${item.nome}. Disponível: ${estoqueAtual}`);
+    }
+
+    const novoEstoque = estoqueAtual - quantidadeVendida;
 
     const { error } = await sb
       .from("produtos")
@@ -1057,10 +1228,10 @@ async function baixarEstoqueProdutos() {
       .eq("empresa_id", obterEmpresaId());
 
     if (error) {
-      logVenda("Não foi possível atualizar estoque de " + item.nome + ": " + error.message, "warn");
-    } else {
-      produtoOriginal.estoque = novoEstoque;
+      throw new Error("Não foi possível atualizar estoque de " + item.nome + ": " + error.message);
     }
+
+    produtoOriginal.estoque = novoEstoque;
   }
 }
 

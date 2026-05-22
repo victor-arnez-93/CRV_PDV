@@ -12,7 +12,11 @@ let caixasHistorico = [];
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
 
-  logSistema("RELATORIOS", "Inicializando...");
+  if (typeof logSistema === "function") {
+    logSistema("RELATORIOS", "Inicializando...");
+  } else {
+    console.log("[CRV PDV][RELATORIOS] Inicializando...");
+  }
 
   const hoje = new Date().toISOString().slice(0,10);
 
@@ -21,7 +25,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await carregarDados();
 
-  atualizarStatusCaixa();
+  if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+    crvAtualizarStatusCaixaGlobal();
+  }
+
   renderRelatorio();
 });
 
@@ -283,19 +290,12 @@ function renderHistoricoCaixas() {
   }).join('');
 }
 
-
 // ===== STATUS CAIXA =====
+// Status agora é controlado globalmente pelo app.js via Supabase.
+// Mantido apenas para evitar erro em chamadas antigas.
 function atualizarStatusCaixa() {
-
-  const caixa = localDB.obter('caixa');
-
-  const dot  = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-
-  if (caixa?.status === 'aberto') {
-    dot.classList.replace('closed', 'open');
-    text.textContent = 'Caixa aberto';
-    text.style.color = 'var(--crv-green)';
+  if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+    crvAtualizarStatusCaixaGlobal();
   }
 }
 
