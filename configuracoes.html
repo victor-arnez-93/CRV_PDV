@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>CRV PDV — Configurações</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/configuracoes.css" />
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-img-wrap">
+        <img src="assets/logo1.png" alt="CRV PDV" class="sidebar-logo-img" />
+      </div>
+      <span class="sidebar-logo-sub">Controle de Caixa</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+
+      <a href="dashboard.html" class="nav-item">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+        Dashboard
+      </a>
+
+      <a href="caixa.html" class="nav-item">
+        <i data-lucide="wallet" class="nav-icon"></i>
+        Caixa / PDV
+      </a>
+
+      <a href="comandas.html" class="nav-item">
+        <i data-lucide="ticket" class="nav-icon"></i>
+        Comandas
+      </a>
+
+      <a href="vendas.html" class="nav-item">
+        <i data-lucide="shopping-cart" class="nav-icon"></i>
+        Vendas
+      </a>
+
+      <span class="nav-section-label">Cadastros</span>
+
+      <a href="produtos.html" class="nav-item">
+        <i data-lucide="package" class="nav-icon"></i>
+        Produtos
+      </a>
+
+      <a href="clientes.html" class="nav-item">
+        <i data-lucide="users" class="nav-icon"></i>
+        Clientes
+      </a>
+
+      <span class="nav-section-label">Relatórios</span>
+
+      <a href="relatorios.html" class="nav-item">
+        <i data-lucide="bar-chart-2" class="nav-icon"></i>
+        Relatórios
+      </a>
+
+      <span class="nav-section-label">Sistema</span>
+
+      <a href="configuracoes.html" class="nav-item active">
+        <i data-lucide="settings" class="nav-icon"></i>
+        Configurações
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="sidebar-footer-link">
+        <span class="sidebar-footer-label">Desenvolvido por</span>
+        <img src="assets/logo2.png" alt="CRV Soluções TI" class="sidebar-footer-logo" />
+      </a>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div style="display:flex; flex-direction:column; min-height:100vh;">
+
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn-menu" id="btnMenu">
+          <i data-lucide="menu" width="22" height="22"></i>
+        </button>
+        <span class="topbar-title">Configurações</span>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="topbar-datetime" id="topbarDatetime"></div>
+
+        <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+          <i data-lucide="moon" id="iconTheme"></i>
+        </button>
+
+        <button class="topbar-avatar" id="btnUserModal" type="button">
+          <i class="fa-solid fa-user"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+
+      <section class="config-header">
+        <div>
+          <h1>Configurações do Sistema</h1>
+          <p>Gerencie os dados principais da empresa, aparência e módulos ativos.</p>
+        </div>
+
+        <button class="btn-primary" id="btnSalvarConfiguracoes">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>Salvar alterações</span>
+        </button>
+      </section>
+
+      <section class="config-grid">
+
+  <div class="card config-card config-card-wide">
+    <h2>Dados da empresa</h2>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nome fantasia</label>
+        <input id="cfgNomeFantasia" type="text" placeholder="Ex: Comércio Modelo" />
+      </div>
+
+      <div class="form-group">
+        <label>Razão social</label>
+        <input id="cfgRazaoSocial" type="text" placeholder="Ex: Comércio Modelo LTDA" />
+      </div>
+
+      <div class="form-group">
+        <label>CNPJ</label>
+        <input id="cfgCnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18" />
+      </div>
+
+      <div class="form-group">
+        <label>Telefone</label>
+        <input id="cfgTelefone" type="text" placeholder="(00) 0000-0000" maxlength="15" />
+      </div>
+
+      <div class="form-group">
+        <label>WhatsApp</label>
+        <input id="cfgWhatsapp" type="text" placeholder="(00) 00000-0000" maxlength="15" />
+      </div>
+
+      <div class="form-group">
+        <label>E-mail</label>
+        <input id="cfgEmail" type="email" placeholder="contato@empresa.com.br" />
+      </div>
+
+      <div class="form-group full">
+        <label>Endereço</label>
+        <input id="cfgEndereco" type="text" placeholder="Rua, número, bairro" />
+      </div>
+
+      <div class="form-group">
+        <label>Cidade</label>
+        <input id="cfgCidade" type="text" placeholder="Cidade" />
+      </div>
+
+      <div class="form-group">
+        <label>UF</label>
+        <input id="cfgUf" type="text" maxlength="2" placeholder="UF" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card config-card">
+    <h2>Logo da empresa</h2>
+
+    <p class="config-muted">
+      Selecione uma imagem do computador. Ela será exibida no sistema após salvar.
+    </p>
+
+    <div class="form-group">
+      <label>Escolher logo</label>
+      <input id="cfgLogoFile" type="file" accept="image/png,image/jpeg,image/webp" />
+    </div>
+
+    <div class="logo-preview-box">
+      <img id="cfgLogoPreview" src="assets/logo1.png" alt="Logo da empresa" />
+    </div>
+
+    <small class="config-muted">
+      Recomenda-se PNG com fundo transparente.
+    </small>
+  </div>
+
+  <div class="card config-card crv-card">
+    <div class="crv-card-title">
+      <img src="assets/logo3.png" alt="CRV" class="crv-card-logo" />
+      <h2>CRV Soluções em TI</h2>
+    </div>
+
+    <p>Envie sugestões, melhorias ou dúvidas sobre o sistema.</p>
+
+    <div class="crv-links">
+      <a href="https://www.instagram.com/crvsolucoesemti" target="_blank" rel="noopener">
+        <i class="fa-brands fa-instagram"></i>
+        @crvsolucoesemti
+      </a>
+
+      <a href="https://crvsolucoesti.com" target="_blank" rel="noopener">
+        <i class="fa-solid fa-globe"></i>
+        crvsolucoesti.com
+      </a>
+
+      <a id="cfgFeedbackLink" href="https://wa.me/5515997021387" target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp"></i>
+        Enviar feedback
+      </a>
+    </div>
+  </div>
+
+</section>
+
+      <div id="cfgFeedback" class="cfg-feedback"></div>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script src="js/core/user.js"></script>
+<script src="js/configuracoes.js"></script>
+
+</body>
+</html>

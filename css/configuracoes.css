@@ -1,0 +1,257 @@
+/* ======================================================
+   HEADER
+====================================================== */
+
+.config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.config-header h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 6px;
+}
+
+.config-header p {
+  color: var(--text-secondary);
+  font-size: .95rem;
+}
+
+/* ======================================================
+   GRID
+====================================================== */
+
+.config-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+.config-card-wide {
+  grid-row: span 2;
+}
+
+.config-card h2 {
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.config-muted {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  font-size: .9rem;
+}
+
+/* ======================================================
+   FORMULÁRIOS
+====================================================== */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.form-group.full {
+  grid-column: span 2;
+}
+
+.form-group label {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  min-width: 0;
+  padding: 15px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  outline: none;
+  transition:
+    border-color .2s ease,
+    transform .15s ease,
+    background .2s ease;
+}
+
+.form-group input[type="file"] {
+  cursor: pointer;
+  padding: 13px 14px;
+}
+
+.form-group input::file-selector-button {
+  border: none;
+  border-radius: 999px;
+  padding: 9px 14px;
+  margin-right: 12px;
+  background: linear-gradient(135deg, #244a85, #a48633);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--crv-orange);
+  transform: translateY(-1px);
+}
+
+.form-group small {
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+
+/* ======================================================
+   LOGO
+====================================================== */
+
+.logo-preview-box {
+  width: 100%;
+  min-height: 170px;
+  border-radius: 20px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 22px;
+}
+
+.logo-preview-box img {
+  max-width: 230px;
+  max-height: 125px;
+  object-fit: contain;
+}
+
+/* ======================================================
+   CRV CARD
+====================================================== */
+
+.crv-card {
+  justify-content: flex-start;
+}
+
+.crv-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.crv-card-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.crv-card-title h2 {
+  margin: 0;
+}
+
+.crv-card p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.crv-links {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.crv-links a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition:
+    transform .18s ease,
+    border-color .2s ease,
+    background .2s ease;
+}
+
+.crv-links a:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249,137,72,.45);
+  background: rgba(249,137,72,.08);
+}
+
+.crv-links i {
+  font-size: 1.1rem;
+  color: var(--crv-orange);
+  width: 20px;
+  text-align: center;
+}
+
+/* ======================================================
+   FEEDBACK
+====================================================== */
+
+.cfg-feedback {
+  margin-top: 20px;
+  min-height: 24px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* ======================================================
+   RESPONSIVO
+====================================================== */
+
+@media (max-width: 1180px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-card-wide {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.full {
+    grid-column: span 1;
+  }
+
+  .config-header {
+    align-items: flex-start;
+  }
+
+  .config-header .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}

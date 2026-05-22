@@ -60,6 +60,12 @@
         <i data-lucide="bar-chart-2" class="nav-icon"></i>
         Relatórios
       </a>
+          <span class="nav-section-label">Sistema</span>
+
+    <a href="configuracoes.html" class="nav-item">
+      <i data-lucide="settings" class="nav-icon"></i>
+      Configurações
+    </a>
     </nav>
 
 <div class="sidebar-footer">
@@ -102,9 +108,9 @@
         </button>
 
         <!-- Avatar demo -->
-        <div class="topbar-avatar">
+        <button class="topbar-avatar" id="btnUserModal" type="button">
           <i class="fa-solid fa-user"></i>
-        </div>
+        </button>
       </div>
     </header>
 
@@ -155,11 +161,11 @@
 
         <div class="card dash-card">
           <div class="card-title">
-            <i data-lucide="wallet" width="13" height="13"></i>
-            Saldo em Caixa
+            <i data-lucide="coins" width="13" height="13"></i>
+            Lucro Bruto
           </div>
-          <div class="card-value" id="saldoCaixa">R$ 0,00</div>
-          <div class="card-delta" id="deltaSaldo">caixa fechado</div>
+          <div class="card-value" id="lucroBrutoDia">R$ 0,00</div>
+          <div class="card-delta positive" id="margemDia">Margem: 0.0%</div>
         </div>
 
       </div>
@@ -303,6 +309,9 @@
 
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
+
+<script src="js/core/user.js"></script>
+<script src="js/core/config.js"></script>
 
 <script src="js/app.js"></script>
 <script src="js/dashboard.js"></script>

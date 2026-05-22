@@ -2373,3 +2373,7 @@ async function alterarQuantidadeCarrinho(index, delta) {
   item.quantidade = novaQuantidade;
   renderCarrinho();
 }
+
+setTimeout(() => {
+  crvCarregarConfiguracoesEmpresa();
+}, 900);

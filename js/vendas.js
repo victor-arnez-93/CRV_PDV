@@ -249,3 +249,7 @@ function atualizarStatusCaixa() {
     crvAtualizarStatusCaixaGlobal();
   }
 }
+
+setTimeout(() => {
+  crvCarregarConfiguracoesEmpresa();
+}, 900);

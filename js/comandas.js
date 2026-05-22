@@ -786,3 +786,7 @@ async function apagarItensComanda(id) {
     throw error;
   }
 }
+
+setTimeout(() => {
+  crvCarregarConfiguracoesEmpresa();
+}, 900);

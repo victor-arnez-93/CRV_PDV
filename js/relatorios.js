@@ -478,7 +478,7 @@ function exportarCSV() {
   const vendas = getVendasFiltradas();
 
   if (!vendas.length) {
-    alert("Sem dados para exportar.");
+    mostrarModalAviso("Sem dados para exportar.");
     return;
   }
 
@@ -550,7 +550,7 @@ function exportarPDF() {
   const vendas = getVendasFiltradas();
 
   if (!vendas.length) {
-    alert("Sem dados para exportar.");
+    mostrarModalAviso("Sem dados para exportar.");
     return;
   }
 
@@ -833,3 +833,30 @@ function exportarPDF() {
     janela.print();
   };
 }
+
+function mostrarModalAviso(mensagem) {
+    const modalExistente = document.getElementById("modalAvisoSistema");
+    if (modalExistente) modalExistente.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "modalAvisoSistema";
+    modal.className = "modal-aviso-overlay";
+
+    modal.innerHTML = `
+        <div class="modal-aviso-card">
+            <h3>Aviso</h3>
+            <p>${mensagem}</p>
+            <button id="btnFecharModalAviso">OK</button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById("btnFecharModalAviso").onclick = () => {
+        modal.remove();
+    };
+}
+
+setTimeout(() => {
+  crvCarregarConfiguracoesEmpresa();
+}, 900);

@@ -713,3 +713,7 @@ function setupMascarasProdutos() {
   aplicarMascaraMoedaInput(document.getElementById("produtoPreco"));
   aplicarMascaraMoedaInput(document.getElementById("produtoPrecoCusto"));
 }
+
+setTimeout(() => {
+  crvCarregarConfiguracoesEmpresa();
+}, 900);

@@ -208,3 +208,7 @@ function fecharModal() {
   document.getElementById('modalCliente').style.display = 'none';
   document.getElementById('modalExcluir').style.display = 'none';
 }
+
+setTimeout(() => {
+  crvCarregarConfiguracoesEmpresa();
+}, 900);
