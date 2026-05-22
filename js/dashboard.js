@@ -3,6 +3,18 @@ const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' 
 
 // ===== INIT =====
 async function initDashboard() {
+
+    if (!window.APP_EMPRESA_ID) {
+
+      logSistema(
+        "DASHBOARD",
+        "Empresa não carregada",
+        "error"
+      );
+
+      return;
+    }
+
   logSistema("DASHBOARD", "Inicializando dashboard...");
 
   try {
@@ -23,6 +35,7 @@ async function initDashboard() {
       const { data: vendasData, error: vendasError } = await sb
         .from("vendas")
         .select("*")
+        .eq("empresa_id", APP_EMPRESA_ID)
         .order("created_at", { ascending: false });
 
       if (vendasError) throw vendasError;
@@ -32,7 +45,8 @@ async function initDashboard() {
       // Buscar itens
       const { data: itensData } = await sb
         .from("vendas_itens")
-        .select("*");
+        .select("*")
+        .eq("empresa_id", APP_EMPRESA_ID);
 
       itens = itensData || [];
 
@@ -40,7 +54,8 @@ async function initDashboard() {
       const { data: caixaData } = await sb
         .from("caixa")
         .select("*")
-        .order("id", { ascending: false })
+        .eq("empresa_id", APP_EMPRESA_ID)
+        .order("data_abertura", { ascending: false })
         .limit(1);
 
       caixaAtual = caixaData?.[0] || null;

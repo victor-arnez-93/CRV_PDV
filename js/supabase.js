@@ -7,8 +7,8 @@
   // ==========================================
   // ⚙️ CONFIG
   // ==========================================
-  const SUPABASE_URL = "COLE_SUA_URL_AQUI";
-  const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+  const SUPABASE_URL = "https://qpytwbiiqixkitnpksna.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_9Bc3KFSsNOQ3Qc9Q9DEfCQ_GBD-_K-F";
 
 
   // ==========================================

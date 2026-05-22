@@ -8,6 +8,8 @@
   // 🧠 ESTADO GLOBAL
   // ==========================================
   window.USER = null;
+  window.APP_USER = null;
+  window.APP_EMPRESA_ID = null;
 
 
   // ==========================================
@@ -25,25 +27,67 @@
   // ==========================================
   // 🔍 VERIFICAR SESSÃO
   // ==========================================
-  async function verificarSessao() {
-    try {
-      const { data, error } = await sb.auth.getSession();
+async function verificarSessao() {
 
-      if (error) throw error;
+  try {
 
-      if (data?.session) {
-        USER = data.session.user;
-        log("Sessão ativa: " + USER.email, "success");
-      } else {
-        USER = null;
-        log("Nenhuma sessão encontrada", "warn");
+    const { data, error } = await sb.auth.getSession();
+
+    if (error) throw error;
+
+    if (data?.session) {
+
+      USER = data.session.user;
+
+      log("Sessão ativa: " + USER.email, "success");
+
+
+      // ==========================================
+      // 🔍 BUSCAR USUÁRIO SISTEMA
+      // ==========================================
+
+      const { data: usuarioSistema, error: userError } = await sb
+        .from("usuarios")
+        .select("*")
+        .eq("id", USER.id)
+        .single();
+
+      if (userError) {
+        log("Usuário sem cadastro interno", "error");
+        return;
       }
 
-    } catch (err) {
-      log("Erro ao verificar sessão: " + err.message, "error");
-    }
-  }
 
+      // ==========================================
+      // 🌍 ESTADO GLOBAL
+      // ==========================================
+
+      window.APP_USER = usuarioSistema;
+
+      window.APP_EMPRESA_ID = usuarioSistema.empresa_id;
+
+      log(
+        "Empresa carregada: " + APP_EMPRESA_ID,
+        "success"
+      );
+
+    } else {
+
+      USER = null;
+
+      log("Nenhuma sessão encontrada", "warn");
+
+    }
+
+  } catch (err) {
+
+    log(
+      "Erro ao verificar sessão: " + err.message,
+      "error"
+    );
+
+  }
+}
 
   // ==========================================
   // 🔑 LOGIN
@@ -124,4 +168,33 @@
     await verificarSessao();
   });
 
+async function loginDev() {
+
+  const { error } = await sb.auth.signInWithPassword({
+    email: "admin@sistema.com",
+    password: "admin123"
+  });
+
+  if (error) {
+
+    log(
+      "Erro login DEV: " + error.message,
+      "error"
+    );
+
+    return;
+  }
+
+  log(
+    "Login DEV realizado",
+    "success"
+  );
+
+  await verificarSessao();
+
+}
+
+loginDev();
+
 })();
+
