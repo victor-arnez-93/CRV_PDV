@@ -573,7 +573,7 @@ function aplicarBloqueioConfiguracao() {
   if (!CONFIG_EMPRESA?.configuracao_inicial_concluida) return;
 
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgTipoNegocio, #cfgLogoFile"
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgTipoNegocio"
   ).forEach(el => {
     el.disabled = true;
   });

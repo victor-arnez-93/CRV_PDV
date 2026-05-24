@@ -374,6 +374,13 @@
   justify-content: center;
 }
 
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 /* ======================================================
    RESPONSIVO
 ====================================================== */

@@ -1,7 +1,14 @@
 // ===== THEME =====
-(function() {
-  const saved = localStorage.getItem('crv-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
+(function () {
+
+  const savedTheme =
+    localStorage.getItem("crv-theme") || "dark";
+
+  document.documentElement.setAttribute(
+    "data-theme",
+    savedTheme
+  );
+
 })();
 
 let crvAppCaixaAberto = false;
