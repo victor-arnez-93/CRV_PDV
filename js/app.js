@@ -404,6 +404,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   crvInicializarRelogio();
   crvInicializarModalUsuario();
 
+  if (window.crvCarregarConfiguracoesEmpresa) {
+    await window.crvCarregarConfiguracoesEmpresa();
+  }
+
   await crvAtualizarSaudacao();
   await crvAtualizarStatusCaixaGlobal();
   await crvCarregarLogoEmpresaTopbar();

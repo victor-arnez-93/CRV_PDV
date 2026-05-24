@@ -134,21 +134,6 @@ document.getElementById('eyeBtn').addEventListener('click', () => {
     : '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
 });
 
-/* ===== THEME TOGGLE ===== */
-const html  = document.documentElement;
-const moon  = document.getElementById('iconMoon');
-const sun   = document.getElementById('iconSun');
-
-const syncIcons = () => {
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  moon.style.display = isDark ? 'block' : 'none';
-  sun.style.display  = isDark ? 'none'  : 'block';
-};
-syncIcons();
-document.getElementById('themeToggle').addEventListener('click', () => {
-  setTimeout(syncIcons, 10);
-});
-
 /* ===== LOGIN FORM ===== */
 const errEl = document.getElementById('err');
 
@@ -174,13 +159,127 @@ function handleLogin(e) {
   btn.classList.add('ld');
   btn.disabled = true;
 
-  setTimeout(() => {
-    btn.classList.remove('ld');
-    btn.disabled = false;
-    window.location.href = 'dashboard.html';
-  }, 1200);
+(async () => {
+  const ok = await window.auth.login(em, pw);
+
+  btn.classList.remove('ld');
+  btn.disabled = false;
+
+  if (!ok) {
+    document.getElementById('errTxt').textContent =
+      'E-mail ou senha inválidos.';
+    errEl.classList.add('on');
+    return;
+  }
+
+  await window.auth.verificarSessao();
+
+  if (
+  window.APP_EMPRESA &&
+  window.APP_EMPRESA.configuracao_inicial_concluida === false
+) {
+  sessionStorage.setItem("crv_primeira_configuracao", "1");
+  window.location.href = "configuracoes.html";
+  return;
+}
+
+window.location.href = "dashboard.html";
+})();
 }
 
 function entrarDemo() {
   window.location.href = 'dashboard.html';
+}
+
+const loginForm = document.getElementById("loginForm");
+const cadastroForm = document.getElementById("cadastroForm");
+const btnMostrarCadastro = document.getElementById("btnMostrarCadastro");
+const btnVoltarLogin = document.getElementById("btnVoltarLogin");
+
+if (btnMostrarCadastro) {
+  btnMostrarCadastro.addEventListener("click", () => {
+    loginForm.style.display = "none";
+    cadastroForm.style.display = "block";
+    document.querySelector(".subtitle").style.display = "none";
+    errEl.classList.remove("on");
+  });
+}
+
+if (btnVoltarLogin) {
+  btnVoltarLogin.addEventListener("click", () => {
+    cadastroForm.style.display = "none";
+    loginForm.style.display = "block";
+    document.querySelector(".subtitle").style.display = "block";
+    errEl.classList.remove("on");
+  });
+}
+
+if (cadastroForm) {
+  cadastroForm.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const nome = document.getElementById("cadNome").value.trim();
+    const email = document.getElementById("cadEmail").value.trim();
+    const senha = document.getElementById("cadSenha").value;
+
+    if (!nome || !email || !senha) {
+      document.getElementById("errTxt").textContent =
+        "Preencha todos os campos do cadastro.";
+      errEl.classList.add("on");
+      return;
+    }
+
+    if (senha.length < 6) {
+      document.getElementById("errTxt").textContent =
+        "A senha precisa ter pelo menos 6 caracteres.";
+      errEl.classList.add("on");
+      return;
+    }
+
+    const btn = document.getElementById("btnCadastro");
+    btn.classList.add("ld");
+    btn.disabled = true;
+
+    const resp = await window.auth.cadastrarConta(nome, email, senha);
+
+    btn.classList.remove("ld");
+    btn.disabled = false;
+
+    document.getElementById("errTxt").textContent = resp.mensagem;
+
+    errEl.classList.remove("ok", "warn");
+
+    if (resp.ok) {
+      errEl.classList.add("on", "ok");
+    } else {
+      errEl.classList.add("on");
+    }
+
+    if (resp.ok) {
+      cadastroForm.reset();
+
+      setTimeout(() => {
+        cadastroForm.style.display = "none";
+        loginForm.style.display = "block";
+      }, 1600);
+    }
+  });
+}
+
+const params = new URLSearchParams(window.location.search);
+const hash = new URLSearchParams(window.location.hash.replace("#", "?"));
+
+const emailConfirmado =
+  params.get("type") === "signup" ||
+  hash.get("type") === "signup" ||
+  window.location.hash.includes("access_token");
+
+if (emailConfirmado) {
+  document.getElementById("errTxt").textContent =
+    "E-mail confirmado com sucesso. Agora faça login para acessar o sistema.";
+
+  errEl.classList.remove("warn");
+  errEl.classList.add("on", "ok");
+
+  history.replaceState(null, "", "index.html");
 }

@@ -793,6 +793,14 @@ html[data-theme="dark"] body::after {
   flex-shrink: 0;
 }
 
+.sidebar-logo-sub {
+  visibility: hidden;
+}
+
+.sidebar-logo-sub.ready {
+  visibility: visible;
+}
+
 /* ===== RESPONSIVE — MOBILE ===== */
 @media (max-width: 768px) {
   .app-shell {

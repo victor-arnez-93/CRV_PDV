@@ -91,17 +91,17 @@ if (window.crvAplicarLogoEmpresaTopbar) {
   // ==========================================
   // SUBTÍTULO SIDEBAR
   // ==========================================
+const subs =
+  document.querySelectorAll(".sidebar-logo-sub");
 
-  const subs =
-    document.querySelectorAll(".sidebar-logo-sub");
+subs.forEach(el => {
+  el.textContent =
+    cfg.nome_fantasia ||
+    cfg.nome ||
+    "CRV PDV";
 
-  subs.forEach(el => {
-
-    el.textContent =
-      cfg.nome_fantasia ||
-      cfg.nome ||
-      "CRV PDV";
-  });
+  el.classList.add("ready");
+});
 
   // ==========================================
   // MÓDULOS

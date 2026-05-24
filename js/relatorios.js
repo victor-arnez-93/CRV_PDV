@@ -63,7 +63,16 @@ async function aguardarContextoRelatorios() {
   let tentativas = 0;
 
   while (tentativas < 40) {
-    if (window.sb && window.APP_STATUS?.online && window.APP_STATUS?.supabase_ok) {
+    if (window.auth?.verificarSessao) {
+      await window.auth.verificarSessao();
+    }
+
+    if (
+      window.sb &&
+      window.APP_EMPRESA_ID &&
+      window.APP_STATUS?.online &&
+      window.APP_STATUS?.supabase_ok
+    ) {
       return true;
     }
 
@@ -86,9 +95,10 @@ async function carregarDados() {
   try {
     const empresaId = obterEmpresaId();
 
-    if (!empresaId) {
-      throw new Error("empresa_id não encontrado.");
-    }
+if (!empresaId) {
+  console.warn("[RELATÓRIOS] empresa_id não encontrado.");
+  return;
+}
 
     const { data: vendas, error: erroVendas } = await sb
       .from("vendas")
@@ -175,7 +185,7 @@ if (empresaUsaAgendaEsportiva()) {
 
   } catch (err) {
     console.error(err);
-    alert("Erro ao carregar relatórios: " + err.message);
+    mostrarModalAviso("Não foi possível carregar os relatórios agora.");
 
     vendasData = [];
     itensData = [];

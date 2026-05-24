@@ -21,7 +21,7 @@
       <div class="sidebar-logo-img-wrap">
         <img src="assets/logo1.png" alt="CRV PDV" class="sidebar-logo-img" />
       </div>
-      <span class="sidebar-logo-sub">Controle de Caixa</span>
+      <span class="sidebar-logo-sub"></span>
     </div>
 
 <nav class="sidebar-nav">
@@ -130,10 +130,16 @@
     <p>Configure os dados da empresa, escolha o segmento do negócio e o sistema libera automaticamente os módulos corretos para uso.</p>
   </div>
 
+  <button class="btn-secondary" id="btnEditarConfiguracoes" type="button" style="display:none;">
+  <i class="fa-solid fa-pen"></i>
+  <span>Editar dados</span>
+</button>
+
   <button class="btn-primary" id="btnSalvarConfiguracoes">
     <i class="fa-solid fa-floppy-disk"></i>
     <span>Salvar alterações</span>
   </button>
+
 </div>
 
       <section class="config-grid">
@@ -294,9 +300,14 @@
   </div>
 </div>
 
-    <div class="logo-preview-box">
-      <img id="cfgLogoPreview" src="assets/logo1.png" alt="Logo da empresa" />
-    </div>
+<div class="logo-preview-box">
+  <img id="cfgLogoPreview" src="assets/logo1.png" alt="Logo da empresa" />
+</div>
+
+<button class="btn-secondary" id="btnRemoverLogoEmpresa" type="button">
+  <i class="fa-solid fa-trash"></i>
+  <span>Remover logo atual</span>
+</button>
 
     <small class="config-muted">
       Recomenda-se PNG com fundo transparente.
@@ -337,12 +348,79 @@
   </div>
 </div>
 
+<div class="setup-modal-overlay" id="modalConfirmarRemoverLogo">
+  <div class="setup-modal">
+    <img src="assets/logo1.png" alt="CRV PDV" class="setup-modal-logo" />
+
+    <h2>Remover logo?</h2>
+
+    <p>
+      A logo atual da empresa será removida do sistema.
+      Você poderá enviar uma nova logo depois.
+    </p>
+
+    <div class="modal-actions-row">
+      <button class="btn-secondary" id="btnCancelarRemoverLogo" type="button">
+        CANCELAR
+      </button>
+
+      <button class="btn-primary" id="btnConfirmarRemoverLogo" type="button">
+        REMOVER LOGO
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="setup-modal-overlay" id="setupModalObrigatorio">
+  <div class="setup-modal">
+    <div class="setup-modal-glow"></div>
+
+    <img src="assets/logo1.png" alt="CRV PDV" class="setup-modal-logo" />
+
+    <h2>Configure seu negócio</h2>
+
+    <p>
+      Antes de começar, informe os dados da empresa e escolha o segmento do negócio.
+      O sistema irá liberar automaticamente os módulos corretos para sua operação.
+    </p>
+
+    <button class="btn-primary" id="btnIniciarConfiguracao" type="button">
+      COMEÇAR CONFIGURAÇÃO
+    </button>
+  </div>
+</div>
+
+<div class="setup-modal-overlay" id="setupModalFinalizado">
+  <div class="setup-modal">
+    <img src="assets/logo1.png" alt="CRV PDV" class="setup-modal-logo" />
+
+    <h2>Configuração finalizada</h2>
+
+    <p>
+      Seu sistema foi configurado com sucesso.
+      A partir de agora, os módulos serão adaptados ao segmento escolhido.
+    </p>
+
+    <button class="btn-primary" id="btnFinalizarConfiguracao" type="button">
+      ACESSAR SISTEMA
+    </button>
+  </div>
+</div>
+
+<div class="toast-config" id="toastConfig">
+  <i class="fa-solid fa-circle-check" id="toastConfigIcon"></i>
+  <span id="toastConfigTexto"></span>
+</div>
+
+<!-- SCRIPTS -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/app.js"></script>
 <script src="js/core/user.js"></script>
+<script src="js/core/config.js"></script>
 <script src="js/configuracoes.js"></script>
 
 </body>

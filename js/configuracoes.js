@@ -80,25 +80,44 @@ const SEGMENTOS_CONFIG = {
 // ======================================================
 // HELPERS
 // ======================================================
+let toastConfigTimer = null;
 
 function cfgFeedback(msg, tipo = "normal") {
-  const el = document.getElementById("cfgFeedback");
+  if (!msg) return;
 
-  if (!el) return;
+  const toast = document.getElementById("toastConfig");
+  const texto = document.getElementById("toastConfigTexto");
+  const icon = document.getElementById("toastConfigIcon");
 
-  el.textContent = msg;
+  if (!toast || !texto) return;
+
+  texto.textContent = msg;
+
+  toast.classList.remove("sucesso", "erro", "alerta", "active");
 
   if (tipo === "erro") {
-    el.style.color = "#FF7070";
+    toast.classList.add("erro");
+    if (icon) icon.className = "fa-solid fa-circle-xmark";
   } else if (tipo === "sucesso") {
-    el.style.color = "var(--crv-green)";
+    toast.classList.add("sucesso");
+    if (icon) icon.className = "fa-solid fa-circle-check";
   } else {
-    el.style.color = "var(--text-secondary)";
+    toast.classList.add("alerta");
+    if (icon) icon.className = "fa-solid fa-circle-info";
   }
+
+  toast.classList.add("active");
+
+  clearTimeout(toastConfigTimer);
+
+  toastConfigTimer = setTimeout(() => {
+    toast.classList.remove("active");
+  }, 3200);
 }
 
 function valor(id) {
-  return document.getElementById(id)?.value?.trim() || "";
+  const el = document.getElementById(id);
+  return el ? String(el.value || "").trim() : "";
 }
 
 // ======================================================
@@ -190,7 +209,7 @@ async function carregarConfiguracoes() {
 
     preencherFormulario(data);
 
-    cfgFeedback("Configurações carregadas.", "sucesso");
+    cfgFeedback("");
   } catch (err) {
     console.error("[CRV CONFIG]", err);
     cfgFeedback("Erro ao carregar configurações.", "erro");
@@ -235,6 +254,7 @@ document.getElementById("cfgTipoNegocio").value =
 atualizarPreviewSegmento();
 
   atualizarPreviewLogo();
+  aplicarBloqueioConfiguracao();
 }
 
 function atualizarPreviewSegmento() {
@@ -300,7 +320,7 @@ function atualizarPreviewLogo(file = null) {
   }
 
   if (CONFIG_EMPRESA && CONFIG_EMPRESA.logo_url) {
-    img.src = CONFIG_EMPRESA.logo_url;
+    img.src = `${CONFIG_EMPRESA.logo_url}${CONFIG_EMPRESA.logo_url.includes("?") ? "&" : "?"}v=${Date.now()}`;
   } else {
     img.src = "assets/logo1.png";
   }
@@ -310,81 +330,69 @@ function atualizarPreviewLogo(file = null) {
 // UPLOAD DA LOGO
 // ======================================================
 async function enviarLogoEmpresa(empresaId) {
-
-  const logoInput =
-    document.getElementById("cfgLogoFile");
-
-  const logoFile =
-    logoInput?.files?.[0];
+  const logoInput = document.getElementById("cfgLogoFile");
+  const logoFile = logoInput?.files?.[0];
 
   if (!logoFile) {
     return CONFIG_EMPRESA?.logo_url || "";
   }
 
-  const tiposPermitidos = [
-    "image/png",
-    "image/jpeg",
-    "image/webp"
-  ];
+  const tiposPermitidos = ["image/png", "image/jpeg", "image/webp"];
 
   if (!tiposPermitidos.includes(logoFile.type)) {
-    throw new Error(
-      "Formato inválido. Use PNG, JPG ou WEBP."
-    );
+    throw new Error("Formato inválido. Use PNG, JPG ou WEBP.");
   }
 
-  const tamanhoMaximo =
-    3 * 1024 * 1024;
-
-  if (logoFile.size > tamanhoMaximo) {
-    throw new Error(
-      "Logo muito grande. Máximo 3MB."
-    );
+  if (logoFile.size > 3 * 1024 * 1024) {
+    throw new Error("Logo muito grande. Máximo 3MB.");
   }
 
   cfgFeedback("Enviando logo...");
 
   const extensao =
-    logoFile.name
-      .split(".")
-      .pop()
-      ?.toLowerCase() || "png";
+    logoFile.type === "image/jpeg"
+      ? "jpg"
+      : logoFile.type.replace("image/", "");
 
-  const nomeArquivo =
-    `empresa_${empresaId}.${extensao}`;
+  const pasta = `empresas/${empresaId}`;
 
-  const caminhoCompleto =
-    `logos/${nomeArquivo}`;
+  await sb.storage.from("logo").remove([
+    `${pasta}/logo.png`,
+    `${pasta}/logo.jpg`,
+    `${pasta}/logo.jpeg`,
+    `${pasta}/logo.webp`
+  ]);
 
-  // remove antiga antes
-  await sb.storage
+  const caminho = `${pasta}/logo.${extensao}`;
+
+  const { error } = await sb.storage
     .from("logo")
-    .remove([caminhoCompleto]);
+    .upload(caminho, logoFile, {
+      cacheControl: "0",
+      upsert: true
+    });
 
-  // upload novo
-  const { error: uploadError } =
-    await sb.storage
-      .from("logo")
-      .upload(
-        caminhoCompleto,
-        logoFile,
-        {
-          cacheControl: "0",
-          upsert: true
-        }
-      );
+  if (error) throw error;
 
-  if (uploadError) {
-    console.error(uploadError);
-    throw uploadError;
-  }
-
-  const { data } =
-    sb.storage
-      .from("logo")
-      .getPublicUrl(caminhoCompleto);
+  const { data } = sb.storage
+    .from("logo")
+    .getPublicUrl(caminho);
 
   return `${data.publicUrl}?v=${Date.now()}`;
+}
+
+// ======================================================
+// EDITAR CONFIGURAÇÕES
+// ======================================================
+function liberarEdicaoConfiguracao() {
+  document.querySelectorAll(
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgTipoNegocio, #cfgLogoFile"
+  ).forEach(el => {
+    el.disabled = false;
+  });
+
+  document.getElementById("btnSalvarConfiguracoes").style.display = "";
+  document.getElementById("btnEditarConfiguracoes").style.display = "none";
 }
 
 // ======================================================
@@ -444,6 +452,8 @@ CONFIG_EMPRESA = data;
 
 atualizarPreviewLogo();
 
+aplicarBloqueioConfiguracao();
+
 const logoInput = document.getElementById("cfgLogoFile");
 const fileName = document.getElementById("cfgLogoFileName");
 
@@ -470,9 +480,76 @@ if (logoHeader && data.logo_url) {
 }
 
     cfgFeedback("Configurações salvas com sucesso.", "sucesso");
+    if (sessionStorage.getItem("crv_primeira_configuracao") === "1") {
+      sessionStorage.removeItem("crv_primeira_configuracao");
+
+      const modalFinalizado = document.getElementById("setupModalFinalizado");
+
+      if (modalFinalizado) {
+        modalFinalizado.classList.add("active");
+        return;
+      }
+
+      window.location.href = "dashboard.html";
+    }
   } catch (err) {
     console.error("[CRV CONFIG]", err);
     cfgFeedback("Erro ao salvar configurações.", "erro");
+  }
+}
+
+async function removerLogoEmpresa() {
+  try {
+    const empresaId = window.APP_EMPRESA_ID;
+
+    if (!empresaId) {
+      cfgFeedback("Empresa não encontrada.", "erro");
+      return;
+    }
+
+    cfgFeedback("Removendo logo...");
+
+    const pasta = `empresas/${empresaId}`;
+
+    await sb.storage.from("logo").remove([
+      `${pasta}/logo.png`,
+      `${pasta}/logo.jpg`,
+      `${pasta}/logo.jpeg`,
+      `${pasta}/logo.webp`
+    ]);
+
+    const { data, error } = await sb
+      .from("empresas")
+      .update({
+        logo_url: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", empresaId)
+      .select("*")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    CONFIG_EMPRESA = data;
+
+    const preview = document.getElementById("cfgLogoPreview");
+    const headerLogo = document.querySelector(".empresa-logo-header");
+    const logoInput = document.getElementById("cfgLogoFile");
+    const fileName = document.getElementById("cfgLogoFileName");
+
+    if (preview) preview.src = "assets/logo1.png";
+    if (headerLogo) headerLogo.src = "assets/logo1.png";
+    if (logoInput) logoInput.value = "";
+    if (fileName) fileName.textContent = "Nenhum arquivo selecionado";
+
+    if (window.crvCarregarConfiguracoesEmpresa) {
+      await crvCarregarConfiguracoesEmpresa();
+    }
+
+    cfgFeedback("Logo removida com sucesso.", "erro");
+  } catch (err) {
+    console.error("[CRV CONFIG]", err);
+    cfgFeedback(err?.message || "Erro ao remover logo.", "erro");
   }
 }
 
@@ -492,6 +569,23 @@ function initFeedbackLink() {
   link.href = `https://wa.me/5515997021387?text=${texto}`;
 }
 
+function aplicarBloqueioConfiguracao() {
+  if (!CONFIG_EMPRESA?.configuracao_inicial_concluida) return;
+
+  document.querySelectorAll(
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgTipoNegocio, #cfgLogoFile"
+  ).forEach(el => {
+    el.disabled = true;
+  });
+
+  const btnEditar = document.getElementById("btnEditarConfiguracoes");
+
+   if (btnEditar) {
+     btnEditar.style.display = "";
+   }
+
+}
+
 // ======================================================
 // INIT
 // ======================================================
@@ -499,6 +593,7 @@ function initFeedbackLink() {
 document.addEventListener("DOMContentLoaded", () => {
   const btnSalvar = document.getElementById("btnSalvarConfiguracoes");
   const logoInput = document.getElementById("cfgLogoFile");
+  const btnRemoverLogo = document.getElementById("btnRemoverLogoEmpresa");
 
   initMascaras();
   initFeedbackLink();
@@ -506,6 +601,50 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnSalvar) {
     btnSalvar.addEventListener("click", salvarConfiguracoes);
   }
+
+const modalRemoverLogo = document.getElementById("modalConfirmarRemoverLogo");
+const btnCancelarRemoverLogo = document.getElementById("btnCancelarRemoverLogo");
+const btnConfirmarRemoverLogo = document.getElementById("btnConfirmarRemoverLogo");
+
+if (btnRemoverLogo) {
+  btnRemoverLogo.addEventListener("click", () => {
+    if (modalRemoverLogo) {
+      modalRemoverLogo.classList.add("active");
+    }
+  });
+}
+
+if (btnCancelarRemoverLogo) {
+  btnCancelarRemoverLogo.addEventListener("click", () => {
+    if (modalRemoverLogo) {
+      modalRemoverLogo.classList.remove("active");
+    }
+  });
+}
+
+if (btnConfirmarRemoverLogo) {
+  btnConfirmarRemoverLogo.addEventListener("click", async () => {
+    if (modalRemoverLogo) {
+      modalRemoverLogo.classList.remove("active");
+    }
+
+    await removerLogoEmpresa();
+  });
+}
+
+const btnEditar = document.getElementById("btnEditarConfiguracoes");
+
+if (btnEditar) {
+  btnEditar.addEventListener("click", liberarEdicaoConfiguracao);
+}
+
+const btnFinalizarConfiguracao = document.getElementById("btnFinalizarConfiguracao");
+
+if (btnFinalizarConfiguracao) {
+  btnFinalizarConfiguracao.addEventListener("click", () => {
+    window.location.href = "dashboard.html";
+  });
+}
 
 if (logoInput) {
   logoInput.addEventListener("change", e => {
@@ -543,6 +682,23 @@ if (tipoNegocio) {
     "change",
     atualizarPreviewSegmento
   );
+}
+
+const setupModal = document.getElementById("setupModalObrigatorio");
+const btnIniciarConfiguracao = document.getElementById("btnIniciarConfiguracao");
+
+if (sessionStorage.getItem("crv_primeira_configuracao") === "1") {
+  if (setupModal) {
+    setupModal.classList.add("active");
+  }
+}
+
+if (btnIniciarConfiguracao) {
+  btnIniciarConfiguracao.addEventListener("click", () => {
+    if (setupModal) {
+      setupModal.classList.remove("active");
+    }
+  });
 }
 
 });

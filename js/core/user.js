@@ -106,4 +106,3 @@ window.crvEnviarLinkRedefinicaoSenha = crvEnviarLinkRedefinicaoSenha;
 window.crvObterUsuarioAtual = crvObterUsuarioAtual;
 window.crvTempoSessaoTexto = crvTempoSessaoTexto;
 window.crvLogout = crvLogout;
-window.crvAlterarSenha = crvAlterarSenha;
