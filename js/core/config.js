@@ -51,23 +51,6 @@ function aplicarConfiguracoesSistema(cfg) {
 
   if (!cfg) return;
 
-  // ==========================================
-  // TEMA
-  // ==========================================
-
-  if (cfg.tema) {
-
-    document.documentElement.setAttribute(
-      "data-theme",
-      cfg.tema
-    );
-
-    localStorage.setItem(
-      "crv-theme",
-      cfg.tema
-    );
-  }
-
  // ==========================================
 // LOGO DO SISTEMA - FIXA / IMUTÁVEL
 // ==========================================
