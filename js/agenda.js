@@ -148,6 +148,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       await crvCarregarConfiguracoesEmpresa();
     }
 
+    if (
+      typeof crvBloquearPaginaSemModulo === "function" &&
+      crvBloquearPaginaSemModulo("agenda")
+    ) {
+      return;
+    }
+
     inicializarEventosAgenda();
 
     setupMascarasAgenda();
@@ -1653,6 +1660,12 @@ if (deleteJogadoresError) {
 
     }
 
+    await sincronizarAgendaComCaixa(
+      agendaId,
+      payload,
+      jogadores
+    );
+
     mostrarSucesso(
       "Jogo salvo com sucesso."
     );
@@ -1725,4 +1738,166 @@ function removerJogo(id) {
 
   });
 
+}
+
+// ======================================================
+// INTEGRAR AGENDA COM CAIXA / VENDAS
+// Apenas segmentos com módulo agenda ativo
+// ======================================================
+
+async function sincronizarAgendaComCaixa(agendaId, jogo, jogadores) {
+
+  if (
+    typeof crvModuloAtivo === "function" &&
+    !crvModuloAtivo("agenda")
+  ) {
+    return;
+  }
+
+  const pagos = jogadores.filter(j =>
+    j.pago === true &&
+    Number(j.valor || 0) > 0
+  );
+
+  if (!pagos.length) {
+    return;
+  }
+
+  const totalPago = pagos.reduce((acc, j) => {
+    return acc + Number(j.valor || 0);
+  }, 0);
+
+  if (totalPago <= 0) {
+    return;
+  }
+
+  const formas = pagos
+    .map(j => j.forma_pagamento)
+    .filter(Boolean);
+
+  const formaPagamento =
+    formas.length > 0
+      ? formas[0]
+      : "pix";
+
+  const { data: caixaAberto, error: erroCaixa } = await sb
+    .from("caixa")
+    .select("id")
+    .eq("empresa_id", APP_EMPRESA_ID)
+    .eq("status", "aberto")
+    .order("data_abertura", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (erroCaixa) {
+    throw erroCaixa;
+  }
+
+  if (!caixaAberto?.id) {
+    throw new Error(
+      "Abra o caixa antes de marcar pagamentos da agenda."
+    );
+  }
+
+  const { data: vendaExistente, error: erroBuscaVenda } = await sb
+    .from("vendas")
+    .select("id")
+    .eq("empresa_id", APP_EMPRESA_ID)
+    .eq("origem", "agenda")
+    .eq("origem_id", agendaId)
+    .maybeSingle();
+
+  if (erroBuscaVenda) {
+    throw erroBuscaVenda;
+  }
+
+  if (vendaExistente?.id) {
+
+    await sb
+      .from("vendas_itens")
+      .delete()
+      .eq("empresa_id", APP_EMPRESA_ID)
+      .eq("venda_id", vendaExistente.id);
+
+    const { error: erroUpdate } = await sb
+      .from("vendas")
+      .update({
+        caixa_id: caixaAberto.id,
+        subtotal: totalPago,
+        desconto: 0,
+        total: totalPago,
+        forma_pagamento: formaPagamento,
+        troco: 0,
+        descricao:
+          `Jogo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+      })
+      .eq("id", vendaExistente.id)
+      .eq("empresa_id", APP_EMPRESA_ID);
+
+    if (erroUpdate) {
+      throw erroUpdate;
+    }
+
+    await inserirItensVendaAgenda(
+      vendaExistente.id,
+      pagos,
+      jogo
+    );
+
+    return;
+  }
+
+  const { data: vendaNova, error: erroVenda } = await sb
+    .from("vendas")
+    .insert([{
+      empresa_id: APP_EMPRESA_ID,
+      caixa_id: caixaAberto.id,
+      cliente_id: null,
+      data: new Date().toISOString(),
+      subtotal: totalPago,
+      desconto: 0,
+      total: totalPago,
+      forma_pagamento: formaPagamento,
+      troco: 0,
+      origem: "agenda",
+      origem_id: agendaId,
+      descricao:
+        `Jogo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+    }])
+    .select("id")
+    .single();
+
+  if (erroVenda) {
+    throw erroVenda;
+  }
+
+  await inserirItensVendaAgenda(
+    vendaNova.id,
+    pagos,
+    jogo
+  );
+}
+
+async function inserirItensVendaAgenda(vendaId, jogadoresPagos, jogo) {
+
+  const itens = jogadoresPagos.map(jogador => ({
+    empresa_id: APP_EMPRESA_ID,
+    venda_id: vendaId,
+    produto_id: null,
+    nome:
+      `Pagamento de jogo - ${jogador.nome}`,
+    preco: Number(jogador.valor || 0),
+    quantidade: 1,
+    preco_custo: 0,
+    lucro_unitario: Number(jogador.valor || 0),
+    lucro_total: Number(jogador.valor || 0)
+  }));
+
+  const { error } = await sb
+    .from("vendas_itens")
+    .insert(itens);
+
+  if (error) {
+    throw error;
+  }
 }
