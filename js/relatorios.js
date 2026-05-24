@@ -15,6 +15,27 @@ let chartPagtos = null;
 let vendasData = [];
 let itensData = [];
 let caixasHistorico = [];
+let agendaFechadaData = [];
+
+const TIPOS_COM_AGENDA_ESPORTIVA = [
+  "arena",
+  "society",
+  "arena_society",
+  "arena_beach",
+  "beach_sports",
+  "beach_tennis",
+  "futvolei",
+  "volei_areia",
+  "quadras"
+];
+
+function empresaUsaAgendaEsportiva() {
+  const tipo = String(window.CRV_CONFIG?.empresa?.tipo_negocio || "")
+    .toLowerCase()
+    .trim();
+
+  return TIPOS_COM_AGENDA_ESPORTIVA.includes(tipo);
+}
 
 // ======================================================
 // INIT
@@ -92,6 +113,21 @@ async function carregarDados() {
 
     if (erroCaixas) throw erroCaixas;
 
+    let agendaFechada = [];
+
+if (empresaUsaAgendaEsportiva()) {
+  const { data: agendaData, error: erroAgenda } = await sb
+    .from("agenda")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("status_jogo", "fechado")
+    .order("data_agendamento", { ascending: false });
+
+  if (erroAgenda) throw erroAgenda;
+
+  agendaFechada = Array.isArray(agendaData) ? agendaData : [];
+}
+
     itensData = Array.isArray(itens) ? itens : [];
 
     vendasData = (vendas || []).map(venda => {
@@ -109,6 +145,33 @@ async function carregarDados() {
     });
 
     caixasHistorico = Array.isArray(caixas) ? caixas : [];
+
+    agendaFechadaData = agendaFechada.map(jogo => {
+  const dataBase = `${jogo.data_agendamento}T${jogo.hora_inicio || "00:00"}`;
+
+  const valorRecebido =
+    Number(jogo.total_pago_jogadores || 0) ||
+    Number(jogo.valor_pago || 0) ||
+    Number(jogo.valor_total || 0) ||
+    0;
+
+  return {
+    id: jogo.id,
+    origem: "agenda",
+    data: dataBase,
+    cliente_nome: jogo.cliente_nome || "Responsável não informado",
+    local_recurso: jogo.local_recurso || "Quadra/Campo",
+    hora_inicio: jogo.hora_inicio,
+    hora_fim: jogo.hora_fim,
+    forma_pagamento: "agenda",
+    subtotal: valorRecebido,
+    desconto: 0,
+    total: valorRecebido,
+    lucro_total: valorRecebido,
+    itens: [],
+    descricao: `Aluguel de campo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+  };
+});
 
   } catch (err) {
     console.error(err);
@@ -184,10 +247,22 @@ function getIntervaloPeriodo() {
 function getVendasFiltradas() {
   const { inicio, fim } = getIntervaloPeriodo();
 
-  return vendasData.filter(venda => {
+  const vendasPDV = vendasData.filter(venda => {
     const dataVenda = new Date(venda.data);
     return dataVenda >= inicio && dataVenda <= fim;
   });
+
+  if (!empresaUsaAgendaEsportiva()) {
+    return vendasPDV;
+  }
+
+  const jogosAgenda = agendaFechadaData.filter(jogo => {
+    const dataJogo = new Date(jogo.data);
+    return dataJogo >= inicio && dataJogo <= fim;
+  });
+
+  return [...vendasPDV, ...jogosAgenda]
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 
 // ======================================================

@@ -24,55 +24,70 @@
       <span class="sidebar-logo-sub">Controle de Caixa</span>
     </div>
 
-    <nav class="sidebar-nav">
-      <span class="nav-section-label">Principal</span>
+<nav class="sidebar-nav">
 
-      <a href="dashboard.html" class="nav-item">
-        <i data-lucide="layout-dashboard" class="nav-icon"></i>
-        Dashboard
-      </a>
+  <span class="nav-section-label">
+    Principal
+  </span>
 
-      <a href="caixa.html" class="nav-item">
-        <i data-lucide="wallet" class="nav-icon"></i>
-        Caixa / PDV
-      </a>
+  <a href="dashboard.html" class="nav-item">
+    <i data-lucide="layout-dashboard" class="nav-icon"></i>
+    Dashboard
+  </a>
 
-      <a href="comandas.html" class="nav-item">
-        <i data-lucide="ticket" class="nav-icon"></i>
-        Comandas
-      </a>
+  <a href="caixa.html" class="nav-item">
+    <i data-lucide="wallet" class="nav-icon"></i>
+    Caixa / PDV
+  </a>
 
-      <a href="vendas.html" class="nav-item">
-        <i data-lucide="shopping-cart" class="nav-icon"></i>
-        Vendas
-      </a>
+  <a href="comandas.html" class="nav-item">
+    <i data-lucide="ticket" class="nav-icon"></i>
+    Comandas
+  </a>
 
-      <span class="nav-section-label">Cadastros</span>
+  <a href="agenda.html" class="nav-item">
+    <i data-lucide="calendar-days" class="nav-icon"></i>
+    Agenda
+  </a>
 
-      <a href="produtos.html" class="nav-item">
-        <i data-lucide="package" class="nav-icon"></i>
-        Produtos
-      </a>
+  <a href="vendas.html" class="nav-item">
+    <i data-lucide="shopping-cart" class="nav-icon"></i>
+    Vendas
+  </a>
 
-      <a href="clientes.html" class="nav-item">
-        <i data-lucide="users" class="nav-icon"></i>
-        Clientes
-      </a>
+  <span class="nav-section-label">
+    Cadastros
+  </span>
 
-      <span class="nav-section-label">Relatórios</span>
+  <a href="produtos.html" class="nav-item">
+    <i data-lucide="package" class="nav-icon"></i>
+    Produtos
+  </a>
 
-      <a href="relatorios.html" class="nav-item">
-        <i data-lucide="bar-chart-2" class="nav-icon"></i>
-        Relatórios
-      </a>
+  <a href="clientes.html" class="nav-item">
+    <i data-lucide="users" class="nav-icon"></i>
+    Clientes
+  </a>
 
-      <span class="nav-section-label">Sistema</span>
+  <span class="nav-section-label">
+    Relatórios
+  </span>
 
-      <a href="configuracoes.html" class="nav-item active">
-        <i data-lucide="settings" class="nav-icon"></i>
-        Configurações
-      </a>
-    </nav>
+  <a href="relatorios.html" class="nav-item">
+    <i data-lucide="bar-chart-2" class="nav-icon"></i>
+    Relatórios
+  </a>
+
+  <span class="nav-section-label">
+    Sistema
+  </span>
+
+  <a href="configuracoes.html" class="nav-item active">
+    <i data-lucide="settings" class="nav-icon"></i>
+    Configurações
+  </a>
+
+</nav>
 
     <div class="sidebar-footer">
       <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="sidebar-footer-link">
@@ -109,19 +124,40 @@
 
     <main class="main-content">
 
-      <section class="config-header">
-        <div>
-          <h1>Configurações do Sistema</h1>
-          <p>Gerencie os dados principais da empresa, aparência e módulos ativos.</p>
-        </div>
+<div class="page-header">
+  <div>
+    <h2>Configurações do Sistema</h2>
+    <p>Configure os dados da empresa, escolha o segmento do negócio e o sistema libera automaticamente os módulos corretos para uso.</p>
+  </div>
 
-        <button class="btn-primary" id="btnSalvarConfiguracoes">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span>Salvar alterações</span>
-        </button>
-      </section>
+  <button class="btn-primary" id="btnSalvarConfiguracoes">
+    <i class="fa-solid fa-floppy-disk"></i>
+    <span>Salvar alterações</span>
+  </button>
+</div>
 
       <section class="config-grid">
+
+        <div class="card config-card segment-preview-card">
+  <div class="segment-preview-header">
+    <i class="fa-solid fa-layer-group"></i>
+    <div>
+      <h2>Modo do sistema</h2>
+      <p id="segmentPreviewTitle">
+        Configure o segmento do negócio
+      </p>
+    </div>
+  </div>
+
+  <div
+    class="segment-preview-content"
+    id="segmentPreviewContent"
+  >
+    <div class="segment-empty">
+      Selecione um segmento para visualizar os recursos automáticos do sistema.
+    </div>
+  </div>
+</div>
 
   <div class="card config-card config-card-wide">
     <h2>Dados da empresa</h2>
@@ -171,6 +207,66 @@
         <label>UF</label>
         <input id="cfgUf" type="text" maxlength="2" placeholder="UF" />
       </div>
+
+      <div class="form-group full">
+  <label>Segmento do negócio</label>
+
+  <select id="cfgTipoNegocio">
+    <option value="">Selecione o segmento</option>
+
+    <option value="comercio_geral">
+      Comércio geral
+    </option>
+
+    <option value="padaria">
+      Padaria
+    </option>
+
+    <option value="restaurante">
+      Restaurante
+    </option>
+
+    <option value="bar_adega">
+      Bar / Adega
+    </option>
+
+    <option value="lanchonete">
+      Lanchonete
+    </option>
+
+    <option value="cafeteria_doceria">
+      Cafeteria / Doceria
+    </option>
+
+    <option value="mercado_mercearia">
+      Mercado / Mercearia
+    </option>
+
+    <option value="conveniencia">
+      Loja de conveniência
+    </option>
+
+    <option value="arena_esportiva">
+      Arena esportiva
+    </option>
+
+    <option value="arena_beach">
+      Arena de areia / Beach sports
+    </option>
+
+    <option value="quadras_esportivas">
+      Quadras esportivas
+    </option>
+
+    <option value="servicos">
+      Serviços
+    </option>
+  </select>
+
+  <small>
+    O sistema irá adaptar automaticamente módulos e funcionalidades para o seu segmento.
+  </small>
+</div>
     </div>
   </div>
 
@@ -181,10 +277,22 @@
       Selecione uma imagem do computador. Ela será exibida no sistema após salvar.
     </p>
 
-    <div class="form-group">
-      <label>Escolher logo</label>
-      <input id="cfgLogoFile" type="file" accept="image/png,image/jpeg,image/webp" />
-    </div>
+<div class="form-group">
+  <label>Escolher logo</label>
+
+  <div class="logo-upload-control">
+    <input id="cfgLogoFile" type="file" accept="image/png,image/jpeg,image/webp" />
+
+    <label for="cfgLogoFile" class="btn-primary logo-upload-btn">
+      <i class="fa-solid fa-image"></i>
+      <span>Escolher logo</span>
+    </label>
+
+    <span id="cfgLogoFileName" class="logo-upload-name">
+      Nenhum arquivo selecionado
+    </span>
+  </div>
+</div>
 
     <div class="logo-preview-box">
       <img id="cfgLogoPreview" src="assets/logo1.png" alt="Logo da empresa" />

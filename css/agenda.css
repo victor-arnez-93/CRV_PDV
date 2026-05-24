@@ -1,0 +1,724 @@
+/* ======================================================
+   HERO
+====================================================== */
+
+.agenda-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.agenda-title {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  margin-bottom: 4px;
+}
+
+.agenda-subtitle {
+  color: var(--text-muted);
+  font-size: .9rem;
+}
+
+/* ======================================================
+   STATS
+====================================================== */
+
+.agenda-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+
+  margin-bottom: 18px;
+}
+
+.agenda-stat-card {
+  padding: 18px;
+}
+
+.agenda-stat-label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: .72rem;
+  font-weight: 700;
+
+  letter-spacing: .08em;
+  text-transform: uppercase;
+
+  color: var(--text-muted);
+}
+
+.agenda-stat-card strong {
+  display: block;
+
+  font-size: 1.55rem;
+  font-family: var(--font-display);
+
+  margin-bottom: 4px;
+}
+
+.agenda-stat-card small {
+  color: var(--text-secondary);
+  font-size: .82rem;
+}
+
+/* ======================================================
+   FILTROS
+====================================================== */
+
+.agenda-filtros {
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.agenda-filtros-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  gap: 12px;
+}
+
+/* ======================================================
+   GRID
+====================================================== */
+
+.agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.agenda-coluna {
+  padding: 16px;
+  min-height: 420px;
+}
+
+.agenda-coluna.destaque {
+  border-color: rgba(249,137,72,.35);
+}
+
+.agenda-coluna-header {
+  margin-bottom: 16px;
+}
+
+.agenda-coluna-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: .82rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: .08em;
+
+  color: var(--text-muted);
+}
+
+.agenda-coluna-title i {
+  color: var(--crv-orange);
+}
+
+.agenda-coluna-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ======================================================
+   CARD JOGO
+====================================================== */
+
+.agenda-card {
+  padding: 14px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+
+  background: var(--bg-elevated);
+
+  cursor: pointer;
+
+  transition: all var(--transition);
+}
+
+.agenda-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249,137,72,.5);
+}
+
+.agenda-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 10px;
+}
+
+.agenda-card-horario {
+  font-family: var(--font-display);
+  font-size: .95rem;
+  font-weight: 700;
+}
+
+.agenda-card-local {
+  margin-top: 2px;
+
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+.agenda-card-status {
+  padding: 4px 10px;
+
+  border-radius: var(--radius-pill);
+
+  font-size: .66rem;
+  font-weight: 700;
+
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.status-agendado {
+  background: rgba(0,212,255,.12);
+  border: 1px solid rgba(0,212,255,.2);
+  color: var(--crv-cyan);
+}
+
+.status-andamento {
+  background: rgba(0,255,156,.12);
+  border: 1px solid rgba(0,255,156,.2);
+  color: var(--crv-green);
+}
+
+.status-cobranca {
+  background: rgba(249,137,72,.12);
+  border: 1px solid rgba(249,137,72,.2);
+  color: var(--crv-orange);
+}
+
+.status-fechado {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.08);
+  color: var(--text-primary);
+}
+
+.agenda-card-responsavel {
+  font-size: .92rem;
+  font-weight: 700;
+
+  margin-bottom: 3px;
+}
+
+.agenda-card-info {
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
+.agenda-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+
+  margin-top: 12px;
+  padding-top: 10px;
+
+  border-top: 1px solid var(--border);
+}
+
+.agenda-card-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agenda-card-total span {
+  font-size: .68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.agenda-card-total strong {
+  font-size: .86rem;
+  font-family: var(--font-display);
+}
+
+/* ======================================================
+   MODAL
+====================================================== */
+
+#modalReserva {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+}
+
+.agenda-modal-card {
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-modal-card .modal-header {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.agenda-modal-subtitle {
+  margin-top: 4px;
+  font-size: .8rem;
+  color: var(--text-muted);
+}
+
+.agenda-modal-body {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 20px 22px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agenda-modal-card .modal-footer {
+  padding: 16px 22px;
+
+  border-top: 1px solid var(--border);
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ======================================================
+   JOGADORES
+====================================================== */
+
+.agenda-jogadores-box {
+  padding: 14px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+
+  background: var(--bg-elevated);
+}
+
+.agenda-jogadores-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+.agenda-jogadores-header strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.agenda-jogadores-header small {
+  font-size: .74rem;
+  color: var(--text-muted);
+}
+
+.agenda-jogadores-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agenda-jogador-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 120px 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.agenda-jogador-check {
+  height: 40px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  background: var(--bg-card);
+
+  font-size: .75rem;
+}
+
+.agenda-jogador-check input {
+  accent-color: var(--crv-orange);
+}
+
+.agenda-remover-jogador {
+  all: unset;
+
+  width: 36px;
+  height: 36px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  color: #FF5050;
+}
+
+.agenda-remover-jogador:hover {
+  background: rgba(255,80,80,.08);
+  border-color: #FF5050;
+}
+
+/* ======================================================
+   TOTALIZADOR
+====================================================== */
+
+.agenda-totalizador-jogo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.agenda-totalizador-jogo div {
+  padding: 14px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+
+  background: var(--bg-elevated);
+}
+
+.agenda-totalizador-jogo span {
+  display: block;
+
+  margin-bottom: 4px;
+
+  font-size: .72rem;
+  text-transform: uppercase;
+
+  color: var(--text-muted);
+}
+
+.agenda-totalizador-jogo strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.agenda-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.agenda-feedback {
+  min-height: 18px;
+
+  font-size: .84rem;
+  font-weight: 600;
+}
+
+/* ======================================================
+   EMPTY
+====================================================== */
+
+.agenda-empty {
+  min-height: 180px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+
+  color: var(--text-muted);
+
+  font-size: .84rem;
+}
+
+/* ===== LIMITE DE CARDS POR COLUNA ===== */
+
+.agenda-coluna-body {
+  max-height: 292px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.agenda-coluna-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.agenda-coluna-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+/* ===== AVISOS INTELIGENTES ===== */
+
+.agenda-alerta {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(249,137,72,.25);
+  background: rgba(249,137,72,.08);
+  color: var(--text-primary);
+  font-size: .86rem;
+  display: none;
+}
+
+.agenda-alerta.ativo {
+  display: block;
+}
+
+/* ===== CAMPOS MENSAIS ===== */
+
+.agenda-mensal-box {
+  display: none;
+}
+
+.agenda-mensal-box.ativo {
+  display: grid;
+}
+
+/* ======================================================
+   FEEDBACK MODAL
+====================================================== */
+
+.agenda-feedback-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.agenda-feedback {
+  width: 100%;
+
+  text-align: center;
+
+  padding: 12px 14px;
+
+  border-radius: var(--radius-md);
+
+  font-size: .86rem;
+  font-weight: 700;
+
+  display: none;
+}
+
+.agenda-feedback.erro {
+  display: block;
+
+  color: #FF8A8A;
+
+  border: 1px solid rgba(255,80,80,.25);
+  background: rgba(255,80,80,.08);
+}
+
+.agenda-feedback.sucesso {
+  display: block;
+
+  color: var(--crv-green);
+
+  border: 1px solid rgba(0,255,156,.18);
+  background: rgba(0,255,156,.06);
+}
+
+/* ======================================================
+   MODAL AVISO
+====================================================== */
+
+.agenda-aviso-modal {
+  width: 100%;
+  max-width: 420px;
+
+  padding: 28px 24px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  text-align: center;
+
+  gap: 18px;
+}
+
+.agenda-aviso-icon {
+  width: 68px;
+  height: 68px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(249,137,72,.12);
+  border: 1px solid rgba(249,137,72,.25);
+
+  color: var(--crv-orange);
+}
+
+.agenda-aviso-icon svg {
+  width: 34px;
+  height: 34px;
+}
+
+.agenda-aviso-modal h3 {
+  font-size: 1.2rem;
+}
+
+.agenda-aviso-modal p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.agenda-aviso-actions {
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+
+  margin-top: 6px;
+}
+
+/* ======================================================
+   JOGADORES - MODOS
+====================================================== */
+
+.agenda-jogador-row.modo-agendamento {
+  grid-template-columns: 1fr 36px;
+}
+
+.agenda-jogador-row.modo-agendamento .jogador-valor,
+.agenda-jogador-row.modo-agendamento .jogador-pagamento,
+.agenda-jogador-row.modo-agendamento .agenda-jogador-check {
+  display: none;
+}
+
+.agenda-jogador-row.modo-cobranca {
+  grid-template-columns: 1fr 110px 140px 90px 36px;
+}
+
+/* ======================================================
+   BOTÃO EXCLUIR CARD
+====================================================== */
+
+.agenda-card-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-top: 12px;
+}
+
+.btn-remover-jogo {
+  all: unset;
+
+  width: 34px;
+  height: 34px;
+
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  color: #FF7070;
+
+  border: 1px solid rgba(255,80,80,.14);
+
+  transition: .2s;
+}
+
+.btn-remover-jogo:hover {
+  background: rgba(255,80,80,.08);
+  border-color: rgba(255,80,80,.4);
+
+  transform: translateY(-1px);
+}
+
+/* ======================================================
+   RESPONSIVO
+====================================================== */
+
+@media (max-width: 1200px) {
+
+  .agenda-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 900px) {
+
+  .agenda-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  .agenda-filtros-grid,
+  .form-row,
+  .agenda-totalizador-jogo,
+  .agenda-jogador-row {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-modal-card .modal-footer {
+    flex-direction: column;
+  }
+
+  .agenda-modal-card .modal-footer button {
+    width: 100%;
+  }
+
+}
+
+@media (max-width: 560px) {
+
+  .agenda-stats {
+    grid-template-columns: 1fr;
+  }
+
+}

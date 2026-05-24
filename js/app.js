@@ -330,6 +330,70 @@ function crvInicializarModalUsuario() {
   });
 }
 
+function crvAplicarLogoEmpresaTopbar(logoUrl) {
+
+const sidebarLogo = document.querySelector(".sidebar-logo-img");
+
+if (sidebarLogo && !sidebarLogo.src.includes("logo1.png")) {
+  sidebarLogo.src = "assets/logo1.png";
+}
+
+  const titulo = document.querySelector(".topbar-title");
+
+  if (!titulo) return;
+
+  let logo = document.getElementById("empresaLogoTopbar");
+
+  if (!logoUrl) {
+
+    if (logo) {
+      logo.remove();
+    }
+
+    return;
+  }
+
+  if (!logo) {
+
+    logo = document.createElement("img");
+
+    logo.id = "empresaLogoTopbar";
+
+    logo.className = "empresa-logo-topbar";
+
+    titulo.parentElement.appendChild(logo);
+  }
+
+  if (logo.src !== logoUrl) {
+    logo.src = logoUrl;
+  }
+}
+
+window.crvAplicarLogoEmpresaTopbar = crvAplicarLogoEmpresaTopbar;
+
+async function crvCarregarLogoEmpresaTopbar() {
+  try {
+    const pronto = await crvAguardarSupabaseGlobal();
+
+    if (!pronto) return;
+
+    const empresaId = crvObterEmpresaIdGlobal();
+
+    const { data, error } = await sb
+      .from("empresas")
+      .select("logo_url")
+      .eq("id", empresaId)
+      .single();
+
+    if (error) throw error;
+
+    crvAplicarLogoEmpresaTopbar(data?.logo_url || "");
+
+  } catch (err) {
+    console.warn("[CRV PDV] Não foi possível carregar logo da empresa:", err.message);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
@@ -342,6 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await crvAtualizarSaudacao();
   await crvAtualizarStatusCaixaGlobal();
+  await crvCarregarLogoEmpresaTopbar();
 
   setInterval(crvAtualizarStatusCaixaGlobal, 15000);
 

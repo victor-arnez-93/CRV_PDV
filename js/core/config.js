@@ -68,19 +68,25 @@ function aplicarConfiguracoesSistema(cfg) {
     );
   }
 
-  // ==========================================
-  // LOGO
-  // ==========================================
+ // ==========================================
+// LOGO DO SISTEMA - FIXA / IMUTÁVEL
+// ==========================================
 
-  const logos =
-    document.querySelectorAll(".sidebar-logo-img");
+const logosSistema =
+  document.querySelectorAll(".sidebar-logo-img");
 
-  logos.forEach(img => {
+logosSistema.forEach(img => {
+  img.src = "assets/logo1.png";
+  img.alt = "CRV PDV";
+});
 
-    if (cfg.logo_url) {
-      img.src = cfg.logo_url;
-    }
-  });
+// ==========================================
+// LOGO DA EMPRESA - APENAS NO HEADER
+// ==========================================
+
+if (window.crvAplicarLogoEmpresaTopbar) {
+  window.crvAplicarLogoEmpresaTopbar(cfg.logo_url || "");
+}
 
   // ==========================================
   // SUBTÍTULO SIDEBAR

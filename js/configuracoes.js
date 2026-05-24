@@ -4,6 +4,79 @@
 
 let CONFIG_EMPRESA = null;
 
+const SEGMENTOS_CONFIG = {
+
+  comercio_geral: {
+    titulo: "Comércio geral",
+    modulos: [
+      "Caixa / PDV",
+      "Produtos",
+      "Clientes",
+      "Relatórios"
+    ]
+  },
+
+  padaria: {
+    titulo: "Padaria",
+    modulos: [
+      "Caixa rápido",
+      "Produtos",
+      "Comandas opcionais",
+      "Relatórios"
+    ]
+  },
+
+  restaurante: {
+    titulo: "Restaurante",
+    modulos: [
+      "Comandas",
+      "Caixa",
+      "Produtos",
+      "Relatórios"
+    ]
+  },
+
+  bar_adega: {
+    titulo: "Bar / Adega",
+    modulos: [
+      "Comandas",
+      "Caixa",
+      "Bebidas",
+      "Relatórios"
+    ]
+  },
+
+  arena_esportiva: {
+    titulo: "Arena esportiva",
+    modulos: [
+      "Agenda esportiva",
+      "Controle de jogos",
+      "Cobrança por jogador",
+      "Relatórios"
+    ]
+  },
+
+  arena_beach: {
+    titulo: "Arena de areia / Beach sports",
+    modulos: [
+      "Quadras",
+      "Agenda",
+      "Jogos",
+      "Cobrança por jogador"
+    ]
+  },
+
+  quadras_esportivas: {
+    titulo: "Quadras esportivas",
+    modulos: [
+      "Reservas",
+      "Agenda",
+      "Controle de horários",
+      "Relatórios"
+    ]
+  }
+};
+
 // ======================================================
 // HELPERS
 // ======================================================
@@ -156,7 +229,54 @@ function preencherFormulario(data) {
   document.getElementById("cfgUf").value =
     data.uf || "";
 
+document.getElementById("cfgTipoNegocio").value =
+  data.tipo_negocio || "";
+
+atualizarPreviewSegmento();
+
   atualizarPreviewLogo();
+}
+
+function atualizarPreviewSegmento() {
+
+  const select =
+    document.getElementById("cfgTipoNegocio");
+
+  const title =
+    document.getElementById("segmentPreviewTitle");
+
+  const content =
+    document.getElementById("segmentPreviewContent");
+
+  if (!select || !title || !content) return;
+
+  const tipo = select.value;
+
+  const cfg = SEGMENTOS_CONFIG[tipo];
+
+  if (!cfg) {
+
+    title.textContent =
+      "Configure o segmento do negócio";
+
+    content.innerHTML = `
+      <div class="segment-empty">
+        Selecione um segmento para visualizar os recursos automáticos do sistema.
+      </div>
+    `;
+
+    return;
+  }
+
+  title.textContent = cfg.titulo;
+
+  content.innerHTML =
+    cfg.modulos.map(modulo => `
+      <div class="segment-module">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>${modulo}</span>
+      </div>
+    `).join("");
 }
 
 // ======================================================
@@ -189,35 +309,82 @@ function atualizarPreviewLogo(file = null) {
 // ======================================================
 // UPLOAD DA LOGO
 // ======================================================
-
 async function enviarLogoEmpresa(empresaId) {
-  const logoInput = document.getElementById("cfgLogoFile");
-  const logoFile = logoInput?.files?.[0];
+
+  const logoInput =
+    document.getElementById("cfgLogoFile");
+
+  const logoFile =
+    logoInput?.files?.[0];
 
   if (!logoFile) {
     return CONFIG_EMPRESA?.logo_url || "";
   }
 
+  const tiposPermitidos = [
+    "image/png",
+    "image/jpeg",
+    "image/webp"
+  ];
+
+  if (!tiposPermitidos.includes(logoFile.type)) {
+    throw new Error(
+      "Formato inválido. Use PNG, JPG ou WEBP."
+    );
+  }
+
+  const tamanhoMaximo =
+    3 * 1024 * 1024;
+
+  if (logoFile.size > tamanhoMaximo) {
+    throw new Error(
+      "Logo muito grande. Máximo 3MB."
+    );
+  }
+
   cfgFeedback("Enviando logo...");
 
-  const extensao = logoFile.name.split(".").pop()?.toLowerCase() || "png";
+  const extensao =
+    logoFile.name
+      .split(".")
+      .pop()
+      ?.toLowerCase() || "png";
 
   const nomeArquivo =
-    `logo-${empresaId}-${Date.now()}.${extensao}`;
+    `empresa_${empresaId}.${extensao}`;
 
-  const { error: uploadError } = await sb.storage
+  const caminhoCompleto =
+    `logos/${nomeArquivo}`;
+
+  // remove antiga antes
+  await sb.storage
     .from("logo")
-    .upload(nomeArquivo, logoFile, {
-      upsert: true
-    });
+    .remove([caminhoCompleto]);
 
-  if (uploadError) throw uploadError;
+  // upload novo
+  const { error: uploadError } =
+    await sb.storage
+      .from("logo")
+      .upload(
+        caminhoCompleto,
+        logoFile,
+        {
+          cacheControl: "0",
+          upsert: true
+        }
+      );
 
-  const { data: publicData } = sb.storage
-    .from("logo")
-    .getPublicUrl(nomeArquivo);
+  if (uploadError) {
+    console.error(uploadError);
+    throw uploadError;
+  }
 
-  return publicData.publicUrl;
+  const { data } =
+    sb.storage
+      .from("logo")
+      .getPublicUrl(caminhoCompleto);
+
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 // ======================================================
@@ -248,23 +415,59 @@ async function salvarConfiguracoes() {
       cidade: valor("cfgCidade"),
       uf: valor("cfgUf"),
       logo_url: logoUrl,
+      tipo_negocio:
+  valor("cfgTipoNegocio"),
+
+configuracao_inicial_concluida: true,
+
+configuracao_inicial_em:
+  new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await sb
-      .from("empresas")
-      .update(payload)
-      .eq("id", empresaId)
-      .select("*")
-      .single();
+const { data, error } = await sb
+  .from("empresas")
+  .update(payload)
+  .eq("id", empresaId)
+  .select("*")
+  .maybeSingle();
 
-    if (error) throw error;
+if (error) throw error;
 
-    CONFIG_EMPRESA = data;
+if (!data) {
+  throw new Error(
+    "Nenhuma empresa foi atualizada. Verifique se o usuário tem permissão para editar esta empresa."
+  );
+}
+
+CONFIG_EMPRESA = data;
+
+atualizarPreviewLogo();
+
+const logoInput = document.getElementById("cfgLogoFile");
+const fileName = document.getElementById("cfgLogoFileName");
+
+if (logoInput) {
+  logoInput.value = "";
+}
+
+if (fileName) {
+  fileName.textContent = "Nenhum arquivo selecionado";
+}
 
     if (window.crvCarregarConfiguracoesEmpresa) {
       await crvCarregarConfiguracoesEmpresa();
     }
+
+if (window.crvAplicarLogoEmpresaTopbar) {
+  window.crvAplicarLogoEmpresaTopbar(data.logo_url);
+}
+
+const logoHeader = document.querySelector(".empresa-logo-header");
+
+if (logoHeader && data.logo_url) {
+  logoHeader.src = data.logo_url;
+}
 
     cfgFeedback("Configurações salvas com sucesso.", "sucesso");
   } catch (err) {
@@ -304,15 +507,24 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSalvar.addEventListener("click", salvarConfiguracoes);
   }
 
-  if (logoInput) {
-    logoInput.addEventListener("change", e => {
-      const file = e.target.files?.[0];
+if (logoInput) {
+  logoInput.addEventListener("change", e => {
+    const file = e.target.files?.[0];
+    const fileName = document.getElementById("cfgLogoFileName");
 
-      if (file) {
-        atualizarPreviewLogo(file);
+    if (file) {
+      atualizarPreviewLogo(file);
+
+      if (fileName) {
+        fileName.textContent = file.name;
       }
-    });
-  }
+    } else {
+      if (fileName) {
+        fileName.textContent = "Nenhum arquivo selecionado";
+      }
+    }
+  });
+}
 
   setTimeout(() => {
     carregarConfiguracoes();
@@ -323,4 +535,14 @@ document.addEventListener("DOMContentLoaded", () => {
       crvCarregarConfiguracoesEmpresa();
     }
   }, 900);
+  const tipoNegocio =
+  document.getElementById("cfgTipoNegocio");
+
+if (tipoNegocio) {
+  tipoNegocio.addEventListener(
+    "change",
+    atualizarPreviewSegmento
+  );
+}
+
 });

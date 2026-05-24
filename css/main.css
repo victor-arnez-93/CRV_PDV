@@ -773,6 +773,26 @@ html[data-theme="dark"] body::after {
   border-top: 1px solid var(--border);
 }
 
+.empresa-logo-topbar {
+
+  width: 130px;
+  height: 42px;
+
+  object-fit: contain;
+
+  margin-left: 18px;
+
+  padding: 0;
+
+  background: transparent;
+
+  border: none;
+
+  display: block;
+
+  flex-shrink: 0;
+}
+
 /* ===== RESPONSIVE — MOBILE ===== */
 @media (max-width: 768px) {
   .app-shell {
