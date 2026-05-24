@@ -9,6 +9,8 @@
     savedTheme
   );
 
+  window.CRV_THEME = savedTheme;
+
 })();
 
 let crvAppCaixaAberto = false;
@@ -254,25 +256,56 @@ async function crvAtualizarSaudacao() {
 }
 
 function crvInicializarTema() {
+
   const toggle = document.getElementById('themeToggle');
   const icon = document.getElementById('iconTheme');
 
-  if (!toggle) return;
+  const aplicarTema = (tema) => {
 
-  toggle.addEventListener('click', () => {
-    const html = document.documentElement;
-    const isDark = html.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute(
+      'data-theme',
+      tema
+    );
 
-    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    localStorage.setItem('crv-theme', isDark ? 'light' : 'dark');
+    localStorage.setItem(
+      'crv-theme',
+      tema
+    );
+
+    window.CRV_THEME = tema;
 
     if (icon) {
-      icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+
+      icon.setAttribute(
+        'data-lucide',
+        tema === 'dark'
+          ? 'moon'
+          : 'sun'
+      );
     }
 
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }
+  };
+
+  aplicarTema(
+    localStorage.getItem('crv-theme') || 'dark'
+  );
+
+  if (!toggle) return;
+
+  toggle.addEventListener('click', () => {
+
+    const temaAtual =
+      document.documentElement.getAttribute('data-theme') || 'dark';
+
+    const novoTema =
+      temaAtual === 'dark'
+        ? 'light'
+        : 'dark';
+
+    aplicarTema(novoTema);
   });
 }
 

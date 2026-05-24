@@ -246,14 +246,39 @@ window.auth = {
   protegerPagina
 };
 
+  // ==========================================
+  // 🔒 PROTEÇÃO AUTOMÁTICA DE ROTAS
+  // ==========================================
+  function paginaPublica() {
+    const paginasPublicas = [
+      "",
+      "index.html",
+      "cadastro.html",
+      "nova-senha.html",
+      "recuperar-senha.html",
+      "esqueci-senha.html"
+    ];
+
+    const paginaAtual =
+      window.location.pathname.split("/").pop() || "index.html";
+
+    return paginasPublicas.includes(paginaAtual);
+  }
+
 
   // ==========================================
   // 🚀 INIT
   // ==========================================
   document.addEventListener("DOMContentLoaded", async () => {
     log("Inicializando módulo de autenticação...");
+
     await verificarSessao();
+
+    if (!paginaPublica() && !USER) {
+      log("Acesso direto bloqueado - redirecionando", "warn");
+      window.location.href = "index.html";
+      return;
+    }
   });
 })();
-
 
