@@ -98,6 +98,111 @@ async function crvEnviarLinkRedefinicaoSenha(email) {
   }
 }
 
+// ======================================================
+// AÇÕES DO MODAL USUÁRIO
+// ======================================================
+
+document.addEventListener("DOMContentLoaded", async () => {
+
+  const btnConfiguracoes =
+    document.getElementById("btnUserConfiguracoes");
+
+  const btnAlterarSenha =
+    document.getElementById("btnUserAlterarSenha");
+
+  const btnLogout =
+    document.getElementById("btnUserLogout");
+
+  // CONFIGURAÇÕES
+  if (btnConfiguracoes) {
+
+    btnConfiguracoes.addEventListener("click", () => {
+
+      window.location.href =
+        "configuracoes.html";
+
+    });
+
+  }
+
+  // ALTERAR SENHA
+  if (btnAlterarSenha) {
+
+    btnAlterarSenha.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          btnAlterarSenha.disabled = true;
+
+          const user =
+            await crvObterUsuarioAtual();
+
+          const email =
+            user?.email || "";
+
+          const resultado =
+            await crvEnviarLinkRedefinicaoSenha(
+              email
+            );
+
+          if (!resultado.ok) {
+
+            alert(resultado.mensagem);
+
+            btnAlterarSenha.disabled = false;
+
+            return;
+          }
+
+          alert(
+            "Link de redefinição enviado para seu e-mail."
+          );
+
+        } catch (err) {
+
+          console.error(
+            "[CRV PDV][USER]",
+            err
+          );
+
+          alert(
+            "Erro ao enviar redefinição."
+          );
+
+          btnAlterarSenha.disabled = false;
+
+        }
+
+      }
+    );
+
+  }
+
+  // LOGOUT
+  if (btnLogout) {
+
+    btnLogout.addEventListener(
+      "click",
+      async () => {
+
+        crvToast(
+          "Saindo do sistema...",
+          "warn"
+        );
+
+        setTimeout(async () => {
+          await crvLogout();
+        }, 600);
+
+      }
+    );
+
+  }
+
+});
+
 window.crvEnviarLinkRedefinicaoSenha = crvEnviarLinkRedefinicaoSenha;
 
 // ======================================================

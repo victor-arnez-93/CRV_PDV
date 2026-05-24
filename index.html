@@ -76,6 +76,10 @@
       <span class="bt">ENTRAR NO SISTEMA</span>
     </button>
 
+    <button type="button" class="forgot-password" id="btnEsqueciSenha">
+      Esqueceu sua senha?
+    </button>
+
     <div class="login-divider"><span>ou</span></div>
 
     <button type="button" class="btn btn-demo" id="btnMostrarCadastro">
@@ -91,6 +95,28 @@
       <span id="errTxt">Credenciais inválidas.</span>
     </div>
   </form>
+
+  <form id="recuperarForm" novalidate style="display:none;">
+  <div class="subtitle">
+    <h2>Recuperar senha</h2>
+    <p class="recovery-text">Informe seu e-mail para receber o link de redefinição.</p>
+  </div>
+
+  <div class="field">
+    <label for="recEmail">E-mail</label>
+    <div class="iw">
+      <input type="email" id="recEmail" placeholder="seuemail@email.com" required />
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-enter" id="btnEnviarRecuperacao">
+    <span class="bt">ENVIAR LINK</span>
+  </button>
+
+  <button type="button" class="btn btn-demo" id="btnVoltarLoginRecuperacao">
+    <span class="bt">VOLTAR AO LOGIN</span>
+  </button>
+</form>
 
   <form id="cadastroForm" novalidate style="display:none;">
   <div class="subtitle">

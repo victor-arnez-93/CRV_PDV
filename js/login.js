@@ -283,3 +283,82 @@ if (emailConfirmado) {
 
   history.replaceState(null, "", "index.html");
 }
+
+const recuperarForm = document.getElementById("recuperarForm");
+const btnEsqueciSenha = document.getElementById("btnEsqueciSenha");
+const btnVoltarLoginRecuperacao = document.getElementById("btnVoltarLoginRecuperacao");
+
+if (btnEsqueciSenha) {
+  btnEsqueciSenha.addEventListener("click", () => {
+    loginForm.style.display = "none";
+    cadastroForm.style.display = "none";
+    recuperarForm.style.display = "block";
+
+    document.querySelector(".subtitle").style.display = "none";
+
+    const emailAtual = document.getElementById("email")?.value?.trim();
+    const recEmail = document.getElementById("recEmail");
+
+    if (emailAtual && recEmail) {
+      recEmail.value = emailAtual;
+    }
+
+    errEl.classList.remove("on", "ok", "warn");
+  });
+}
+
+if (btnVoltarLoginRecuperacao) {
+  btnVoltarLoginRecuperacao.addEventListener("click", () => {
+    recuperarForm.style.display = "none";
+    cadastroForm.style.display = "none";
+    loginForm.style.display = "block";
+    errEl.classList.remove("on", "ok", "warn");
+  });
+}
+
+if (recuperarForm) {
+  recuperarForm.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    document.querySelector(".subtitle").style.display = "block";
+
+    const email = document.getElementById("recEmail").value.trim();
+    const btn = document.getElementById("btnEnviarRecuperacao");
+
+    if (!email) {
+      document.getElementById("errTxt").textContent =
+        "Informe seu e-mail para recuperar a senha.";
+
+      errEl.classList.remove("ok", "warn");
+      errEl.classList.add("on");
+      return;
+    }
+
+    btn.classList.add("ld");
+    btn.disabled = true;
+
+    const resp = await window.auth.enviarRecuperacaoSenha(email);
+
+    btn.classList.remove("ld");
+    btn.disabled = false;
+
+    document.getElementById("errTxt").innerHTML = `
+      Link de redefinição enviado com sucesso.<br>
+      Verifique seu e-mail para continuar.
+    `;
+
+    errEl.classList.remove("ok", "warn");
+
+    if (resp.ok) {
+
+      errEl.classList.remove("warn");
+      errEl.classList.add("on", "ok");
+
+    } else {
+
+      errEl.classList.remove("ok");
+      errEl.classList.add("on");
+
+    }
+  });
+}

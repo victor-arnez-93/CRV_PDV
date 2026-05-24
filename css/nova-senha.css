@@ -72,18 +72,7 @@
 
 .btn-reset {
   width: 100%;
-  border: none;
-  border-radius: 999px;
-  padding: 16px;
-  background: linear-gradient(135deg, #244a85, #a48633);
-  color: #fff;
-  font-weight: 800;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.btn-reset:hover {
-  filter: brightness(1.08);
+  margin-top: 18px;
 }
 
 .link-voltar {

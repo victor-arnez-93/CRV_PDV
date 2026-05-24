@@ -170,6 +170,37 @@ async function cadastrarConta(nome, email, senha) {
   }
 }
 
+async function enviarRecuperacaoSenha(email) {
+  try {
+    if (!email) {
+      return {
+        ok: false,
+        mensagem: "Informe seu e-mail para recuperar a senha."
+      };
+    }
+
+    const redirectTo =
+      `${window.location.origin}/nova-senha.html`;
+
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo
+    });
+
+    if (error) throw error;
+
+    return {
+      ok: true,
+      mensagem: "Enviamos um link de redefinição para seu e-mail."
+    };
+
+  } catch (err) {
+    return {
+      ok: false,
+      mensagem: err.message || "Erro ao enviar link de recuperação."
+    };
+  }
+}
+
   // ==========================================
   // 🚪 LOGOUT
   // ==========================================
@@ -209,6 +240,7 @@ async function cadastrarConta(nome, email, senha) {
 window.auth = {
   login,
   cadastrarConta,
+  enviarRecuperacaoSenha,
   logout,
   verificarSessao,
   protegerPagina

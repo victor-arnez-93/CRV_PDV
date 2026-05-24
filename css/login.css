@@ -329,19 +329,74 @@ body {
   text-shadow: 0 0 10px rgba(255,160,50,.45);
 }
 
+/* ======================================================
+   AJUSTES FINAIS LOGIN / CADASTRO / RECUPERAÇÃO
+====================================================== */
+
 #loginForm .btn-enter {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 #loginForm .login-divider {
-  margin: 0 0 12px;
+  margin: 8px 0 14px;
+}
+
+#cadastroForm .btn-enter {
+  margin-bottom: 8px;
+}
+
+#cadastroForm .btn-demo {
+  margin-top: 0;
+}
+
+#recuperarForm .btn-enter {
+  margin-bottom: 8px;
+}
+
+#recuperarForm .btn-demo {
+  margin-top: 0;
+}
+
+.forgot-password {
+  all: unset;
+  display: block;
+  width: 100%;
+  margin: -8px 0 18px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #00d4ff;
+  cursor: pointer;
+  letter-spacing: .08em;
+  transition: color .2s ease, text-shadow .2s ease;
+}
+
+.forgot-password:hover {
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, .55);
+}
+
+.recovery-text {
+  color: #ffffff !important;
+  font-weight: 800;
+  text-align: center;
 }
 
 .err.ok {
   display: flex;
-  background: rgba(0, 255, 136, .08);
-  border-color: rgba(0, 255, 136, .35);
-  color: rgba(160, 255, 210, .95);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 190, 120, .16),
+      rgba(0, 255, 170, .10)
+    );
+  border: 1px solid rgba(0, 255, 170, .35);
+  color: #a9ffe1;
+  box-shadow: 0 0 22px rgba(0, 255, 170, .10);
+}
+
+.err.ok .ei {
+  color: #00ffb3;
 }
 
 .err.warn {
