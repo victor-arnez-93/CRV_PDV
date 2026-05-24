@@ -346,28 +346,260 @@ function crvInicializarRelogio() {
   setInterval(tick, 1000);
 }
 
-function crvInicializarModalUsuario() {
-  const avatar = document.querySelector('.topbar-avatar');
-  const modal = document.getElementById('userModal');
-  const closeBtn = document.getElementById('closeUserModal');
+function crvCriarModalUsuarioGlobal() {
+  let modal = document.getElementById("userModal");
 
-  if (!avatar || !modal) return;
-
-  avatar.addEventListener('click', () => {
-    modal.classList.remove('hidden');
-  });
-
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      modal.classList.add('hidden');
-    });
+  if (modal) {
+    modal.remove();
   }
 
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.add('hidden');
+  modal = document.createElement("div");
+  modal.className = "modal-overlay hidden";
+  modal.id = "userModal";
+
+  modal.innerHTML = `
+    <div class="user-modal">
+
+      <div class="user-modal-header">
+        <div class="user-info">
+          <div class="user-avatar">
+            <i class="fa-solid fa-user"></i>
+          </div>
+
+          <div>
+            <strong id="userModalNome">Usuário</strong>
+            <span id="userModalEmail">Carregando...</span>
+          </div>
+        </div>
+
+        <button class="modal-close" id="closeUserModal" type="button">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="user-modal-body">
+
+        <div class="user-row">
+          <span>Último acesso:</span>
+          <strong id="userModalUltimoAcesso">Sessão atual</strong>
+        </div>
+
+        <div class="user-row">
+          <span>Perfil:</span>
+          <strong id="userModalPerfil">Operador</strong>
+        </div>
+
+        <div class="user-row">
+          <span>Sessão ativa há:</span>
+          <strong id="userModalTempoSessao">0 min</strong>
+        </div>
+
+        <div class="user-actions">
+          <button class="btn-secondary" id="btnUserConfiguracoes" type="button">
+            <span>Configurações</span>
+          </button>
+
+          <button class="btn-secondary" id="btnUserAlterarSenha" type="button">
+            <span>Alterar Senha</span>
+          </button>
+
+          <button class="btn-primary" id="btnUserLogout" type="button">
+            Sair do Sistema
+          </button>
+        </div>
+
+      </div>
+
+      <div class="user-modal-footer">
+        Sistema seguro • CRV PDV
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  return modal;
+}
+
+async function crvPreencherModalUsuarioGlobal() {
+  const user =
+    typeof crvObterUsuarioAtual === "function"
+      ? await crvObterUsuarioAtual()
+      : window.USER;
+
+  const nomeEl = document.getElementById("userModalNome");
+  const emailEl = document.getElementById("userModalEmail");
+  const perfilEl = document.getElementById("userModalPerfil");
+  const tempoEl = document.getElementById("userModalTempoSessao");
+
+  const email =
+    user?.email ||
+    window.APP_USER?.email ||
+    "";
+
+  const nome =
+    window.APP_USER?.nome ||
+    user?.user_metadata?.nome ||
+    email.split("@")[0] ||
+    "Usuário";
+
+  if (nomeEl) nomeEl.textContent = crvCapitalizarNome(nome);
+  if (emailEl) emailEl.textContent = email || "E-mail não encontrado";
+  if (perfilEl) perfilEl.textContent = window.APP_USER?.perfil || "Operador";
+
+  if (tempoEl) {
+    tempoEl.textContent =
+      typeof crvTempoSessaoTexto === "function"
+        ? crvTempoSessaoTexto()
+        : "0 min";
+  }
+}
+
+function crvAbrirModalRedefinicaoSenhaGlobal() {
+  const modalExistente = document.getElementById("modalEnviarRedefinicaoSenha");
+
+  if (modalExistente) {
+    modalExistente.remove();
+  }
+
+  const emailAtual =
+    window.USER?.email ||
+    window.APP_USER?.email ||
+    "";
+
+  const modal = document.createElement("div");
+  modal.id = "modalEnviarRedefinicaoSenha";
+  modal.className = "modal-overlay";
+
+  modal.innerHTML = `
+    <div class="user-modal" style="max-width:420px;">
+
+      <div class="user-modal-header">
+        <div class="user-info">
+          <div class="user-avatar">
+            <i class="fa-solid fa-envelope"></i>
+          </div>
+
+          <div>
+            <strong>Redefinir senha</strong>
+            <span>Enviaremos um link para seu e-mail</span>
+          </div>
+        </div>
+
+        <button class="modal-close" id="btnFecharRedefinicaoSenha" type="button">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="user-modal-body">
+        <label class="input-label">E-mail para redefinição</label>
+
+        <input
+          class="input"
+          type="email"
+          id="emailRedefinicaoSenha"
+          value="${emailAtual}"
+          placeholder="Digite o e-mail"
+          autocomplete="email"
+        >
+
+        <div
+          id="feedbackRedefinicaoSenha"
+          style="margin:14px 0;color:var(--text-secondary);font-size:.88rem;"
+        ></div>
+
+        <div class="user-actions">
+          <button class="btn-secondary" id="btnCancelarRedefinicaoSenha" type="button">
+            <span>Cancelar</span>
+          </button>
+
+          <button class="btn-primary" id="btnEnviarRedefinicaoSenha" type="button">
+            Enviar link
+          </button>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const fechar = () => modal.remove();
+
+  document.getElementById("btnFecharRedefinicaoSenha").onclick = fechar;
+  document.getElementById("btnCancelarRedefinicaoSenha").onclick = fechar;
+
+  document.getElementById("btnEnviarRedefinicaoSenha").onclick = async () => {
+    const feedback = document.getElementById("feedbackRedefinicaoSenha");
+    const email = document.getElementById("emailRedefinicaoSenha").value.trim();
+
+    if (!email) {
+      feedback.textContent = "Informe um e-mail válido.";
+      feedback.style.color = "#FF7070";
+      return;
+    }
+
+    feedback.textContent = "Enviando link...";
+    feedback.style.color = "var(--text-secondary)";
+
+    const redirectTo = `${window.location.origin}/nova-senha.html`;
+
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo
+    });
+
+    if (error) {
+      feedback.textContent = error.message || "Erro ao enviar link.";
+      feedback.style.color = "#FF7070";
+      return;
+    }
+
+    feedback.textContent = "Link enviado. Verifique sua caixa de entrada e também spam/lixo eletrônico.";
+    feedback.style.color = "var(--crv-green)";
+  };
+}
+
+function crvInicializarModalUsuario() {
+  const avatar = document.querySelector(".topbar-avatar");
+
+  if (!avatar) return;
+
+  const modal = crvCriarModalUsuarioGlobal();
+
+  avatar.addEventListener("click", async () => {
+    await crvPreencherModalUsuarioGlobal();
+    modal.classList.remove("hidden");
+  });
+
+  document.getElementById("closeUserModal").onclick = () => {
+    modal.classList.add("hidden");
+  };
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal) {
+      modal.classList.add("hidden");
     }
   });
+
+  document.getElementById("btnUserConfiguracoes").onclick = () => {
+    window.location.href = "configuracoes.html";
+  };
+
+  document.getElementById("btnUserAlterarSenha").onclick = () => {
+    modal.classList.add("hidden");
+    crvAbrirModalRedefinicaoSenhaGlobal();
+  };
+
+  document.getElementById("btnUserLogout").onclick = async () => {
+    if (typeof crvLogout === "function") {
+      await crvLogout();
+      return;
+    }
+
+    await sb.auth.signOut();
+    window.location.href = "index.html";
+  };
 }
 
 function crvAplicarLogoEmpresaTopbar(logoUrl) {

@@ -1,214 +1,609 @@
+// ======================================================
+// CRV PDV - CLIENTES
+// Supabase real + empresa_id + RLS por empresa
+// ======================================================
+
 // ===== ESTADO =====
-let clientes = JSON.parse(localStorage.getItem('crv-clientes')) || [
-  { id: 1, nome: 'João Silva',    telefone: '(15) 99812-3456', obs: 'Arena 28 — time azul',  data: '2026-03-20' },
-  { id: 2, nome: 'Pedro Alves',   telefone: '(15) 99734-5678', obs: 'Jogador fut de areia',  data: '2026-03-21' },
-  { id: 3, nome: 'Ana Souza',     telefone: '(15) 98801-2345', obs: 'Cliente padaria — VIP', data: '2026-03-22' },
-  { id: 4, nome: 'Lucas Mendes',  telefone: '(15) 99923-4567', obs: '',                      data: '2026-03-22' },
-];
+let clientes = [];
+let filtroAtivo = "todos";
+let idExcluirCliente = null;
 
-let filtroAtivo = 'todos';
+// ======================================================
+// HELPERS
+// ======================================================
 
-// ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
-  salvarLocal();
+function logClientes(mensagem, tipo = "info") {
+  if (typeof logSistema === "function") {
+    logSistema("CLIENTES", mensagem, tipo);
+  } else {
+    console.log(`[CRV PDV][CLIENTES] ${mensagem}`);
+  }
+}
+
+function obterEmpresaIdClientes() {
+  return window.APP_EMPRESA_ID || APP_EMPRESA_ID || null;
+}
+
+function sistemaOnlineClientes() {
+  return Boolean(
+    window.APP_STATUS &&
+    APP_STATUS.online &&
+    APP_STATUS.supabase_ok &&
+    window.sb &&
+    obterEmpresaIdClientes()
+  );
+}
+
+async function aguardarContextoClientes() {
+  let tentativas = 0;
+
+  while (tentativas < 40) {
+    if (sistemaOnlineClientes()) {
+      return true;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    tentativas++;
+  }
+
+  return false;
+}
+
+function formatarDataCliente(valor) {
+  if (!valor) return "—";
+
+  const data = new Date(valor);
+
+  if (Number.isNaN(data.getTime())) {
+    return "—";
+  }
+
+  return data.toLocaleDateString("pt-BR");
+}
+
+function normalizarTelefone(valor) {
+  return String(valor || "").trim();
+}
+
+// ======================================================
+// INIT
+// ======================================================
+
+document.addEventListener("DOMContentLoaded", async () => {
+  logClientes("Inicializando...");
+
+  const pronto = await aguardarContextoClientes();
+
+  if (!pronto) {
+    logClientes("Supabase/Auth não ficou pronto a tempo.", "error");
+    renderClientes();
+
+    if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+      crvAtualizarStatusCaixaGlobal();
+    }
+
+    return;
+  }
+
+  await carregarClientes();
+
   renderClientes();
 
   if (typeof crvAtualizarStatusCaixaGlobal === "function") {
     crvAtualizarStatusCaixaGlobal();
   }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 });
 
-function salvarLocal() {
-  localStorage.setItem('crv-clientes', JSON.stringify(clientes));
+// ======================================================
+// SUPABASE - CARREGAR
+// ======================================================
+
+async function carregarClientes() {
+  try {
+    if (!sistemaOnlineClientes()) {
+      throw new Error("Sistema sem conexão com Supabase.");
+    }
+
+    const empresaId = obterEmpresaIdClientes();
+
+    logClientes("Buscando clientes do Supabase...");
+
+    const { data, error } = await sb
+      .from("clientes")
+      .select("*")
+      .eq("empresa_id", empresaId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    clientes = Array.isArray(data)
+      ? data.map(cliente => ({
+          id: cliente.id,
+          empresa_id: cliente.empresa_id,
+          nome: cliente.nome || "",
+          telefone: cliente.telefone || "",
+          obs: cliente.obs || "",
+          created_at: cliente.created_at || null,
+          data: cliente.created_at
+            ? String(cliente.created_at).slice(0, 10)
+            : ""
+        }))
+      : [];
+
+    logClientes(`${clientes.length} cliente(s) carregado(s).`, "success");
+
+  } catch (err) {
+    clientes = [];
+
+    logClientes("Erro ao carregar clientes: " + err.message, "error");
+  }
 }
 
-// ===== FILTRO =====
+// ======================================================
+// FILTROS
+// ======================================================
+
 function setFiltro(btn, filtro) {
-  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document
+    .querySelectorAll(".filtro-btn")
+    .forEach(botao => botao.classList.remove("active"));
+
+  if (btn) {
+    btn.classList.add("active");
+  }
+
   filtroAtivo = filtro;
   renderClientes();
 }
 
 function getClientesFiltrados() {
-  const texto = document.getElementById('filtroTexto')?.value.toLowerCase().trim() || '';
+  const texto = String(
+    document.getElementById("filtroTexto")?.value || ""
+  )
+    .toLowerCase()
+    .trim();
+
   let lista = [...clientes];
 
-  if (filtroAtivo === 'recentes') {
+  if (filtroAtivo === "recentes") {
     const hoje = new Date().toISOString().slice(0, 10);
-    lista = lista.filter(c => c.data === hoje);
+
+    lista = lista.filter(cliente => {
+      const dataCliente = cliente.created_at
+        ? String(cliente.created_at).slice(0, 10)
+        : cliente.data;
+
+      return dataCliente === hoje;
+    });
   }
 
   if (texto) {
-    lista = lista.filter(c =>
-      c.nome.toLowerCase().includes(texto) ||
-      c.telefone?.replace(/\D/g,'').includes(texto.replace(/\D/g,''))
-    );
+    const textoNumerico = texto.replace(/\D/g, "");
+
+    lista = lista.filter(cliente => {
+      const nome = String(cliente.nome || "").toLowerCase();
+      const telefone = String(cliente.telefone || "").replace(/\D/g, "");
+
+      return (
+        nome.includes(texto) ||
+        telefone.includes(textoNumerico)
+      );
+    });
   }
 
   return lista;
 }
 
-// ===== RENDER =====
-function renderClientes() {
-  const container = document.getElementById('clientesLista');
-  const lista     = getClientesFiltrados();
+// ======================================================
+// RENDER
+// ======================================================
 
-  document.getElementById('subtitleClientes').textContent =
-    `${clientes.length} cliente(s) cadastrado(s)`;
+function renderClientes() {
+  const container = document.getElementById("clientesLista");
+  const subtitle = document.getElementById("subtitleClientes");
+
+  if (!container) return;
+
+  const lista = getClientesFiltrados();
+
+  if (subtitle) {
+    subtitle.textContent = `${clientes.length} cliente(s) cadastrado(s)`;
+  }
 
   if (!lista.length) {
     container.innerHTML = `
       <div class="clientes-empty">
         <i data-lucide="users" width="40" height="40" style="opacity:0.3;"></i>
         <p>Nenhum cliente encontrado</p>
+
         <button class="btn-ghost" onclick="abrirModalNovo()">
-          <i data-lucide="user-plus" width="14" height="14"></i> Adicionar cliente
+          <i data-lucide="user-plus" width="14" height="14"></i>
+          Adicionar cliente
         </button>
-      </div>`;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+      </div>
+    `;
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
     return;
   }
 
-  container.innerHTML = lista.map(c => {
-    const iniciais = c.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-    const dataFmt  = c.data
-      ? new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')
-      : '—';
+  container.innerHTML = lista.map(cliente => {
+    const nome = cliente.nome || "Cliente";
+    const iniciais = nome
+      .split(" ")
+      .filter(Boolean)
+      .map(parte => parte[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+
+    const dataFmt = formatarDataCliente(cliente.created_at || cliente.data);
 
     return `
       <div class="cliente-card">
-        <div class="cliente-avatar">${iniciais}</div>
-        <div class="cliente-info">
-          <span class="cliente-nome">${c.nome}</span>
-          ${c.telefone ? `
-            <span class="cliente-telefone">
-              <i data-lucide="phone" width="11" height="11"></i>
-              ${c.telefone}
-            </span>` : ''}
-          ${c.obs ? `<span class="cliente-obs">${c.obs}</span>` : ''}
-          <span class="cliente-data">Cadastrado em ${dataFmt}</span>
+
+        <div class="cliente-avatar">
+          ${iniciais || "CL"}
         </div>
+
+        <div class="cliente-info">
+          <span class="cliente-nome">${nome}</span>
+
+          ${
+            cliente.telefone
+              ? `
+                <span class="cliente-telefone">
+                  <i data-lucide="phone" width="11" height="11"></i>
+                  ${cliente.telefone}
+                </span>
+              `
+              : ""
+          }
+
+          ${
+            cliente.obs
+              ? `<span class="cliente-obs">${cliente.obs}</span>`
+              : ""
+          }
+
+          <span class="cliente-data">
+            Cadastrado em ${dataFmt}
+          </span>
+        </div>
+
         <div class="cliente-actions">
-          ${c.telefone ? `
-            <button class="cliente-btn whatsapp" onclick="abrirWhatsApp('${c.telefone}')" title="WhatsApp">
-              <i data-lucide="message-circle" width="13" height="13"></i>
-            </button>` : ''}
-          <button class="cliente-btn" onclick="abrirModalEditar(${c.id})" title="Editar">
+          ${
+            cliente.telefone
+              ? `
+                <button
+                  class="cliente-btn whatsapp"
+                  onclick="abrirWhatsApp('${cliente.telefone}')"
+                  title="WhatsApp"
+                >
+                  <i data-lucide="message-circle" width="13" height="13"></i>
+                </button>
+              `
+              : ""
+          }
+
+          <button
+            class="cliente-btn"
+            onclick="abrirModalEditar('${cliente.id}')"
+            title="Editar"
+          >
             <i data-lucide="pencil" width="13" height="13"></i>
           </button>
-          <button class="cliente-btn danger" onclick="confirmarExcluir(${c.id})" title="Remover">
+
+          <button
+            class="cliente-btn danger"
+            onclick="confirmarExcluir('${cliente.id}')"
+            title="Remover"
+          >
             <i data-lucide="trash-2" width="13" height="13"></i>
           </button>
         </div>
-      </div>`;
-  }).join('');
 
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+      </div>
+    `;
+  }).join("");
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
-// ===== MODAL NOVO =====
+// ======================================================
+// MODAL NOVO
+// ======================================================
+
 function abrirModalNovo() {
-  document.getElementById('modalClienteTitulo').textContent = 'Novo Cliente';
-  document.getElementById('clienteId').value        = '';
-  document.getElementById('clienteNome').value      = '';
-  document.getElementById('clienteTelefone').value  = '';
-  document.getElementById('clienteObs').value       = '';
-  document.getElementById('modalCliente').style.display = 'flex';
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-  setTimeout(() => document.getElementById('clienteNome').focus(), 100);
+  const titulo = document.getElementById("modalClienteTitulo");
+
+  if (titulo) {
+    titulo.textContent = "Novo Cliente";
+  }
+
+  document.getElementById("clienteId").value = "";
+  document.getElementById("clienteNome").value = "";
+  document.getElementById("clienteTelefone").value = "";
+  document.getElementById("clienteObs").value = "";
+
+  const modal = document.getElementById("modalCliente");
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
+  setTimeout(() => {
+    document.getElementById("clienteNome")?.focus();
+  }, 100);
 }
 
-// ===== MODAL EDITAR =====
+// ======================================================
+// MODAL EDITAR
+// ======================================================
+
 function abrirModalEditar(id) {
-  const c = clientes.find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('modalClienteTitulo').textContent = 'Editar Cliente';
-  document.getElementById('clienteId').value        = c.id;
-  document.getElementById('clienteNome').value      = c.nome;
-  document.getElementById('clienteTelefone').value  = c.telefone || '';
-  document.getElementById('clienteObs').value       = c.obs || '';
-  document.getElementById('modalCliente').style.display = 'flex';
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
+  const cliente = clientes.find(item => item.id === id);
 
-// ===== SALVAR =====
-function salvarCliente() {
-  const nome     = document.getElementById('clienteNome').value.trim();
-  const telefone = document.getElementById('clienteTelefone').value.trim();
-  const obs      = document.getElementById('clienteObs').value.trim();
-
-  if (!nome) { alert('Informe o nome do cliente.'); return; }
-
-  const id = document.getElementById('clienteId').value;
-  const hoje = new Date().toISOString().slice(0, 10);
-
-  if (id) {
-    const idx = clientes.findIndex(c => c.id == id);
-    if (idx > -1) clientes[idx] = { ...clientes[idx], nome, telefone, obs };
-  } else {
-    clientes.push({ id: Date.now(), nome, telefone, obs, data: hoje });
+  if (!cliente) {
+    alert("Cliente não encontrado.");
+    return;
   }
 
-  salvarLocal();
-  fecharModal();
-  renderClientes();
+  document.getElementById("modalClienteTitulo").textContent = "Editar Cliente";
+  document.getElementById("clienteId").value = cliente.id;
+  document.getElementById("clienteNome").value = cliente.nome || "";
+  document.getElementById("clienteTelefone").value = cliente.telefone || "";
+  document.getElementById("clienteObs").value = cliente.obs || "";
+
+  const modal = document.getElementById("modalCliente");
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
-// ===== EXCLUIR =====
+// ======================================================
+// SALVAR
+// ======================================================
+
+async function salvarCliente() {
+  const nome = String(
+    document.getElementById("clienteNome")?.value || ""
+  ).trim();
+
+  const telefone = normalizarTelefone(
+    document.getElementById("clienteTelefone")?.value
+  );
+
+  const obs = String(
+    document.getElementById("clienteObs")?.value || ""
+  ).trim();
+
+  const id = String(
+    document.getElementById("clienteId")?.value || ""
+  ).trim();
+
+  if (!nome) {
+    alert("Informe o nome do cliente.");
+    return;
+  }
+
+  if (!sistemaOnlineClientes()) {
+    alert("Sistema sem conexão com Supabase. Aguarde e tente novamente.");
+    return;
+  }
+
+  try {
+    const empresaId = obterEmpresaIdClientes();
+
+    const payload = {
+      empresa_id: empresaId,
+      nome: nome,
+      telefone: telefone || null,
+      obs: obs || null
+    };
+
+    if (id) {
+      const { error } = await sb
+        .from("clientes")
+        .update(payload)
+        .eq("id", id)
+        .eq("empresa_id", empresaId);
+
+      if (error) throw error;
+
+      logClientes("Cliente atualizado.", "success");
+
+    } else {
+      const { error } = await sb
+        .from("clientes")
+        .insert([payload]);
+
+      if (error) throw error;
+
+      logClientes("Cliente criado.", "success");
+    }
+
+    fecharModal();
+
+    await carregarClientes();
+    renderClientes();
+
+  } catch (err) {
+    logClientes("Erro ao salvar cliente: " + err.message, "error");
+    alert("Erro ao salvar cliente: " + err.message);
+  }
+}
+
+// ======================================================
+// EXCLUIR
+// ======================================================
+
 function confirmarExcluir(id) {
-  const c = clientes.find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('msgExcluir').textContent =
-    `"${c.nome}" será removido da lista de clientes.`;
-  document.getElementById('btnConfirmarExcluir').onclick = () => excluirCliente(id);
-  document.getElementById('modalExcluir').style.display = 'flex';
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
+  const cliente = clientes.find(item => item.id === id);
 
-function excluirCliente(id) {
-  clientes = clientes.filter(c => c.id !== id);
-  salvarLocal();
-  fecharModal();
-  renderClientes();
-}
-
-// ===== WHATSAPP =====
-function abrirWhatsApp(telefone) {
-  const num = telefone.replace(/\D/g, '');
-  const completo = num.startsWith('55') ? num : '55' + num;
-  window.open(`https://wa.me/${completo}`, '_blank');
-}
-
-// ===== MÁSCARA TELEFONE =====
-function mascaraTelefone(input) {
-  let v = input.value.replace(/\D/g, '').slice(0, 11);
-  if (v.length > 10) {
-    v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-  } else if (v.length > 6) {
-    v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
-  } else if (v.length > 2) {
-    v = v.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
-  } else {
-    v = v.replace(/^(\d*)$/, '($1');
+  if (!cliente) {
+    alert("Cliente não encontrado.");
+    return;
   }
-  input.value = v;
+
+  idExcluirCliente = id;
+
+  const msg = document.getElementById("msgExcluir");
+
+  if (msg) {
+    msg.textContent = `"${cliente.nome}" será removido da lista de clientes.`;
+  }
+
+  const btn = document.getElementById("btnConfirmarExcluir");
+
+  if (btn) {
+    btn.onclick = () => excluirCliente(id);
+  }
+
+  const modal = document.getElementById("modalExcluir");
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
-// ===== STATUS CAIXA =====
-// Status agora é controlado globalmente pelo app.js via Supabase.
-// Mantido apenas para evitar erro em chamadas antigas.
+async function excluirCliente(id) {
+  if (!sistemaOnlineClientes()) {
+    alert("Sistema sem conexão com Supabase.");
+    return;
+  }
+
+  try {
+    const empresaId = obterEmpresaIdClientes();
+
+    const { error } = await sb
+      .from("clientes")
+      .delete()
+      .eq("id", id)
+      .eq("empresa_id", empresaId);
+
+    if (error) throw error;
+
+    logClientes("Cliente removido.", "success");
+
+    idExcluirCliente = null;
+
+    fecharModal();
+
+    await carregarClientes();
+    renderClientes();
+
+  } catch (err) {
+    logClientes("Erro ao excluir cliente: " + err.message, "error");
+    alert("Erro ao excluir cliente: " + err.message);
+  }
+}
+
+// ======================================================
+// WHATSAPP
+// ======================================================
+
+function abrirWhatsApp(telefone) {
+  const numero = String(telefone || "").replace(/\D/g, "");
+
+  if (!numero) return;
+
+  const completo = numero.startsWith("55")
+    ? numero
+    : "55" + numero;
+
+  window.open(`https://wa.me/${completo}`, "_blank");
+}
+
+// ======================================================
+// MÁSCARA TELEFONE
+// ======================================================
+
+function mascaraTelefone(input) {
+  let valor = String(input.value || "")
+    .replace(/\D/g, "")
+    .slice(0, 11);
+
+  if (valor.length > 10) {
+    valor = valor.replace(
+      /^(\d{2})(\d{5})(\d{4})$/,
+      "($1) $2-$3"
+    );
+  } else if (valor.length > 6) {
+    valor = valor.replace(
+      /^(\d{2})(\d{4})(\d{0,4})$/,
+      "($1) $2-$3"
+    );
+  } else if (valor.length > 2) {
+    valor = valor.replace(
+      /^(\d{2})(\d{0,5})$/,
+      "($1) $2"
+    );
+  } else {
+    valor = valor.replace(
+      /^(\d*)$/,
+      "($1"
+    );
+  }
+
+  input.value = valor;
+}
+
+// ======================================================
+// STATUS CAIXA
+// ======================================================
+
 function atualizarStatusCaixa() {
   if (typeof crvAtualizarStatusCaixaGlobal === "function") {
     crvAtualizarStatusCaixaGlobal();
   }
 }
 
+// ======================================================
+// MODAIS
+// ======================================================
+
 function fecharModal() {
-  document.getElementById('modalCliente').style.display = 'none';
-  document.getElementById('modalExcluir').style.display = 'none';
+  const modalCliente = document.getElementById("modalCliente");
+  const modalExcluir = document.getElementById("modalExcluir");
+
+  if (modalCliente) {
+    modalCliente.style.display = "none";
+  }
+
+  if (modalExcluir) {
+    modalExcluir.style.display = "none";
+  }
 }
 
+// ======================================================
+// CONFIG GLOBAL
+// ======================================================
+
 setTimeout(() => {
-  crvCarregarConfiguracoesEmpresa();
+  if (typeof crvCarregarConfiguracoesEmpresa === "function") {
+    crvCarregarConfiguracoesEmpresa();
+  }
 }, 900);

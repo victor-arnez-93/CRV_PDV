@@ -716,7 +716,6 @@ if (!emailDigitado) {
 
 // ===== INIT =====
 document.addEventListener("DOMContentLoaded", async () => {
-  initUserModalDashboard();
 
   setTimeout(async () => {
     if (typeof crvCarregarConfiguracoesEmpresa === "function") {

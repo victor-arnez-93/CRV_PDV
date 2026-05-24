@@ -229,12 +229,25 @@ if (cadastroForm) {
       return;
     }
 
-    if (senha.length < 6) {
-      document.getElementById("errTxt").textContent =
-        "A senha precisa ter pelo menos 6 caracteres.";
-      errEl.classList.add("on");
-      return;
-    }
+    const emailValido =
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+
+const dominiosBloqueados = [
+  "teste.com",
+  "test.com",
+  "email.com",
+  "exemplo.com",
+  "example.com"
+];
+
+const dominioEmail = email.split("@")[1]?.toLowerCase();
+
+if (!emailValido || dominiosBloqueados.includes(dominioEmail)) {
+  document.getElementById("errTxt").textContent =
+    "Digite um e-mail válido e real para confirmar sua conta.";
+  errEl.classList.add("on");
+  return;
+}
 
     const btn = document.getElementById("btnCadastro");
     btn.classList.add("ld");

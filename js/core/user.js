@@ -125,61 +125,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   }
 
-  // ALTERAR SENHA
-  if (btnAlterarSenha) {
-
-    btnAlterarSenha.addEventListener(
-      "click",
-      async () => {
-
-        try {
-
-          btnAlterarSenha.disabled = true;
-
-          const user =
-            await crvObterUsuarioAtual();
-
-          const email =
-            user?.email || "";
-
-          const resultado =
-            await crvEnviarLinkRedefinicaoSenha(
-              email
-            );
-
-          if (!resultado.ok) {
-
-            alert(resultado.mensagem);
-
-            btnAlterarSenha.disabled = false;
-
-            return;
-          }
-
-          alert(
-            "Link de redefinição enviado para seu e-mail."
-          );
-
-        } catch (err) {
-
-          console.error(
-            "[CRV PDV][USER]",
-            err
-          );
-
-          alert(
-            "Erro ao enviar redefinição."
-          );
-
-          btnAlterarSenha.disabled = false;
-
-        }
-
-      }
-    );
-
-  }
-
   // LOGOUT
   if (btnLogout) {
 
