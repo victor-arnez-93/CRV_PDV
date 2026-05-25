@@ -141,16 +141,29 @@ function crvAplicarStatusCaixa(aberto, caixaData = null) {
 async function crvAtualizarStatusCaixaGlobal() {
   const statusText = document.getElementById("statusText");
 
+  if (navigator.onLine === false || window.APP_STATUS?.online === false) {
+  if (statusText) {
+    statusText.textContent = "Offline Ready";
+    statusText.style.color = "#FFC857";
+  }
+
+  return;
+}
+
   if (statusText) {
     statusText.textContent = "Verificando caixa...";
   }
 
   const pronto = await crvAguardarSupabaseGlobal();
 
-  if (!pronto) {
-    crvAplicarStatusCaixa(false);
-    return;
+if (!pronto) {
+  if (navigator.onLine === false) {
+    console.warn("[CRV PDV] Offline: status do caixa será lido pelo módulo local quando disponível.");
   }
+
+  crvAplicarStatusCaixa(false);
+  return;
+}
 
   try {
     const empresaId = crvObterEmpresaIdGlobal();
@@ -682,9 +695,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await crvAtualizarSaudacao();
   await crvAtualizarStatusCaixaGlobal();
-  await crvCarregarLogoEmpresaTopbar();
+await crvCarregarLogoEmpresaTopbar();
 
-  setInterval(crvAtualizarStatusCaixaGlobal, 15000);
+if (
+  window.crvSync &&
+  typeof window.crvSync.sincronizarPendencias === "function"
+) {
+  window.crvSync.sincronizarPendencias();
+}
+
+setInterval(() => {
+  if (navigator.onLine !== false && window.APP_STATUS?.online !== false) {
+    crvAtualizarStatusCaixaGlobal();
+  }
+}, 15000);
 
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();

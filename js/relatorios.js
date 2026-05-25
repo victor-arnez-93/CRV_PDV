@@ -38,6 +38,53 @@ function empresaUsaAgendaEsportiva() {
 }
 
 // ======================================================
+// OFFLINE RELATÓRIOS
+// ======================================================
+
+async function obterDadosOfflineRelatorios() {
+
+  const vendasCache =
+    await crvOfflineDB.obterCache("relatorios_vendas") || [];
+
+  const itensCache =
+    await crvOfflineDB.obterCache("relatorios_itens") || [];
+
+  const caixasCache =
+    await crvOfflineDB.obterCache("relatorios_caixas") || [];
+
+  const fila =
+    await crvOfflineDB.obterFilaOffline();
+
+  const vendasPendentes =
+    fila
+      .filter(item => item.tabela === "vendas")
+      .map(item => item.payload);
+
+  const itensPendentes =
+    fila
+      .filter(item => item.tabela === "vendas_itens")
+      .flatMap(item => {
+        return Array.isArray(item.payload)
+          ? item.payload
+          : [item.payload];
+      });
+
+  return {
+    vendas: [
+      ...vendasPendentes,
+      ...vendasCache
+    ],
+
+    itens: [
+      ...itensPendentes,
+      ...itensCache
+    ],
+
+    caixas: caixasCache
+  };
+}
+
+// ======================================================
 // INIT
 // ======================================================
 
@@ -68,13 +115,11 @@ async function aguardarContextoRelatorios() {
     }
 
     if (
-      window.sb &&
-      window.APP_EMPRESA_ID &&
-      window.APP_STATUS?.online &&
-      window.APP_STATUS?.supabase_ok
-    ) {
-      return true;
-    }
+  window.APP_EMPRESA_ID &&
+  window.crvOfflineDB
+) {
+  return true;
+}
 
     await new Promise(resolve => setTimeout(resolve, 150));
     tentativas++;
@@ -90,58 +135,88 @@ function obterEmpresaId() {
 // ======================================================
 // CARREGAR DADOS
 // ======================================================
-
 async function carregarDados() {
   try {
     const empresaId = obterEmpresaId();
 
-if (!empresaId) {
-  console.warn("[RELATÓRIOS] empresa_id não encontrado.");
-  return;
-}
+    if (!empresaId) {
+      console.warn("[RELATÓRIOS] empresa_id não encontrado.");
+      return;
+    }
 
-    const { data: vendas, error: erroVendas } = await sb
-      .from("vendas")
-      .select("*")
-      .eq("empresa_id", empresaId)
-      .order("data", { ascending: false });
+    let vendas = [];
+    let itens = [];
+    let caixas = [];
 
-    if (erroVendas) throw erroVendas;
+    if (
+      window.APP_STATUS?.online &&
+      window.APP_STATUS?.supabase_ok &&
+      window.sb
+    ) {
 
-    const { data: itens, error: erroItens } = await sb
-      .from("vendas_itens")
-      .select("*")
-      .eq("empresa_id", empresaId);
+      const { data: vendasSupabase, error: erroVendas } = await sb
+        .from("vendas")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .order("data", { ascending: false });
 
-    if (erroItens) throw erroItens;
+      if (erroVendas) throw erroVendas;
 
-    const { data: caixas, error: erroCaixas } = await sb
-      .from("caixa")
-      .select("*")
-      .eq("empresa_id", empresaId)
-      .order("data_abertura", { ascending: false });
+      const { data: itensSupabase, error: erroItens } = await sb
+        .from("vendas_itens")
+        .select("*")
+        .eq("empresa_id", empresaId);
 
-    if (erroCaixas) throw erroCaixas;
+      if (erroItens) throw erroItens;
 
-    let agendaFechada = [];
+      const { data: caixasSupabase, error: erroCaixas } = await sb
+        .from("caixa")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .order("data_abertura", { ascending: false });
 
-if (empresaUsaAgendaEsportiva()) {
-  const { data: agendaData, error: erroAgenda } = await sb
-    .from("agenda")
-    .select("*")
-    .eq("empresa_id", empresaId)
-    .eq("status_jogo", "fechado")
-    .order("data_agendamento", { ascending: false });
+      if (erroCaixas) throw erroCaixas;
 
-  if (erroAgenda) throw erroAgenda;
+      vendas = Array.isArray(vendasSupabase)
+        ? vendasSupabase
+        : [];
 
-  agendaFechada = Array.isArray(agendaData) ? agendaData : [];
-}
+      itens = Array.isArray(itensSupabase)
+        ? itensSupabase
+        : [];
 
-    itensData = Array.isArray(itens) ? itens : [];
+      caixas = Array.isArray(caixasSupabase)
+        ? caixasSupabase
+        : [];
+
+      await crvOfflineDB.salvarCache("relatorios_vendas", vendas);
+      await crvOfflineDB.salvarCache("relatorios_itens", itens);
+      await crvOfflineDB.salvarCache("relatorios_caixas", caixas);
+
+    } else {
+
+      crvLog(
+        "RELATÓRIOS",
+        "Modo offline - usando IndexedDB",
+        "warn"
+      );
+
+      const dadosOffline =
+        await obterDadosOfflineRelatorios();
+
+      vendas = dadosOffline.vendas;
+      itens = dadosOffline.itens;
+      caixas = dadosOffline.caixas;
+    }
+
+    itensData = Array.isArray(itens)
+      ? itens
+      : [];
 
     vendasData = (vendas || []).map(venda => {
-      const itensVenda = itensData.filter(item => item.venda_id === venda.id);
+      const itensVenda = itensData.filter(item => {
+        return String(item.venda_id) === String(venda.id);
+      });
 
       const lucroTotal = itensVenda.reduce((acc, item) => {
         return acc + Number(item.lucro_total || 0);
@@ -150,46 +225,36 @@ if (empresaUsaAgendaEsportiva()) {
       return {
         ...venda,
         itens: itensVenda,
-        lucro_total: lucroTotal
+        lucro_total:
+          Number(venda.lucro_total || 0) ||
+          lucroTotal
       };
     });
 
-    caixasHistorico = Array.isArray(caixas) ? caixas : [];
+    caixasHistorico =
+      Array.isArray(caixas)
+        ? caixas
+        : [];
 
-    agendaFechadaData = agendaFechada.map(jogo => {
-  const dataBase = `${jogo.data_agendamento}T${jogo.hora_inicio || "00:00"}`;
-
-  const valorRecebido =
-    Number(jogo.total_pago_jogadores || 0) ||
-    Number(jogo.valor_pago || 0) ||
-    Number(jogo.valor_total || 0) ||
-    0;
-
-  return {
-    id: jogo.id,
-    origem: "agenda",
-    data: dataBase,
-    cliente_nome: jogo.cliente_nome || "Responsável não informado",
-    local_recurso: jogo.local_recurso || "Quadra/Campo",
-    hora_inicio: jogo.hora_inicio,
-    hora_fim: jogo.hora_fim,
-    forma_pagamento: "agenda",
-    subtotal: valorRecebido,
-    desconto: 0,
-    total: valorRecebido,
-    lucro_total: valorRecebido,
-    itens: [],
-    descricao: `Aluguel de campo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
-  };
-});
+    agendaFechadaData = [];
 
   } catch (err) {
     console.error(err);
-    mostrarModalAviso("Não foi possível carregar os relatórios agora.");
+
+    crvLog(
+      "RELATÓRIOS",
+      err.message,
+      "error"
+    );
+
+    mostrarModalAviso(
+      "Não foi possível carregar os relatórios agora."
+    );
 
     vendasData = [];
     itensData = [];
     caixasHistorico = [];
+    agendaFechadaData = [];
   }
 }
 
@@ -257,21 +322,11 @@ function getIntervaloPeriodo() {
 function getVendasFiltradas() {
   const { inicio, fim } = getIntervaloPeriodo();
 
-  const vendasPDV = vendasData.filter(venda => {
-    const dataVenda = new Date(venda.data);
-    return dataVenda >= inicio && dataVenda <= fim;
-  });
-
-  if (!empresaUsaAgendaEsportiva()) {
-    return vendasPDV;
-  }
-
-  const jogosAgenda = agendaFechadaData.filter(jogo => {
-    const dataJogo = new Date(jogo.data);
-    return dataJogo >= inicio && dataJogo <= fim;
-  });
-
-  return [...vendasPDV, ...jogosAgenda]
+  return vendasData
+    .filter(venda => {
+      const dataVenda = new Date(venda.data);
+      return dataVenda >= inicio && dataVenda <= fim;
+    })
     .sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 

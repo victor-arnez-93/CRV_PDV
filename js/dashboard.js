@@ -30,6 +30,54 @@ function obterDataVenda(venda) {
   return venda.data || venda.created_at || venda.createdAt || venda.criado_em || null;
 }
 
+// ======================================================
+// OFFLINE DASHBOARD
+// ======================================================
+
+async function obterDadosOfflineDashboard() {
+
+  const vendasCache =
+    await crvOfflineDB.obterCache("dashboard_vendas") || [];
+
+  const itensCache =
+    await crvOfflineDB.obterCache("dashboard_itens") || [];
+
+  const caixaCache =
+    await crvOfflineDB.obterCache("dashboard_caixa") || null;
+
+  const fila =
+    await crvOfflineDB.obterFilaOffline();
+
+  const vendasPendentes =
+    fila
+      .filter(item => item.tabela === "vendas")
+      .map(item => item.payload);
+
+  const itensPendentes =
+    fila
+      .filter(item => item.tabela === "vendas_itens")
+      .flatMap(item => {
+        return Array.isArray(item.payload)
+          ? item.payload
+          : [item.payload];
+      });
+
+  return {
+    vendas: [
+      ...vendasPendentes,
+      ...vendasCache
+    ],
+
+    itens: [
+      ...itensPendentes,
+      ...itensCache
+    ],
+
+    caixaAtual:
+      caixaCache
+  };
+}
+
 function dataVendaEhHoje(venda) {
   const valor = obterDataVenda(venda);
   if (!valor) return false;
@@ -99,17 +147,20 @@ async function initDashboard() {
 
       caixaAtual = caixaData?.[0] || null;
 
-      localDB.salvar("vendas", vendas);
-      localDB.salvar("itens", itens);
-      localDB.salvar("caixa", caixaAtual);
+      await crvOfflineDB.salvarCache("dashboard_vendas", vendas);
+      await crvOfflineDB.salvarCache("dashboard_itens", itens);
+      await crvOfflineDB.salvarCache("dashboard_caixa", caixaAtual);
 
       logSistema("DASHBOARD", "Dados carregados do Supabase", "success");
     } else {
-      logSistema("DASHBOARD", "Modo offline - usando localStorage", "warn");
+      logSistema("DASHBOARD", "Modo offline - usando IndexedDB", "warn");
 
-      vendas = localDB.obter("vendas") || [];
-      itens = localDB.obter("itens") || [];
-      caixaAtual = localDB.obter("caixa") || null;
+      const dadosOffline =
+        await obterDadosOfflineDashboard();
+
+      vendas = dadosOffline.vendas;
+      itens = dadosOffline.itens;
+      caixaAtual = dadosOffline.caixaAtual;
     }
 
     const hoje = new Date().toISOString().slice(0, 10);
@@ -148,7 +199,11 @@ async function initDashboard() {
 
     const ultimas = vendasHoje.slice(0, 5).map(v => ({
       hora: fmtDataHora(obterDataVenda(v)),
-      desc: `${v.total_itens || 1} item(ns)`,
+      desc:
+  v.descricao ||
+  (v.origem === "agenda"
+    ? "Pagamento de jogo"
+    : `${v.total_itens || 1} item(ns)`),
       valor: Number(v.total || 0),
       pagto: normalizarFormaPagamento(v.forma_pagamento || v.pagamento).toUpperCase()
     }));

@@ -368,6 +368,45 @@ async function carregarAgenda() {
 
 }
 
+// ======================================================
+// OFFLINE AGENDA
+// ======================================================
+
+async function salvarAgendaOffline({
+  tabela,
+  operacao = "insert",
+  payload
+}) {
+
+  try {
+
+    await crvOfflineDB.adicionarFilaOffline({
+      tabela,
+      operacao,
+      payload,
+      empresa_id: APP_EMPRESA_ID
+    });
+
+    crvLog(
+      "AGENDA OFFLINE",
+      `${operacao} salvo offline em ${tabela}`,
+      "warn"
+    );
+
+    return true;
+
+  } catch (err) {
+
+    crvLog(
+      "AGENDA OFFLINE",
+      err.message,
+      "error"
+    );
+
+    return false;
+  }
+}
+
 function agruparJogadores(lista) {
 
   const grupos = {};
@@ -1575,6 +1614,70 @@ let statusJogo = modoModalAgenda === "novo"
         new Date().toISOString()
 
     };
+
+    // ======================================================
+// OFFLINE
+// ======================================================
+
+if (!navigator.onLine) {
+
+  const agendaOfflineId =
+    agendaAtualId ||
+    `offline-agenda-${Date.now()}`;
+
+  const agendaOfflinePayload = {
+    id: agendaOfflineId,
+    ...payload,
+    offline: true
+  };
+
+  await salvarAgendaOffline({
+    tabela: "agenda",
+    payload: agendaOfflinePayload
+  });
+
+  if (jogadores.length) {
+
+    const jogadoresOffline =
+      jogadores.map(j => ({
+        empresa_id: APP_EMPRESA_ID,
+        agenda_id: agendaOfflineId,
+        nome: j.nome,
+        valor: j.valor,
+        forma_pagamento: j.forma_pagamento,
+        pago: j.pago,
+        offline: true,
+        pago_em:
+          j.pago
+            ? new Date().toISOString()
+            : null
+      }));
+
+    await salvarAgendaOffline({
+      tabela: "agenda_jogadores",
+      payload: jogadoresOffline
+    });
+  }
+
+  mostrarSucesso(
+    "Jogo salvo offline."
+  );
+
+  crvToast({
+    titulo: "Agenda offline",
+    mensagem:
+      "O jogo será sincronizado automaticamente quando a internet voltar.",
+    tipo: "warn"
+  });
+
+  await carregarAgenda();
+
+  setTimeout(() => {
+    fecharModalJogo();
+  }, 700);
+
+  return;
+}
 
     let agendaId =
       agendaAtualId;

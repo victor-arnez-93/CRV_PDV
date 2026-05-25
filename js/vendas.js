@@ -7,6 +7,45 @@ let filtroAtivo = 'todos';
 const labelPagto = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX' };
 const iconPagto  = { dinheiro: 'banknote', cartao: 'credit-card', pix: 'zap' };
 
+function normalizarPagamento(valor) {
+  const texto = String(valor || "").toLowerCase();
+
+  if (texto.includes("dinheiro")) return "dinheiro";
+  if (texto.includes("cart")) return "cartao";
+  if (texto.includes("pix")) return "pix";
+
+  return "outros";
+}
+
+function obterDataVenda(venda) {
+  return venda.data || venda.created_at || venda.criado_em || new Date().toISOString();
+}
+
+async function obterDadosOfflineVendas() {
+  const vendasCache =
+    await crvOfflineDB.obterCache("vendas_lista") || [];
+
+  const itensCache =
+    await crvOfflineDB.obterCache("vendas_itens_lista") || [];
+
+  const fila =
+    await crvOfflineDB.obterFilaOffline();
+
+  const vendasPendentes =
+    fila
+      .filter(item => item.tabela === "vendas")
+      .map(item => item.payload);
+
+  const itensPendentes =
+    fila
+      .filter(item => item.tabela === "vendas_itens")
+      .flatMap(item => Array.isArray(item.payload) ? item.payload : [item.payload]);
+
+  return {
+    vendas: [...vendasPendentes, ...vendasCache],
+    itens: [...itensPendentes, ...itensCache]
+  };
+}
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,65 +61,94 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ===== CARREGAR =====
 async function carregarVendas() {
-
   try {
+    let vendas = [];
+    let itens = [];
 
-    if (APP_STATUS.online && APP_STATUS.supabase_ok) {
-
+    if (
+      window.APP_STATUS?.online &&
+      window.APP_STATUS?.supabase_ok &&
+      window.sb
+    ) {
       logSistema("VENDAS", "Buscando do Supabase...");
 
-      const { data: vendas, error } = await sb
+      const { data: vendasSupabase, error: erroVendas } = await sb
         .from("vendas")
         .select("*")
-        .order("created_at", { ascending: false });
+        .eq("empresa_id", APP_EMPRESA_ID)
+        .order("data", { ascending: false });
 
-      if (error) throw error;
+      if (erroVendas) throw erroVendas;
 
-      // buscar itens
-      const { data: itens } = await sb
+      const { data: itensSupabase, error: erroItens } = await sb
         .from("vendas_itens")
-        .select("*");
+        .select("*")
+        .eq("empresa_id", APP_EMPRESA_ID);
 
-      // montar estrutura igual antiga
-      vendasData = vendas.map(v => ({
-        id: v.id,
-        hora: new Date(v.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        total: v.total,
-        desconto: 0,
-        formaPagamento: v.pagamento,
-        itens: itens
-          .filter(i => i.venda_id === v.id)
-          .map(i => ({
-            nome: `Produto ${i.produto_id}`,
-            quantidade: i.quantidade,
-            preco: i.preco
-          }))
-      }));
+      if (erroItens) throw erroItens;
 
-      localDB.salvar("vendas", vendasData);
+      vendas = Array.isArray(vendasSupabase) ? vendasSupabase : [];
+      itens = Array.isArray(itensSupabase) ? itensSupabase : [];
+
+      await crvOfflineDB.salvarCache("vendas_lista", vendas);
+      await crvOfflineDB.salvarCache("vendas_itens_lista", itens);
 
       logSistema("VENDAS", "Dados carregados", "success");
 
     } else {
+      logSistema("VENDAS", "Modo offline - usando IndexedDB", "warn");
 
-      logSistema("VENDAS", "Modo offline", "warn");
+      const dadosOffline =
+        await obterDadosOfflineVendas();
 
-      vendasData = localDB.obter("vendas") || [];
+      vendas = dadosOffline.vendas;
+      itens = dadosOffline.itens;
     }
 
-    const hoje = new Date().toLocaleDateString('pt-BR');
+    vendasData = vendas.map(v => {
+      const itensVenda = itens.filter(i => {
+        return String(i.venda_id) === String(v.id);
+      });
 
-    document.getElementById('subtitleVendas').textContent =
-      `${vendasData.length} venda(s) registrada(s) hoje · ${hoje}`;
+      return {
+        id: v.id,
+        hora: new Date(obterDataVenda(v)).toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit"
+        }),
+        data: obterDataVenda(v),
+        total: Number(v.total || 0),
+        subtotal: Number(v.subtotal || v.total || 0),
+        desconto: Number(v.desconto || 0),
+        formaPagamento: normalizarPagamento(v.forma_pagamento || v.pagamento),
+        descricao:
+          v.descricao ||
+          (v.origem === "agenda"
+            ? "Pagamento de jogo"
+            : null),
+        offline: v.offline === true,
+        itens: itensVenda.map(i => ({
+          nome: i.nome || "Produto",
+          quantidade: Number(i.quantidade || 0),
+          preco: Number(i.preco || 0)
+        }))
+      };
+    });
+
+    const hoje = new Date().toLocaleDateString("pt-BR");
+
+    document.getElementById("subtitleVendas").textContent =
+      `${vendasData.length} venda(s) registrada(s) · ${hoje}`;
 
   } catch (err) {
-
     logSistema("VENDAS", "Erro: " + err.message, "error");
 
-    vendasData = localDB.obter("vendas") || [];
+    const dadosOffline =
+      await obterDadosOfflineVendas();
+
+    vendasData = dadosOffline.vendas || [];
   }
 }
-
 
 // ===== RESUMO =====
 function renderResumo() {
@@ -149,11 +217,14 @@ function renderTabela() {
   tbody.innerHTML = reversed.map((v, idx) => {
 
     const num = reversed.length - idx;
-    const primeiro = v.itens[0];
+    const primeiro =
+  v.itens[0] || {
+    nome: v.descricao || (v.offline ? "Venda offline" : "Venda")
+  };
     const maisItens = v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '';
 
     return `
-      <tr onclick="verDetalhe(${v.id})">
+      <tr onclick="verDetalhe('${v.id}')">
         <td><span class="venda-num">#${String(num).padStart(3,'0')}</span></td>
         <td><span class="venda-hora">${v.hora}</span></td>
         <td>
@@ -164,14 +235,14 @@ function renderTabela() {
         </td>
         <td>
           <span class="pagto-badge ${v.formaPagamento}">
-            <i data-lucide="${iconPagto[v.formaPagamento]}" width="11" height="11"></i>
-            ${labelPagto[v.formaPagamento]}
+            <i data-lucide="${iconPagto[v.formaPagamento] || 'receipt'}" width="11" height="11"></i>
+            ${labelPagto[v.formaPagamento] || 'Outro'}
           </span>
         </td>
         <td>${v.desconto > 0 ? `<span class="venda-desconto">- ${fmt(v.desconto)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
         <td><span class="venda-total">${fmt(v.total)}</span></td>
         <td>
-          <button class="btn-ver" onclick="event.stopPropagation(); verDetalhe(${v.id})">
+          <button class="btn-ver" onclick="event.stopPropagation(); verDetalhe('${v.id}')">
             <i data-lucide="eye" width="14" height="14"></i>
           </button>
         </td>
@@ -199,13 +270,13 @@ function verDetalhe(id) {
     <div class="detalhe-row" style="margin-bottom:12px;">
       <span>Pagamento</span>
       <span class="pagto-badge ${venda.formaPagamento}">
-        <i data-lucide="${iconPagto[venda.formaPagamento]}" width="11" height="11"></i>
-        ${labelPagto[venda.formaPagamento]}
+        <i data-lucide="${iconPagto[venda.formaPagamento] || 'receipt'}" width="11" height="11"></i>
+        ${labelPagto[venda.formaPagamento] || 'Outro'}
       </span>
     </div>
 
     <div class="detalhe-itens">
-      ${venda.itens.map(i => `
+      ${(venda.itens.length ? venda.itens : [{ nome: venda.descricao || "Venda", quantidade: 1, preco: venda.total }]).map(i => `
         <div class="detalhe-item">
           <div>
             <div class="detalhe-item-nome">${i.nome}</div>

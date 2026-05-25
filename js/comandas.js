@@ -70,6 +70,52 @@ function logComandas(mensagem, tipo = "info") {
 }
 
 // ======================================================
+// OFFLINE COMANDAS
+// ======================================================
+
+async function salvarComandaOffline({
+  tabela,
+  operacao = "insert",
+  payload
+}) {
+
+  try {
+
+    await crvOfflineDB.adicionarFilaOffline({
+      tabela,
+      operacao,
+      payload,
+      empresa_id: obterEmpresaIdComandas()
+    });
+
+    crvLog(
+      "COMANDAS OFFLINE",
+      `${operacao} salvo offline em ${tabela}`,
+      "warn"
+    );
+
+    crvToast({
+      titulo: "Comanda salva offline",
+      mensagem:
+        "A alteração será sincronizada automaticamente quando a internet voltar.",
+      tipo: "warn"
+    });
+
+    return true;
+
+  } catch (err) {
+
+    crvLog(
+      "COMANDAS OFFLINE",
+      err.message,
+      "error"
+    );
+
+    return false;
+  }
+}
+
+// ======================================================
 // AGUARDAR CONTEXTO
 // ======================================================
 
@@ -477,10 +523,53 @@ function fecharModalComanda() {
 }
 
 async function salvarComanda() {
-  if (!sistemaOnlineComandas()) {
-    alert("Sistema sem conexão com Supabase.");
+if (!sistemaOnlineComandas()) {
+
+  const id = String(document.getElementById("comandaId")?.value || "").trim();
+  const codigo = String(document.getElementById("comandaCodigoInput")?.value || "").trim();
+  const nome = String(document.getElementById("comandaNomeInput")?.value || "").trim();
+  const obs = String(document.getElementById("comandaObservacoesInput")?.value || "").trim();
+
+  if (!codigo) {
+    alert("Informe o código da comanda.");
     return;
   }
+
+  const offlineId =
+    id || `offline-comanda-${Date.now()}`;
+
+  const payload = {
+    id: offlineId,
+    empresa_id: obterEmpresaIdComandas(),
+    codigo: codigo,
+    nome_cliente: nome || null,
+    observacoes: obs || null,
+    status: "livre",
+    total: 0,
+    offline: true
+  };
+
+  await salvarComandaOffline({
+    tabela: "comandas",
+    operacao: id ? "update" : "insert",
+    payload
+  });
+
+  const existente = comandas.find(c => String(c.id) === String(offlineId));
+
+  if (existente) {
+    existente.codigo = codigo;
+    existente.nome_cliente = nome || null;
+    existente.observacoes = obs || null;
+  } else {
+    comandas.push(payload);
+  }
+
+  fecharModalComanda();
+  aplicarFiltrosComandas();
+
+  return;
+}
 
   const id = String(document.getElementById("comandaId")?.value || "").trim();
   const codigo = String(document.getElementById("comandaCodigoInput")?.value || "").trim();
@@ -592,10 +681,58 @@ function atualizarPreviewLote() {
 }
 
 async function gerarLoteComandas() {
-  if (!sistemaOnlineComandas()) {
-    alert("Sistema sem conexão com Supabase.");
+if (!sistemaOnlineComandas()) {
+
+  const inicio = Number(document.getElementById("loteInicio")?.value || 1);
+  const fim = Number(document.getElementById("loteFim")?.value || 100);
+  const prefixo = String(document.getElementById("lotePrefixo")?.value || "").trim();
+  const digitos = Math.max(1, Number(document.getElementById("loteDigitos")?.value || 3));
+
+  if (inicio <= 0 || fim <= 0 || fim < inicio) {
+    alert("Informe um intervalo válido.");
     return;
   }
+
+  const quantidade = fim - inicio + 1;
+
+  if (quantidade > 500) {
+    alert("Gere no máximo 500 comandas por vez.");
+    return;
+  }
+
+  const confirmar = confirm(
+    `Gerar ${quantidade} comandas offline?\n\nDe ${gerarCodigoLote(inicio, digitos, prefixo)} até ${gerarCodigoLote(fim, digitos, prefixo)}`
+  );
+
+  if (!confirmar) return;
+
+  const empresaId = obterEmpresaIdComandas();
+
+  const payload = [];
+
+  for (let numero = inicio; numero <= fim; numero++) {
+    payload.push({
+      id: `offline-comanda-${Date.now()}-${numero}`,
+      empresa_id: empresaId,
+      codigo: gerarCodigoLote(numero, digitos, prefixo),
+      status: "livre",
+      total: 0,
+      offline: true
+    });
+  }
+
+  await salvarComandaOffline({
+    tabela: "comandas",
+    payload
+  });
+
+  comandas.push(...payload);
+
+  fecharModalLote();
+  aplicarFiltrosComandas();
+
+  return;
+}
 
   const inicio = Number(document.getElementById("loteInicio")?.value || 1);
   const fim = Number(document.getElementById("loteFim")?.value || 100);

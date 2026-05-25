@@ -126,6 +126,52 @@ function logVenda(mensagem, tipo = "info") {
 }
 
 // ======================================================
+// OFFLINE HELPER
+// ======================================================
+
+async function salvarOffline({
+  tabela,
+  operacao = "insert",
+  payload
+}) {
+
+  try {
+
+    await crvOfflineDB.adicionarFilaOffline({
+      tabela,
+      operacao,
+      payload,
+      empresa_id: obterEmpresaId()
+    });
+
+    crvToast({
+      titulo: "Dados salvos offline",
+      mensagem:
+        "A operação será sincronizada automaticamente quando a internet voltar.",
+      tipo: "warn"
+    });
+
+    crvLog(
+      "OFFLINE",
+      `${operacao} salvo localmente em ${tabela}`,
+      "warn"
+    );
+
+    return true;
+
+  } catch (err) {
+
+    crvLog(
+      "OFFLINE",
+      err.message,
+      "error"
+    );
+
+    return false;
+  }
+}
+
+// ======================================================
 // AGUARDAR SUPABASE / AUTH
 // ======================================================
 async function aguardarContextoSistema() {
@@ -1144,10 +1190,77 @@ async function finalizarVenda() {
     return;
   }
 
-  if (!sistemaOnline()) {
-    alert("Sistema sem conexão com Supabase.");
-    return;
-  }
+if (!sistemaOnline()) {
+
+  const vendaOfflineId =
+    "offline-" + Date.now();
+
+  const subtotal = calcularSubtotalCarrinho();
+  const desconto = calcularDesconto();
+  const total = calcularTotalCarrinho();
+
+  const troco =
+    metodoPagamento === "dinheiro"
+      ? Math.max(
+          0,
+          normalizarNumero(
+            document.getElementById("valorRecebido")?.value || 0
+          ) - total
+        )
+      : 0;
+
+  const vendaPayload = {
+    id: vendaOfflineId,
+    empresa_id: obterEmpresaId(),
+    caixa_id: caixa?.id || null,
+    subtotal,
+    desconto,
+    total,
+    forma_pagamento: metodoPagamento,
+    troco,
+    data: new Date().toISOString(),
+    offline: true
+  };
+
+  const itensPayload = carrinho.map(item => ({
+    empresa_id: obterEmpresaId(),
+    venda_id: vendaOfflineId,
+    produto_id: item.produto_manual
+      ? null
+      : item.id,
+    nome: item.nome,
+    preco: Number(item.preco || 0),
+    preco_custo: Number(item.preco_custo || 0),
+    quantidade: Number(item.quantidade || 0)
+  }));
+
+  await salvarOffline({
+    tabela: "vendas",
+    payload: vendaPayload
+  });
+
+  await salvarOffline({
+    tabela: "vendas_itens",
+    payload: itensPayload
+  });
+
+  vendas.unshift(vendaPayload);
+
+  exibirModalSucesso(total, troco);
+
+  carrinho = [];
+
+  renderCarrinho();
+  atualizarInfobar();
+  renderHistorico();
+
+  logVenda(
+    "Venda salva offline.",
+    "warn"
+  );
+
+  return;
+}
 
   if (!caixa || caixa.status !== "aberto") {
     alert("Abra o caixa antes de finalizar uma venda.");
