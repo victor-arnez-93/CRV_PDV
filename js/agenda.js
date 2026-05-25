@@ -1883,6 +1883,68 @@ async function sincronizarAgendaComCaixa(agendaId, jogo, jogadores) {
       ? formas[0]
       : "pix";
 
+// ======================================================
+// OFFLINE
+// ======================================================
+
+if (!navigator.onLine) {
+
+  const vendaOfflineId =
+    `offline-agenda-venda-${Date.now()}`;
+
+  const vendaPayload = {
+    id: vendaOfflineId,
+    empresa_id: APP_EMPRESA_ID,
+    caixa_id: null,
+    cliente_id: null,
+    data: new Date().toISOString(),
+    subtotal: totalPago,
+    desconto: 0,
+    total: totalPago,
+    forma_pagamento: formaPagamento,
+    troco: 0,
+    origem: "agenda",
+    origem_id: agendaId,
+    descricao:
+      `Jogo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`,
+    offline: true
+  };
+
+  const itensPayload =
+    pagos.map(jogador => ({
+      empresa_id: APP_EMPRESA_ID,
+      venda_id: vendaOfflineId,
+      produto_id: null,
+      nome:
+        `Pagamento de jogo - ${jogador.nome}`,
+      preco: Number(jogador.valor || 0),
+      quantidade: 1,
+      preco_custo: 0,
+      lucro_unitario:
+        Number(jogador.valor || 0),
+      lucro_total:
+        Number(jogador.valor || 0)
+    }));
+
+  await salvarAgendaOffline({
+    tabela: "vendas",
+    payload: vendaPayload
+  });
+
+  await salvarAgendaOffline({
+    tabela: "vendas_itens",
+    payload: itensPayload
+  });
+
+  crvLog(
+    "AGENDA OFFLINE",
+    "Pagamento salvo offline",
+    "warn"
+  );
+
+  return;
+}
+
   const { data: caixaAberto, error: erroCaixa } = await sb
     .from("caixa")
     .select("id")

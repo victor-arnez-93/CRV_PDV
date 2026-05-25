@@ -70,6 +70,7 @@
   function atualizarEstadoRede(online) {
     window.APP_STATUS = window.APP_STATUS || {};
     APP_STATUS.online = online;
+    APP_STATUS.offline_ready = true;
 
     atualizarBadgeRede(online);
     atualizarStatusBarLogin(online);

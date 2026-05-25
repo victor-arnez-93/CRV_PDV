@@ -151,11 +151,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const pronto = await aguardarContextoSistema();
 
   if (!pronto) {
-    logProdutos("Supabase/Auth não ficou pronto a tempo.", "error");
-    renderProdutos();
-    atualizarStatusCaixa();
-    return;
-  }
+  logProdutos("Modo offline/cache ativado para produtos.", "warn");
+
+  produtos =
+    await crvOfflineDB.obterCache(
+      "produtos_lista"
+    ) || [];
+
+  renderProdutos();
+  atualizarStatusCaixa();
+
+  return;
+}
 
   await carregarProdutos();
 
@@ -206,11 +213,30 @@ async function carregarProdutos() {
         }))
       : [];
 
+    await crvOfflineDB.salvarCache(
+  "caixa_produtos",
+  produtos
+);
+
+await crvOfflineDB.salvarCache(
+  "produtos_lista",
+  produtos
+);
+
     logProdutos(`${produtos.length} produto(s) carregado(s).`, "success");
 
   } catch (err) {
-    produtos = [];
-    logProdutos("Erro ao carregar produtos: " + err.message, "error");
+    produtos =
+  await crvOfflineDB.obterCache(
+    "produtos_lista"
+  ) || [];
+
+logProdutos(
+  produtos.length
+    ? "Produtos carregados do cache offline."
+    : "Erro ao carregar produtos: " + err.message,
+  produtos.length ? "warn" : "error"
+);
   }
 }
 

@@ -157,7 +157,14 @@
       error: "color:#FF4D67;font-weight:bold;"
     };
 
-    console.log(
+        const metodo =
+      tipo === "error"
+        ? console.error
+        : tipo === "warn"
+          ? console.warn
+          : console.log;
+
+    metodo(
       `%c[CRV PDV][${modulo}] ${mensagem}`,
       estilos[tipo] || estilos.info
     );

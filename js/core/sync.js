@@ -20,8 +20,37 @@
       const operacao =
         item.operacao;
 
-      const payload =
-        item.payload;
+const limparIdsOffline = dados => {
+
+  if (Array.isArray(dados)) {
+    return dados.map(limparIdsOffline);
+  }
+
+  const copia = { ...dados };
+
+  if (
+    copia.id &&
+    String(copia.id).startsWith("offline-")
+  ) {
+    delete copia.id;
+  }
+
+  if (
+    copia.venda_id &&
+    String(copia.venda_id).startsWith("offline-")
+  ) {
+    delete copia.venda_id;
+  }
+
+  if (
+    copia.agenda_id &&
+    String(copia.agenda_id).startsWith("offline-")
+  ) {
+    delete copia.agenda_id;
+  }
+
+  return copia;
+};
 
       // ==========================================
       // INSERT
@@ -29,10 +58,12 @@
 
       if (operacao === "insert") {
 
-  const dadosInsert =
+const dadosInsert =
+  limparIdsOffline(
     Array.isArray(payload)
       ? payload
-      : [payload];
+      : [payload]
+  );
 
   const { error } = await sb
     .from(tabela)

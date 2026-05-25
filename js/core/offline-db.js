@@ -5,7 +5,7 @@
   // ======================================================
 
   const DB_NAME = "CRV_PDV_OFFLINE";
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
 
   const STORE_QUEUE = "offline_queue";
   const STORE_CACHE = "offline_cache";
