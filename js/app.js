@@ -573,6 +573,70 @@ function crvAbrirModalRedefinicaoSenhaGlobal() {
   };
 }
 
+function crvAbrirModalConfirmacaoSaidaGlobal() {
+  const modalExistente = document.getElementById("modalConfirmarSaida");
+
+  if (modalExistente) {
+    modalExistente.remove();
+  }
+
+  const modal = document.createElement("div");
+  modal.id = "modalConfirmarSaida";
+  modal.className = "modal-overlay";
+
+  modal.innerHTML = `
+    <div class="user-modal" style="max-width:420px;">
+      <div class="user-modal-header">
+        <div class="user-info">
+          <div class="user-avatar">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </div>
+
+          <div>
+            <strong>Sair do sistema?</strong>
+            <span>Confirme para encerrar sua sessão.</span>
+          </div>
+        </div>
+
+        <button class="modal-close" id="btnFecharConfirmarSaida" type="button">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="user-modal-body">
+        <p style="color:var(--text-secondary); margin-bottom:20px;">
+          Tem certeza que deseja sair do CRV PDV?
+        </p>
+
+        <div class="user-actions">
+          <button class="btn-secondary" id="btnCancelarSaida" type="button">
+            <span>Cancelar</span>
+          </button>
+
+          <button class="btn-primary" id="btnConfirmarSaida" type="button">
+            Sair do Sistema
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById("btnFecharConfirmarSaida").onclick = () => modal.remove();
+  document.getElementById("btnCancelarSaida").onclick = () => modal.remove();
+
+  document.getElementById("btnConfirmarSaida").onclick = async () => {
+    if (typeof crvLogout === "function") {
+      await crvLogout();
+      return;
+    }
+
+    await sb.auth.signOut();
+    window.location.href = "index.html";
+  };
+}
+
 function crvInicializarModalUsuario() {
   const avatar = document.querySelector(".topbar-avatar");
 
@@ -604,15 +668,10 @@ function crvInicializarModalUsuario() {
     crvAbrirModalRedefinicaoSenhaGlobal();
   };
 
-  document.getElementById("btnUserLogout").onclick = async () => {
-    if (typeof crvLogout === "function") {
-      await crvLogout();
-      return;
-    }
-
-    await sb.auth.signOut();
-    window.location.href = "index.html";
-  };
+document.getElementById("btnUserLogout").onclick = () => {
+  modal.classList.add("hidden");
+  crvAbrirModalConfirmacaoSaidaGlobal();
+};
 }
 
 function crvAplicarLogoEmpresaTopbar(logoUrl) {
