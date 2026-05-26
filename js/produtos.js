@@ -167,6 +167,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await carregarProdutos();
 
   renderProdutos();
+  verificarEstoqueBaixo();
   atualizarStatusCaixa();
 
   if (window.lucide) {
@@ -743,3 +744,40 @@ function setupMascarasProdutos() {
 setTimeout(() => {
   crvCarregarConfiguracoesEmpresa();
 }, 900);
+
+// ======================================================
+// ALERTA ESTOQUE BAIXO
+// ======================================================
+
+function verificarEstoqueBaixo() {
+  if (!Array.isArray(produtos) || !produtos.length) {
+    return;
+  }
+
+  const baixos = produtos.filter(produto => {
+    return Number(produto.estoque || 0) > 0 &&
+           Number(produto.estoque || 0) <= 5 &&
+           produto.ativo !== false;
+  });
+
+  if (!baixos.length) {
+    return;
+  }
+
+  const primeiro = baixos[0];
+
+  if (typeof mostrarToast === "function") {
+    mostrarToast({
+      tipo: "warn",
+      titulo: "Estoque baixo",
+      mensagem:
+        `${primeiro.nome} está com apenas ${primeiro.estoque} unidade(s).`
+    });
+
+    return;
+  }
+
+  console.warn(
+    `[CRV PDV] Estoque baixo: ${primeiro.nome}`
+  );
+}

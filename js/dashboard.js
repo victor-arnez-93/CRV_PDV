@@ -79,25 +79,24 @@ async function obterDadosOfflineDashboard() {
 }
 
 function dataVendaEhHoje(venda) {
+
   const valor = obterDataVenda(venda);
+
   if (!valor) return false;
 
-  const hojeISO = new Date().toISOString().slice(0, 10);
-  const texto = String(valor);
+  const dataVenda = new Date(valor);
 
-  // Formato ISO: 2026-05-22...
-  if (texto.startsWith(hojeISO)) return true;
-
-  // Formato brasileiro: 22/05/2026...
-  const hojeBR = new Date().toLocaleDateString("pt-BR");
-  if (texto.startsWith(hojeBR)) return true;
-
-  const data = new Date(valor);
-  if (!Number.isNaN(data.getTime())) {
-    return data.toISOString().slice(0, 10) === hojeISO;
+  if (Number.isNaN(dataVenda.getTime())) {
+    return false;
   }
 
-  return false;
+  const agora = new Date();
+
+  return (
+    dataVenda.getDate() === agora.getDate() &&
+    dataVenda.getMonth() === agora.getMonth() &&
+    dataVenda.getFullYear() === agora.getFullYear()
+  );
 }
 
 // ===== INIT =====
@@ -322,7 +321,9 @@ function initChart(vendas) {
     const data = new Date(hoje);
     data.setDate(hoje.getDate() - i);
 
-    const iso = data.toISOString().slice(0, 10);
+    const dia = data.getDate();
+    const mes = data.getMonth();
+    const ano = data.getFullYear();
 
     labels.push(data.toLocaleDateString("pt-BR", {
       weekday: "short"
@@ -333,13 +334,17 @@ function initChart(vendas) {
         const dataVenda = obterDataVenda(v);
         if (!dataVenda) return false;
 
-const texto = String(dataVenda);
+        const dataConvertida = new Date(dataVenda);
 
-if (texto.startsWith(iso)) return true;
+        if (Number.isNaN(dataConvertida.getTime())) {
+          return false;
+        }
 
-const dataConvertida = new Date(dataVenda);
-return !Number.isNaN(dataConvertida.getTime()) &&
-       dataConvertida.toISOString().slice(0, 10) === iso;
+        return (
+          dataConvertida.getDate() === dia &&
+          dataConvertida.getMonth() === mes &&
+          dataConvertida.getFullYear() === ano
+        );
       })
       .reduce((acc, v) => acc + Number(v.total || 0), 0);
 

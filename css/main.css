@@ -775,8 +775,8 @@ html[data-theme="dark"] body::after {
 
 .empresa-logo-topbar {
 
-  width: 155px;
-  height: 125px;
+  width: 75px;
+  height: 55px;
 
   object-fit: contain;
 

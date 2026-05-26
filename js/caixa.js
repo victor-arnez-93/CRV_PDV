@@ -1341,17 +1341,20 @@ if (!sistemaOnline()) {
 
     const empresaId = obterEmpresaId();
 
-    const vendaPayload = {
-      empresa_id: empresaId,
-      caixa_id: caixa.id,
-      cliente_id: null,
-      subtotal: subtotal,
-      desconto: desconto,
-      total: total,
-      forma_pagamento: metodoPagamento,
-      troco: troco,
-      data: new Date().toISOString()
-    };
+const vendaPayload = {
+  empresa_id: empresaId,
+  caixa_id: caixa.id,
+  cliente_id: null,
+  subtotal: subtotal,
+  desconto: desconto,
+  total: total,
+  forma_pagamento: metodoPagamento,
+  troco: troco,
+  origem: "comanda",
+  origem_id: comandaAtiva.id,
+  descricao: `Comanda ${comandaAtiva.codigo}`,
+  data: new Date().toISOString()
+};
 
     const { data: vendaData, error: vendaError } = await sb
       .from("vendas")

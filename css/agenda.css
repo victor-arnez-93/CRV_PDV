@@ -203,12 +203,6 @@
   color: var(--crv-orange);
 }
 
-.status-fechado {
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.08);
-  color: var(--text-primary);
-}
-
 .agenda-card-responsavel {
   font-size: .92rem;
   font-weight: 700;
@@ -675,7 +669,7 @@
 
   cursor: pointer;
 
-  color: #FF7070;
+  color: #54CD16;
 
   border: 1px solid rgba(255,80,80,.14);
 
@@ -687,6 +681,223 @@
   border-color: rgba(255,80,80,.4);
 
   transform: translateY(-1px);
+}
+
+/* ======================================================
+   AJUSTE FINAL — SCROLL DOS CARDS DA AGENDA
+====================================================== */
+
+.agenda-coluna {
+  min-height: 420px;
+  max-height: 420px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-coluna-header {
+  flex-shrink: 0;
+}
+
+.agenda-coluna-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 5px;
+  max-height: 330px;
+}
+
+.agenda-coluna-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.agenda-coluna-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+/* mantém no máximo cerca de 3 cards visíveis antes do scroll */
+.agenda-card {
+  min-height: 96px;
+}
+
+/* cobrança pendente: amarelo com brilho leve */
+.status-cobranca {
+  background: rgba(255, 193, 7, .13);
+  border: 1px solid rgba(255, 193, 7, .45);
+  color: #ffd56a;
+  box-shadow: 0 0 12px rgba(255, 193, 7, .16);
+  animation: agendaCobrancaGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes agendaCobrancaGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 193, 7, .12);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(255, 193, 7, .32);
+  }
+}
+
+/* pago/finalizado: vermelho com neon leve */
+.status-fechado {
+  background: rgba(84,205,22,.10);
+  border: 1px solid rgba(84,205,22,.35);
+  color: #54CD16;
+  box-shadow: 0 0 12px rgba(84,205,22,.18);
+}
+
+/* botão lixeira mais bonito */
+.btn-remover-jogo {
+  color: #ff7070;
+  background: rgba(255, 80, 80, .05);
+  border: 1px solid rgba(255, 80, 80, .20);
+}
+
+.btn-remover-jogo:hover {
+  background: rgba(255, 80, 80, .12);
+  border-color: rgba(255, 80, 80, .55);
+  color: #ff8a8a;
+  box-shadow: 0 0 12px rgba(255, 80, 80, .22);
+}
+
+/* ======================================================
+   NAVEGAÇÃO DE DATA + CARD FINALIZADO
+====================================================== */
+
+.agenda-filtros-grid {
+  grid-template-columns: 220px auto 1fr 220px;
+}
+
+.agenda-date-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agenda-date-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 40px;
+  padding: 8px 14px;
+
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.agenda-date-btn:hover {
+  border-color: var(--crv-orange);
+  color: var(--text-primary);
+}
+
+.agenda-date-btn.active {
+  background: rgba(249,137,72,.10);
+  border-color: var(--crv-orange);
+  color: var(--crv-orange);
+}
+
+/* X do modal no topo direito */
+.agenda-modal-card {
+  position: relative;
+}
+
+#btnFecharModalReserva {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 20;
+}
+
+/* Card de finalizados/cobrança */
+#agendaFinalizados .agenda-card {
+  display: grid;
+  grid-template-columns: 1fr 120px 54px;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "horario valores status"
+    "local   valores trash"
+    "nome    valores trash";
+
+  align-items: center;
+  column-gap: 18px;
+  row-gap: 4px;
+
+  min-height: 122px;
+  padding: 18px 20px;
+}
+
+#agendaFinalizados .agenda-card-top {
+  display: contents;
+  margin: 0;
+}
+
+#agendaFinalizados .agenda-card-top > div {
+  display: contents;
+}
+
+#agendaFinalizados .agenda-card-horario {
+  grid-area: horario;
+  font-size: .95rem;
+  line-height: 1.2;
+}
+
+#agendaFinalizados .agenda-card-local {
+  grid-area: local;
+  margin: 0;
+  font-size: .78rem;
+}
+
+#agendaFinalizados .agenda-card-responsavel {
+  grid-area: nome;
+  margin: 0;
+  font-size: 1rem;
+  align-self: end;
+}
+
+#agendaFinalizados .agenda-card-footer {
+  grid-area: valores;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#agendaFinalizados .agenda-card-status {
+  grid-area: status;
+  justify-self: center;
+  align-self: start;
+  margin: 0;
+}
+
+#agendaFinalizados .agenda-card-actions {
+  grid-area: trash;
+  justify-self: center;
+  align-self: end;
+  margin: 0;
+}
+
+#agendaFinalizados .btn-remover-jogo {
+  width: 40px;
+  height: 40px;
 }
 
 /* ======================================================

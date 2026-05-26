@@ -193,6 +193,22 @@
             id="filtroData"
           >
 
+<div class="agenda-date-actions">
+  <button class="filtro-btn agenda-date-btn" type="button" onclick="alterarDiaAgenda(-1)">
+    <span>←</span>
+    <span>Dia anterior</span>
+  </button>
+
+  <button class="filtro-btn agenda-date-btn active" type="button" onclick="voltarHojeAgenda()">
+    Hoje
+  </button>
+
+  <button class="filtro-btn agenda-date-btn" type="button" onclick="alterarDiaAgenda(1)">
+    <span>Próximo dia</span>
+    <span>→</span>
+  </button>
+</div>
+
           <input
             class="input"
             id="filtroBusca"

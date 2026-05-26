@@ -319,6 +319,93 @@
   margin-top: 4px;
 }
 
+/* ======================================================
+   AJUSTE FINAL — MODAIS E SCROLL DA TELA VENDAS
+====================================================== */
+
+#modalDetalhe {
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#modalDetalhe .modal,
+#modalDetalhe .modal-card,
+#modalDetalhe .card {
+  width: 100%;
+  max-width: 460px;
+  max-height: 82vh;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+#modalDetalhe .modal-header {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+#modalDetalhe .modal-body,
+#modalDetalheBody {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+#modalDetalhe .modal-footer {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+#modalDetalheBody::-webkit-scrollbar,
+#modalDetalhe .modal-body::-webkit-scrollbar,
+.vendas-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+
+#modalDetalheBody::-webkit-scrollbar-thumb,
+#modalDetalhe .modal-body::-webkit-scrollbar-thumb,
+.vendas-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+/* tabela de vendas com no máximo 4 linhas visíveis */
+.vendas-scroll-area {
+  max-height: 292px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+}
+
+.vendas-scroll-area table {
+  margin-bottom: 0;
+}
+
+.vendas-scroll-area thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* scroll interno apenas na lista de itens do detalhe */
+#modalDetalhe .detalhe-itens {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+#modalDetalhe .detalhe-itens::-webkit-scrollbar {
+  width: 5px;
+}
+
+#modalDetalhe .detalhe-itens::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1100px) {
   .vendas-resumo { grid-template-columns: repeat(3, 1fr); }

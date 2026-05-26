@@ -263,6 +263,29 @@ function definirDataInicial() {
 
 }
 
+function alterarDiaAgenda(delta) {
+  const input = document.getElementById("filtroData");
+  if (!input) return;
+
+  const dataAtual = input.value || hojeISOAgenda();
+  const data = new Date(`${dataAtual}T12:00:00`);
+
+  data.setDate(data.getDate() + delta);
+
+  input.value = data.toISOString().slice(0, 10);
+
+  aplicarFiltrosAgenda();
+}
+
+function voltarHojeAgenda() {
+  const input = document.getElementById("filtroData");
+  if (!input) return;
+
+  input.value = hojeISOAgenda();
+
+  aplicarFiltrosAgenda();
+}
+
 // ======================================================
 // MODAL AVISO
 // ======================================================
@@ -484,22 +507,26 @@ function aplicarFiltrosAgenda() {
       .toLowerCase()
       .trim();
 
-  const status =
-    document.getElementById("filtroStatus")?.value || "";
+let status =
+  document.getElementById("filtroStatus")?.value || "";
+
+if (status === "todos") {
+  status = "";
+}
 
   let lista = [...agendaDados];
 
-  if (data) {
-    lista = lista.filter(
-      item => item.data_agendamento === data
-    );
-  }
+if (data) {
+  lista = lista.filter(item => {
+    return String(item.data_agendamento || "").slice(0, 10) === data;
+  });
+}
 
-  if (status) {
-    lista = lista.filter(
-      item => calcularStatusVisual(item) === status
-    );
-  }
+if (status) {
+  lista = lista.filter(item => {
+    return calcularStatusVisual(item) === status;
+  });
+}
 
   if (busca) {
 
@@ -767,9 +794,9 @@ function criarCardJogo(jogo) {
 
         </div>
 
-        <span class="agenda-card-status status-${status}">
-          ${status}
-        </span>
+<span class="agenda-card-status status-${status}">
+  ${status === "cobranca" ? "cobrança" : status === "fechado" ? "pago" : status}
+</span>
 
       </div>
 
@@ -1948,8 +1975,7 @@ if (!navigator.onLine) {
     origem: "agenda",
     origem_id: agendaId,
     descricao:
-      descricao:
-  `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`,
+        `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`,
     offline: true
   };
 
@@ -2037,8 +2063,7 @@ if (!navigator.onLine) {
         forma_pagamento: formaPagamento,
         troco: 0,
         descricao:
-          descricao:
-  `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+            `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
       })
       .eq("id", vendaExistente.id)
       .eq("empresa_id", APP_EMPRESA_ID);
@@ -2071,8 +2096,7 @@ if (!navigator.onLine) {
       origem: "agenda",
       origem_id: agendaId,
       descricao:
-        descricao:
-  `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+        `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
     }])
     .select("id")
     .single();

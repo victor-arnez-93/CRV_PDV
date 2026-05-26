@@ -6,6 +6,31 @@ let filtroAtivo = 'todos';
 let filtroOrigem = 'todos';
 let empresaAtualVendas = null;
 
+let dataSelecionada = new Date();
+
+function isoDataLocal(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function formatarDataTitulo(data) {
+  return data.toLocaleDateString("pt-BR");
+}
+
+function inicioDiaISO(data) {
+  const d = new Date(data);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function fimDiaISO(data) {
+  const d = new Date(data);
+  d.setHours(23, 59, 59, 999);
+  return d.toISOString();
+}
+
 const labelPagto = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX' };
 const iconPagto  = { dinheiro: 'banknote', cartao: 'credit-card', pix: 'zap' };
 
@@ -58,6 +83,85 @@ async function obterEmpresaAtualVendas() {
   return null;
 }
 
+async function aguardarContextoVendas() {
+  let tentativas = 0;
+
+  while (tentativas < 50) {
+    if (window.auth?.verificarSessao) {
+      await window.auth.verificarSessao();
+    }
+
+    const empresaId = await obterEmpresaAtualVendas();
+
+    if (
+      empresaId &&
+      window.APP_STATUS?.online &&
+      window.APP_STATUS?.supabase_ok &&
+      window.sb
+    ) {
+      return true;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    tentativas++;
+  }
+
+  return false;
+}
+
+function criarNavegacaoDataVendas() {
+  const subtitulo = document.getElementById("subtitleVendas");
+
+  if (!subtitulo || document.getElementById("navDataVendas")) return;
+
+  const nav = document.createElement("div");
+  nav.id = "navDataVendas";
+  nav.style.display = "flex";
+  nav.style.alignItems = "center";
+  nav.style.gap = "8px";
+  nav.style.marginTop = "10px";
+  nav.style.flexWrap = "wrap";
+
+  nav.innerHTML = `
+    <button class="filtro-btn" type="button" id="btnDiaAnterior">← Dia anterior</button>
+    <button class="filtro-btn active" type="button" id="btnHojeVendas">Hoje</button>
+    <button class="filtro-btn" type="button" id="btnProximoDia">Próximo dia →</button>
+    <span id="dataSelecionadaVendas" style="color:var(--text-muted);font-weight:700;margin-left:6px;"></span>
+  `;
+
+  subtitulo.insertAdjacentElement("afterend", nav);
+
+  document.getElementById("btnDiaAnterior").onclick = async () => {
+    dataSelecionada.setDate(dataSelecionada.getDate() - 1);
+    await recarregarVendasPorData();
+  };
+
+  document.getElementById("btnProximoDia").onclick = async () => {
+    dataSelecionada.setDate(dataSelecionada.getDate() + 1);
+    await recarregarVendasPorData();
+  };
+
+  document.getElementById("btnHojeVendas").onclick = async () => {
+    dataSelecionada = new Date();
+    await recarregarVendasPorData();
+  };
+
+  atualizarTextoDataSelecionada();
+}
+
+function atualizarTextoDataSelecionada() {
+  const el = document.getElementById("dataSelecionadaVendas");
+  if (el) el.textContent = `Data selecionada: ${formatarDataTitulo(dataSelecionada)}`;
+}
+
+async function recarregarVendasPorData() {
+  atualizarTextoDataSelecionada();
+  await carregarVendas();
+  renderResumo();
+  renderTabela();
+  renderResumo();
+}
+
 async function obterDadosOfflineVendas() {
   const vendasCache =
     await crvOfflineDB.obterCache("vendas_lista") || [];
@@ -85,8 +189,12 @@ async function obterDadosOfflineVendas() {
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   logSistema("VENDAS", "Inicializando...");
+
+  await aguardarContextoVendas();
+
+  criarNavegacaoDataVendas();
 
   await carregarVendas();
 
@@ -94,9 +202,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderResumo();
   renderTabela();
+  renderResumo();
   atualizarStatusCaixa();
 });
-
 
 // ===== CARREGAR =====
 async function carregarVendas() {
@@ -111,18 +219,37 @@ async function carregarVendas() {
     ) {
       logSistema("VENDAS", "Buscando do Supabase...");
 
+const empresaId = await obterEmpresaAtualVendas();
+
+if (!empresaId) {
+  throw new Error("empresa_id não encontrado para buscar vendas.");
+}
+
 const { data: vendasSupabase, error: erroVendas } = await sb
   .from("vendas")
   .select("*")
+  .eq("empresa_id", empresaId)
+  .gte("data", inicioDiaISO(dataSelecionada))
+  .lte("data", fimDiaISO(dataSelecionada))
   .order("data", { ascending: false });
 
       if (erroVendas) throw erroVendas;
 
-const { data: itensSupabase, error: erroItens } = await sb
-  .from("vendas_itens")
-  .select("*");
+const idsVendas = (vendasSupabase || []).map(v => v.id);
 
-      if (erroItens) throw erroItens;
+let itensSupabase = [];
+
+if (idsVendas.length) {
+  const { data: itensData, error: erroItens } = await sb
+    .from("vendas_itens")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .in("venda_id", idsVendas);
+
+  if (erroItens) throw erroItens;
+
+  itensSupabase = itensData || [];
+}
 
       vendas = Array.isArray(vendasSupabase) ? vendasSupabase : [];
       itens = Array.isArray(itensSupabase) ? itensSupabase : [];
@@ -174,10 +301,10 @@ const { data: itensSupabase, error: erroItens } = await sb
       };
     });
 
-    const hoje = new Date().toLocaleDateString("pt-BR");
+document.getElementById("subtitleVendas").textContent =
+  `${vendasData.length} venda(s) registrada(s) · ${formatarDataTitulo(dataSelecionada)}`;
 
-    document.getElementById("subtitleVendas").textContent =
-      `${vendasData.length} venda(s) registrada(s) · ${hoje}`;
+atualizarTextoDataSelecionada();
 
   } catch (err) {
     logSistema("VENDAS", "Erro: " + err.message, "error");
@@ -219,13 +346,15 @@ vendasData = vendas.map(v => {
 // ===== RESUMO =====
 function renderResumo() {
 
-  const total    = vendasData.reduce((a, v) => a + v.total, 0);
-  const qtd      = vendasData.length;
+  const base = getVendasFiltradas();
+
+  const total = base.reduce((a, v) => a + v.total, 0);
+  const qtd = base.length;
   const ticket   = qtd > 0 ? total / qtd : 0;
 
-  const dinheiro = vendasData.filter(v => v.formaPagamento === 'dinheiro').reduce((a, v) => a + v.total, 0);
-  const cartao   = vendasData.filter(v => v.formaPagamento === 'cartao').reduce((a, v) => a + v.total, 0);
-  const pix      = vendasData.filter(v => v.formaPagamento === 'pix').reduce((a, v) => a + v.total, 0);
+  const dinheiro = base.filter(v => v.formaPagamento === "dinheiro").reduce((a, v) => a + v.total, 0);
+  const cartao = base.filter(v => v.formaPagamento === "cartao").reduce((a, v) => a + v.total, 0);
+  const pix = base.filter(v => v.formaPagamento === "pix").reduce((a, v) => a + v.total, 0);
 
   document.getElementById('resumoTotal').textContent    = fmt(total);
   document.getElementById('resumoQtd').textContent      = qtd;
@@ -317,6 +446,7 @@ const filtrosBox =
       filtroOrigem = btn.dataset.origem || "todos";
 
       renderTabela();
+      renderResumo();
     });
   });
 }
@@ -327,6 +457,7 @@ function setFiltro(btn, filtro) {
   btn.classList.add('active');
   filtroAtivo = filtro;
   renderTabela();
+  renderResumo();
 }
 
 function filtrarVendas() { renderTabela(); }
@@ -369,6 +500,7 @@ function renderTabela() {
           <p>Nenhuma venda encontrada</p>
         </td>
       </tr>`;
+      prepararScrollTabelaVendas();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
@@ -497,3 +629,66 @@ function atualizarStatusCaixa() {
 setTimeout(() => {
   crvCarregarConfiguracoesEmpresa();
 }, 900);
+
+// ======================================================
+// AJUSTE FINAL — MODAL DETALHE + SCROLL TABELA
+// ======================================================
+
+function fecharModalDetalheVendas() {
+  const modal = document.getElementById("modalDetalhe");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function prepararScrollTabelaVendas() {
+  const tbody = document.getElementById("vendasTableBody");
+  if (!tbody) return;
+
+  const table = tbody.closest("table");
+  if (!table) return;
+
+  const parent = table.parentElement;
+  if (!parent || parent.classList.contains("vendas-scroll-area")) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "vendas-scroll-area";
+
+  parent.insertBefore(wrapper, table);
+  wrapper.appendChild(table);
+}
+
+document.addEventListener("click", event => {
+  const fechar =
+    event.target.closest("#closeModalDetalhe") ||
+    event.target.closest("#btnFecharModalDetalhe") ||
+    event.target.closest("#modalDetalhe .modal-close") ||
+    event.target.closest("#modalDetalhe .btn-ghost");
+
+  if (fechar) {
+    event.preventDefault();
+    fecharModalDetalheVendas();
+    return;
+  }
+
+  const modal = document.getElementById("modalDetalhe");
+
+  if (
+    modal &&
+    modal.style.display === "flex" &&
+    event.target === modal
+  ) {
+    fecharModalDetalheVendas();
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    fecharModalDetalheVendas();
+  }
+});
+
+setTimeout(() => {
+  prepararScrollTabelaVendas();
+}, 300);

@@ -135,14 +135,39 @@
 .produto-estoque {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  gap: 6px;
+
+  font-size: 0.82rem;
+  font-weight: 800;
+
+  letter-spacing: 0.01em;
 }
 
-.estoque-ok   { color: var(--crv-green); }
-.estoque-low  { color: var(--crv-orange); }
-.estoque-zero { color: #FF5050; }
+/* tema escuro */
+[data-theme="dark"] .estoque-ok {
+  color: #D4A017;
+}
+
+[data-theme="dark"] .estoque-low {
+  color: #ffb347;
+}
+
+[data-theme="dark"] .estoque-zero {
+  color: #FF5050;
+}
+
+/* tema claro */
+[data-theme="light"] .estoque-ok {
+  color: var(--crv-blue);
+}
+
+[data-theme="light"] .estoque-low {
+  color: var(--crv-blue);
+}
+
+[data-theme="light"] .estoque-zero {
+  color: #FF5050;
+}
 
 .produto-actions {
   display: flex;
