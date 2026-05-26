@@ -3,6 +3,8 @@ const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' 
 
 let vendasData = [];
 let filtroAtivo = 'todos';
+let filtroOrigem = 'todos';
+let empresaAtualVendas = null;
 
 const labelPagto = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX' };
 const iconPagto  = { dinheiro: 'banknote', cartao: 'credit-card', pix: 'zap' };
@@ -19,6 +21,41 @@ function normalizarPagamento(valor) {
 
 function obterDataVenda(venda) {
   return venda.data || venda.created_at || venda.criado_em || new Date().toISOString();
+}
+
+async function obterEmpresaAtualVendas() {
+  if (empresaAtualVendas) return empresaAtualVendas;
+
+  if (window.APP_EMPRESA_ID) {
+    empresaAtualVendas = window.APP_EMPRESA_ID;
+    return empresaAtualVendas;
+  }
+
+  if (typeof crvObterEmpresaAtual === "function") {
+    const empresa = await crvObterEmpresaAtual();
+    empresaAtualVendas = empresa?.id || empresa;
+    return empresaAtualVendas;
+  }
+
+  if (window.sb) {
+    const { data: userData } = await sb.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return null;
+
+    const { data, error } = await sb
+      .from("usuarios")
+      .select("empresa_id")
+      .eq("id", userId)
+      .single();
+
+    if (error) throw error;
+
+    empresaAtualVendas = data?.empresa_id || null;
+    return empresaAtualVendas;
+  }
+
+  return null;
 }
 
 async function obterDadosOfflineVendas() {
@@ -53,6 +90,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await carregarVendas();
 
+  criarFiltroOrigemArena();
+
   renderResumo();
   renderTabela();
   atualizarStatusCaixa();
@@ -72,18 +111,16 @@ async function carregarVendas() {
     ) {
       logSistema("VENDAS", "Buscando do Supabase...");
 
-      const { data: vendasSupabase, error: erroVendas } = await sb
-        .from("vendas")
-        .select("*")
-        .eq("empresa_id", APP_EMPRESA_ID)
-        .order("data", { ascending: false });
+const { data: vendasSupabase, error: erroVendas } = await sb
+  .from("vendas")
+  .select("*")
+  .order("data", { ascending: false });
 
       if (erroVendas) throw erroVendas;
 
-      const { data: itensSupabase, error: erroItens } = await sb
-        .from("vendas_itens")
-        .select("*")
-        .eq("empresa_id", APP_EMPRESA_ID);
+const { data: itensSupabase, error: erroItens } = await sb
+  .from("vendas_itens")
+  .select("*");
 
       if (erroItens) throw erroItens;
 
@@ -121,6 +158,8 @@ async function carregarVendas() {
         subtotal: Number(v.subtotal || v.total || 0),
         desconto: Number(v.desconto || 0),
         formaPagamento: normalizarPagamento(v.forma_pagamento || v.pagamento),
+        origem: v.origem || "pdv",
+        origem_id: v.origem_id || null,
         descricao:
           v.descricao ||
           (v.origem === "agenda"
@@ -146,7 +185,34 @@ async function carregarVendas() {
     const dadosOffline =
       await obterDadosOfflineVendas();
 
-    vendasData = dadosOffline.vendas || [];
+    const vendas = dadosOffline.vendas || [];
+const itens = dadosOffline.itens || [];
+
+vendasData = vendas.map(v => {
+  const itensVenda = itens.filter(i => String(i.venda_id) === String(v.id));
+
+  return {
+    id: v.id,
+    hora: new Date(obterDataVenda(v)).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    }),
+    data: obterDataVenda(v),
+    total: Number(v.total || 0),
+    subtotal: Number(v.subtotal || v.total || 0),
+    desconto: Number(v.desconto || 0),
+    formaPagamento: normalizarPagamento(v.forma_pagamento || v.pagamento),
+    origem: v.origem || "pdv",
+    origem_id: v.origem_id || null,
+    descricao: v.descricao || (v.origem === "agenda" ? "Pagamento de jogo" : null),
+    offline: v.offline === true,
+    itens: itensVenda.map(i => ({
+      nome: i.nome || "Produto",
+      quantidade: Number(i.quantidade || 0),
+      preco: Number(i.preco || 0)
+    }))
+  };
+});
   }
 }
 
@@ -169,6 +235,91 @@ function renderResumo() {
   document.getElementById('resumoPix').textContent      = fmt(pix);
 }
 
+function empresaUsaAgendaVendas() {
+  const tipo =
+    window.APP_EMPRESA_TIPO ||
+    window.empresaTipoNegocio ||
+    window.tipoNegocioEmpresa ||
+    "";
+
+  const tiposArena = [
+    "arena",
+    "arena_society",
+    "society",
+    "arena_esportiva",
+    "arena_beach",
+    "beach_sports",
+    "beach_tennis",
+    "futvolei",
+    "volei_areia",
+    "quadras",
+    "quadras_esportivas"
+  ];
+
+  if (tiposArena.includes(String(tipo).toLowerCase())) return true;
+
+  return (
+    typeof crvModuloAtivo === "function" &&
+    crvModuloAtivo("agenda")
+  );
+}
+
+function criarFiltroOrigemArena() {
+  if (!empresaUsaAgendaVendas()) return;
+
+const filtrosBox =
+  document.querySelector(".vendas-filtros") ||
+  document.querySelector(".filtros-actions") ||
+  document.querySelector(".filtros-vendas") ||
+  document.querySelector(".filters-actions") ||
+  document.querySelector(".sales-filters") ||
+  document.querySelector(".search-filters") ||
+  document.querySelector(".vendas-toolbar");
+
+  if (!filtrosBox) return;
+
+  if (document.getElementById("filtroOrigemArena")) return;
+
+  const grupo = document.createElement("div");
+  grupo.id = "filtroOrigemArena";
+  grupo.style.display = "flex";
+  grupo.style.gap = "8px";
+  grupo.style.marginLeft = "8px";
+
+  grupo.innerHTML = `
+    <button class="filtro-btn active" type="button" data-origem="todos">
+      Todos
+    </button>
+
+    <button class="filtro-btn" type="button" data-origem="pdv">
+      Produtos
+    </button>
+
+    <button class="filtro-btn" type="button" data-origem="agenda">
+      Jogos
+    </button>
+
+    <button class="filtro-btn" type="button" data-origem="comanda">
+      Comandas
+    </button>
+  `;
+
+  filtrosBox.appendChild(grupo);
+
+  grupo.querySelectorAll("[data-origem]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      grupo
+        .querySelectorAll("[data-origem]")
+        .forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+
+      filtroOrigem = btn.dataset.origem || "todos";
+
+      renderTabela();
+    });
+  });
+}
 
 // ===== FILTROS =====
 function setFiltro(btn, filtro) {
@@ -184,13 +335,21 @@ function getVendasFiltradas() {
   const texto = document.getElementById('filtroTexto')?.value.toLowerCase().trim() || '';
 
   return vendasData.filter(v => {
-    const passaFiltro = filtroAtivo === 'todos' || v.formaPagamento === filtroAtivo;
+    const passaFiltro =
+  filtroAtivo === 'todos' ||
+  v.formaPagamento === filtroAtivo;
+
+const passaOrigem =
+  filtroOrigem === 'todos' ||
+  v.origem === filtroOrigem;
 
     const passaTexto  = !texto ||
       v.itens.some(i => i.nome.toLowerCase().includes(texto)) ||
-      fmt(v.total).includes(texto);
+String(v.descricao || "").toLowerCase().includes(texto) ||
+String(v.origem || "").toLowerCase().includes(texto) ||
+fmt(v.total).includes(texto);
 
-    return passaFiltro && passaTexto;
+    return passaFiltro && passaOrigem && passaTexto;
   });
 }
 
@@ -200,7 +359,7 @@ function renderTabela() {
 
   const tbody = document.getElementById('vendasTableBody');
   const lista = getVendasFiltradas();
-  const reversed = [...lista].reverse();
+  const reversed = [...lista];
 
   if (!reversed.length) {
     tbody.innerHTML = `
@@ -217,10 +376,12 @@ function renderTabela() {
   tbody.innerHTML = reversed.map((v, idx) => {
 
     const num = reversed.length - idx;
-    const primeiro =
-  v.itens[0] || {
-    nome: v.descricao || (v.offline ? "Venda offline" : "Venda")
-  };
+    const primeiro = {
+  nome:
+    v.origem === "agenda"
+      ? (v.descricao || "Pagamento de jogo")
+      : v.itens[0]?.nome || (v.offline ? "Venda offline" : "Venda")
+};
     const maisItens = v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '';
 
     return `
@@ -266,6 +427,18 @@ function verDetalhe(id) {
       <span>Horário</span>
       <span style="font-family:'Courier New',monospace;">${venda.hora}</span>
     </div>
+
+    ${venda.origem === "agenda" ? `
+<div class="detalhe-row">
+  <span>Origem</span>
+  <span>Agenda / Jogo</span>
+</div>
+
+<div class="detalhe-row">
+  <span>Descrição</span>
+  <span>${venda.descricao || "Pagamento de jogo"}</span>
+</div>
+` : ""}
 
     <div class="detalhe-row" style="margin-bottom:12px;">
       <span>Pagamento</span>

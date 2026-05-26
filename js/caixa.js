@@ -1571,10 +1571,18 @@ function renderHistorico() {
     item.innerHTML = `
       <div class="historico-item-left">
         <span class="historico-pagto">
-          ${venda.forma_pagamento || "Venda"}
+          ${
+            venda.origem === "agenda"
+              ? (venda.descricao || "Pagamento de jogo")
+              : (venda.forma_pagamento || "Venda")
+          }
         </span>
         <small style="display:block;color:var(--text-muted);font-size:0.68rem;margin-top:3px;">
-          ${formatarDataHoraBrasil(venda.data)}
+          ${
+  venda.origem === "agenda"
+    ? `${String(venda.forma_pagamento || "").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`
+    : formatarDataHoraBrasil(venda.data)
+}
         </small>
       </div>
 

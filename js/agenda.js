@@ -131,6 +131,7 @@ let jogadoresPorAgenda = {};
 
 let agendaAtualId = null;
 let modoModalAgenda = "novo";
+let avisosJogosEmitidos = new Set();
 
 // ======================================================
 // INIT
@@ -163,9 +164,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await carregarAgenda();
 
+    verificarAvisosFimDeJogo();
+
     setInterval(() => {
-  aplicarFiltrosAgenda();
-}, 15000);
+      aplicarFiltrosAgenda();
+      verificarAvisosFimDeJogo();
+    }, 15000);
 
   }, 800);
 
@@ -426,9 +430,48 @@ function agruparJogadores(lista) {
 }
 
 // ======================================================
+// AVISO DE FIM DE JOGO (PARA ARENAS)
+// ======================================================
+function verificarAvisosFimDeJogo() {
+  const agora = new Date();
+  const hoje = hojeISOAgenda();
+
+  agendaDados.forEach(jogo => {
+    if (String(jogo.data_agendamento || "").slice(0, 10) !== hoje) return;
+    if (jogo.status_jogo === "cancelado" || jogo.status_jogo === "fechado") return;
+
+    const fimMinutos = horaParaMinutos(jogo.hora_fim);
+    if (!fimMinutos) return;
+
+    const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
+    const faltam = fimMinutos - minutosAgora;
+
+    if (faltam > 0 && faltam <= 5) {
+      const chave = `${jogo.id}-fim-5min`;
+
+      if (avisosJogosEmitidos.has(chave)) return;
+
+      avisosJogosEmitidos.add(chave);
+
+      crvToast({
+        titulo: "Jogo quase finalizando",
+        mensagem: `${jogo.local_recurso || "Quadra/Campo"} termina em ${faltam} minuto(s).`,
+        tipo: "warn",
+        tempo: 8000
+      });
+
+      crvLog(
+        "AGENDA",
+        `Aviso: jogo ${jogo.id} termina em ${faltam} minuto(s).`,
+        "warn"
+      );
+    }
+  });
+}
+
+// ======================================================
 // FILTROS
 // ======================================================
-
 function aplicarFiltrosAgenda() {
 
   const data =
@@ -1847,7 +1890,6 @@ function removerJogo(id) {
 // INTEGRAR AGENDA COM CAIXA / VENDAS
 // Apenas segmentos com módulo agenda ativo
 // ======================================================
-
 async function sincronizarAgendaComCaixa(agendaId, jogo, jogadores) {
 
   if (
@@ -1906,7 +1948,8 @@ if (!navigator.onLine) {
     origem: "agenda",
     origem_id: agendaId,
     descricao:
-      `Jogo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`,
+      descricao:
+  `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`,
     offline: true
   };
 
@@ -1994,7 +2037,8 @@ if (!navigator.onLine) {
         forma_pagamento: formaPagamento,
         troco: 0,
         descricao:
-          `Jogo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+          descricao:
+  `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
       })
       .eq("id", vendaExistente.id)
       .eq("empresa_id", APP_EMPRESA_ID);
@@ -2027,7 +2071,8 @@ if (!navigator.onLine) {
       origem: "agenda",
       origem_id: agendaId,
       descricao:
-        `Jogo - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
+        descricao:
+  `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
     }])
     .select("id")
     .single();
