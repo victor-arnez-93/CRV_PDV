@@ -979,8 +979,11 @@ html[data-theme="dark"] body::before {
 .hero-actions .btn-secondary,
 .cta-box .btn-primary {
   width: 100%;
-  max-width: 100%;
+  max-width: 320px;
+
   min-height: 54px;
+
+  margin: 0 auto;
 
   padding: 0 22px;
 
