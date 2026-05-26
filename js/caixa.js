@@ -1350,9 +1350,9 @@ const vendaPayload = {
   total: total,
   forma_pagamento: metodoPagamento,
   troco: troco,
-  origem: "comanda",
-  origem_id: comandaAtiva.id,
-  descricao: `Comanda ${comandaAtiva.codigo}`,
+  origem: "pdv",
+  origem_id: null,
+  descricao: "Venda rápida",
   data: new Date().toISOString()
 };
 
