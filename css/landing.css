@@ -837,6 +837,34 @@ html[data-theme="dark"] body::before {
 ====================================================== */
 
 @media (max-width: 980px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  svg,
+  video {
+    max-width: 100%;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 1180px;
+    padding-left: 18px;
+    padding-right: 18px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   .hero-grid,
   .adaptive-box {
     grid-template-columns: 1fr;
@@ -858,64 +886,85 @@ html[data-theme="dark"] body::before {
 }
 
 @media (max-width: 680px) {
-  .container {
-    width: min(100% - 28px, 1180px);
-  }
-
   .landing-header {
     position: sticky;
     top: 0;
     z-index: 50;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .nav {
+    width: 100%;
+    min-width: 0;
     height: auto;
-    min-height: 76px;
-    padding: 12px 0;
-    gap: 12px;
+    min-height: 74px;
+    padding: 10px 0;
+    gap: 10px;
+  }
+
+  .brand {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .brand-logo-crv {
-    height: 54px;
-    max-width: 150px;
+    height: 48px;
+    max-width: 118px;
     object-fit: contain;
   }
 
   .nav-actions {
-    gap: 8px;
+    flex: 0 0 auto;
+    gap: 7px;
+    min-width: 0;
   }
 
   .nav-actions .btn {
-    min-height: 42px;
-    padding: 0 14px;
-    font-size: .88rem;
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: .82rem;
     white-space: nowrap;
   }
 
   .nav-actions .btn i {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 
   .theme-toggle {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
   }
 
   .hero {
-    padding-top: 48px;
-    padding-bottom: 46px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    padding-top: 44px;
+    padding-bottom: 44px;
+  }
+
+  .hero-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .hero-title {
-    font-size: clamp(2rem, 11vw, 3rem);
-    line-height: 1;
+    max-width: 100%;
+    font-size: clamp(1.85rem, 10vw, 2.75rem);
+    line-height: 1.02;
+    overflow-wrap: break-word;
   }
 
   .hero-text {
-    font-size: .95rem;
+    max-width: 100%;
+    font-size: .94rem;
     line-height: 1.65;
+    overflow-wrap: break-word;
   }
 
   .hero-actions {
@@ -923,23 +972,28 @@ html[data-theme="dark"] body::before {
     grid-template-columns: 1fr;
     gap: 10px;
     width: 100%;
+    max-width: 100%;
   }
 
   .hero-actions .btn-primary,
   .hero-actions .btn-secondary,
   .cta-box .btn-primary {
     width: 100%;
+    max-width: 100%;
     min-height: 50px;
     justify-content: center;
     text-align: center;
+    white-space: normal;
   }
 
   .hero-tags {
     gap: 8px;
+    max-width: 100%;
   }
 
   .tag {
     font-size: .72rem;
+    max-width: 100%;
   }
 
   .system-panel {
@@ -956,7 +1010,7 @@ html[data-theme="dark"] body::before {
   }
 
   .panel-logo {
-    max-width: 160px;
+    max-width: 150px;
     height: auto;
   }
 
@@ -1018,9 +1072,7 @@ html[data-theme="dark"] body::before {
 
   .cta-box .btn-primary {
     display: flex;
-    max-width: 100%;
     padding: 0 18px;
-    white-space: normal;
   }
 
   .footer-inner {
@@ -1036,40 +1088,45 @@ html[data-theme="dark"] body::before {
   }
 
   .footer-brand img {
-    max-width: 150px;
+    max-width: 145px;
   }
 }
 
 @media (max-width: 420px) {
   .container {
-    width: min(100% - 22px, 1180px);
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
   .nav {
-    min-height: 70px;
+    min-height: 68px;
   }
 
   .brand-logo-crv {
-    height: 48px;
-    max-width: 130px;
+    height: 44px;
+    max-width: 104px;
   }
 
   .nav-actions .btn {
-    padding: 0 12px;
-    font-size: .82rem;
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: .78rem;
   }
 
   .theme-toggle {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
   }
 
   .hero {
-    padding-top: 42px;
+    padding-top: 40px;
   }
 
   .kicker {
-    font-size: .72rem;
+    max-width: 100%;
+    font-size: .7rem;
+    white-space: normal;
   }
 
   .system-panel,
