@@ -975,16 +975,33 @@ html[data-theme="dark"] body::before {
     max-width: 100%;
   }
 
-  .hero-actions .btn-primary,
-  .hero-actions .btn-secondary,
-  .cta-box .btn-primary {
-    width: 100%;
-    max-width: 100%;
-    min-height: 50px;
-    justify-content: center;
-    text-align: center;
-    white-space: normal;
-  }
+.hero-actions .btn-primary,
+.hero-actions .btn-secondary,
+.cta-box .btn-primary {
+  width: 100%;
+  max-width: 100%;
+  min-height: 54px;
+
+  padding: 0 22px;
+
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+  white-space: nowrap;
+
+  border-radius: 999px;
+
+  font-size: .95rem;
+}
+
+.hero-actions .btn-primary i,
+.hero-actions .btn-secondary i,
+.cta-box .btn-primary i {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
 
   .hero-tags {
     gap: 8px;
