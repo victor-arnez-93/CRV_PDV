@@ -750,24 +750,319 @@
   letter-spacing: 0.02em;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 960px) {
+/* ======================================================
+   RESPONSIVE — CAIXA / PDV
+   Mobile sempre no final do arquivo
+====================================================== */
+
+@media (max-width: 1100px) {
   .pdv-grid {
     grid-template-columns: 1fr;
   }
+
   .pdv-cart {
     position: static;
   }
+
+  .pdv-left,
+  .pdv-right {
+    min-width: 0;
+  }
 }
 
-@media (max-width: 600px) {
-  .caixa-infobar {
+@media (max-width: 768px) {
+  .main-content {
+    padding: 18px 14px 90px;
+  }
+
+  .topbar {
+    padding: 12px 14px;
     gap: 10px;
   }
-  .pdv-manual-row {
-    flex-wrap: wrap;
+
+  .topbar-title {
+    font-size: 1rem;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+
+  .topbar-datetime {
+    display: none;
+  }
+
+  .caixa-status {
+    padding: 8px 10px;
+  }
+
+  .caixa-status span:last-child {
+    display: none;
+  }
+
+  .caixa-infobar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .caixa-info-item {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .caixa-info-label {
+    font-size: .7rem;
+  }
+
+  .caixa-info-value {
+    font-size: .9rem;
+    word-break: break-word;
+  }
+
+  #btnFecharCaixa {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .caixa-closed-wrap {
+    min-height: calc(100vh - 150px);
+    padding: 20px 0;
+  }
+
+  .caixa-closed-card {
+    width: 100%;
+    padding: 24px 18px;
+  }
+
+  .caixa-closed-card h2 {
+    font-size: 1.35rem;
+  }
+
+  .pdv-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .pdv-mode-switch {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pdv-mode-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .comanda-card {
+    padding: 16px 14px;
+  }
+
+  .comanda-card-top {
+    gap: 10px;
+  }
+
+  .comanda-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .pdv-search-wrap {
+    min-width: 0;
+  }
+
+  .pdv-search {
+    font-size: .9rem;
+    padding-right: 54px;
+  }
+
+  .pdv-kbd {
+    display: none;
+  }
+
+  .pdv-suggestions {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .pdv-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .quick-item {
+    min-width: 0;
+  }
+
+  .pdv-manual {
+    padding: 14px;
+  }
+
+  .pdv-manual-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .pdv-manual-row .input-group,
+  .pdv-manual-row .input-group[style] {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .pdv-manual-row button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pdv-cart {
+    padding: 16px 14px;
+    overflow: hidden;
+  }
+
+  .cart-header {
+    gap: 10px;
+  }
+
+  .cart-items {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .cart-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .cart-item-name {
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  .cart-item-qty {
+    justify-content: space-between;
+  }
+
+  .cart-item-price {
+    text-align: left;
+  }
+
+  .cart-item-remove {
+    width: 100%;
+  }
+
+  .cart-discount {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .cart-discount input {
+    width: 100% !important;
+  }
+
   .payment-methods {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pay-btn {
+    justify-content: center;
+  }
+
+  .cart-troco {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .troco-result {
+    text-align: center;
+  }
+
+  .pdv-finalizar {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pdv-historico {
+    padding: 16px 14px;
+  }
+
+  .historico-list {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .modal-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .main-content {
+    padding: 16px 12px 90px;
+  }
+
+  .caixa-infobar {
+    grid-template-columns: 1fr;
+  }
+
+  .pdv-quick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-total-row.total {
+    font-size: 1rem;
+  }
+
+  .cart-total-row.total span:last-child {
+    font-size: 1.25rem;
+  }
+
+  .closed-icon {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar-title {
+    max-width: 120px;
+  }
+
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+  }
+
+  .caixa-closed-card h2 {
+    font-size: 1.2rem;
+  }
+
+  .pdv-cart,
+  .pdv-manual,
+  .comanda-card,
+  .pdv-historico {
+    padding: 14px 12px;
   }
 }

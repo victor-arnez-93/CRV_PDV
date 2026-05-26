@@ -304,42 +304,245 @@ textarea.input {
   font-size: 0.82rem;
 }
 
-/* ===== MOBILE ===== */
+/* ======================================================
+   RESPONSIVE — COMANDAS
+   Mobile sempre no final do arquivo
+====================================================== */
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .comandas-cards {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .comandas-toolbar {
     grid-template-columns: 1fr;
   }
+
+  .comandas-table-wrap {
+    overflow-x: auto;
+  }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .main-content {
+    padding: 18px 14px 90px;
+  }
+
+  .topbar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .topbar-title {
+    font-size: 1rem;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .topbar-datetime {
+    display: none;
+  }
+
+  .caixa-status {
+    padding: 8px 10px;
+  }
+
+  .caixa-status span:last-child {
+    display: none;
+  }
+
   .comandas-header {
     flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .comandas-header h1 {
+    font-size: 1.45rem;
+    line-height: 1.15;
+  }
+
+  .comandas-header p {
+    font-size: .86rem;
   }
 
   .comandas-header-actions {
     width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .comandas-header-actions button {
-    flex: 1;
+    width: 100%;
     justify-content: center;
+  }
+
+  .comandas-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .comandas-card {
+    min-width: 0;
+    padding: 16px 14px;
+  }
+
+  .comandas-card-value {
+    font-size: 1.45rem;
+    word-break: break-word;
+  }
+
+  .comandas-toolbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .comandas-search-wrap {
+    min-width: 0;
+  }
+
+  .comandas-search-wrap input {
+    min-width: 0;
+  }
+
+  .comandas-table-card {
+    overflow: hidden;
+  }
+
+  .comandas-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .comandas-table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .comandas-table {
+    min-width: 760px;
+  }
+
+  .comandas-table th,
+  .comandas-table td {
+    white-space: nowrap;
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .empty-state {
+    padding: 24px 14px;
+  }
+
+  .modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .input-group {
+    min-width: 0;
+  }
+
+  .lote-preview {
+    word-break: break-word;
+  }
+
+  .user-modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+
+  .user-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .main-content {
+    padding: 16px 12px 90px;
+  }
+
+  .comandas-header-actions {
+    grid-template-columns: 1fr;
   }
 
   .comandas-cards {
     grid-template-columns: 1fr;
   }
 
-  .modal-footer {
-    flex-direction: column;
+  .comandas-card {
+    padding: 15px 14px;
   }
 
-  .modal-footer button {
-    width: 100%;
-    justify-content: center;
+  .comandas-card-value {
+    font-size: 1.55rem;
+  }
+
+  .comandas-toolbar {
+    padding: 12px;
+  }
+
+  .comandas-table {
+    min-width: 680px;
+  }
+
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar-title {
+    max-width: 110px;
+  }
+
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+  }
+
+  .comandas-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .comandas-card-value {
+    font-size: 1.35rem;
+  }
+
+  .comandas-card,
+  .comandas-toolbar {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }

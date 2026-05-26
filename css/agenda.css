@@ -901,7 +901,8 @@
 }
 
 /* ======================================================
-   RESPONSIVO
+   RESPONSIVE — AGENDA
+   Mobile sempre no final do arquivo
 ====================================================== */
 
 @media (max-width: 1200px) {
@@ -910,17 +911,93 @@
     grid-template-columns: 1fr;
   }
 
+  .agenda-coluna {
+    min-width: 0;
+  }
+
 }
 
 @media (max-width: 900px) {
 
   .agenda-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
 }
 
 @media (max-width: 768px) {
+
+  .main-content {
+    padding: 18px 14px 90px;
+  }
+
+  .topbar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .topbar-title {
+    font-size: 1rem;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .topbar-datetime {
+    display: none;
+  }
+
+  .caixa-status {
+    padding: 8px 10px;
+  }
+
+  .caixa-status span:last-child {
+    display: none;
+  }
+
+  .agenda-hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .agenda-hero h1 {
+    font-size: 1.45rem;
+    line-height: 1.15;
+  }
+
+  .agenda-hero p {
+    font-size: .86rem;
+  }
+
+  .agenda-hero .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agenda-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .agenda-stat-card {
+    min-width: 0;
+    padding: 16px 14px;
+  }
+
+  .agenda-stat-card strong {
+    font-size: 1.45rem;
+    word-break: break-word;
+  }
+
+  .agenda-filtros {
+    padding: 14px;
+  }
 
   .agenda-filtros-grid,
   .form-row,
@@ -929,20 +1006,201 @@
     grid-template-columns: 1fr;
   }
 
-  .agenda-modal-card .modal-footer {
+  .agenda-date-actions {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .agenda-date-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agenda-grid {
+    gap: 14px;
+  }
+
+  .agenda-coluna {
+    overflow: hidden;
+  }
+
+  .agenda-coluna-header {
+    padding-bottom: 10px;
+  }
+
+  .agenda-coluna-body {
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .agenda-card,
+  .agenda-jogo-card {
+    min-width: 0;
+  }
+
+  .agenda-card-top,
+  .agenda-jogo-top {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .agenda-card-title,
+  .agenda-jogo-title {
+    min-width: 0;
+  }
+
+  .agenda-card-title strong,
+  .agenda-jogo-title strong {
+    word-break: break-word;
+  }
+
+  .agenda-card-info,
+  .agenda-jogo-info {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-card-actions,
+  .agenda-jogo-actions {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .agenda-card-actions button,
+  .agenda-jogo-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agenda-jogadores-header {
     flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  #btnAdicionarJogador {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agenda-jogadores-lista {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .agenda-jogador-row {
+    gap: 10px;
+  }
+
+  .agenda-totalizador-jogo {
+    gap: 10px;
+  }
+
+  .agenda-totalizador-jogo > div {
+    width: 100%;
+  }
+
+  .agenda-textarea {
+    min-height: 110px;
+  }
+
+  .agenda-modal-card {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+
+  .agenda-modal-card .modal-header {
+    align-items: flex-start;
+  }
+
+  .agenda-modal-card .modal-body {
+    overflow-y: auto;
+  }
+
+  .agenda-modal-card .modal-footer {
+    flex-direction: column-reverse;
+    gap: 10px;
   }
 
   .agenda-modal-card .modal-footer button {
     width: 100%;
+    justify-content: center;
+  }
+
+  .agenda-aviso-modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+
+  .agenda-aviso-actions {
+    flex-direction: column-reverse;
+  }
+
+  .agenda-aviso-actions button {
+    width: 100%;
+    justify-content: center;
   }
 
 }
 
 @media (max-width: 560px) {
 
+  .main-content {
+    padding: 16px 12px 90px;
+  }
+
   .agenda-stats {
     grid-template-columns: 1fr;
+  }
+
+  .agenda-stat-card {
+    padding: 15px 14px;
+  }
+
+  .agenda-stat-card strong {
+    font-size: 1.55rem;
+  }
+
+  .agenda-filtros {
+    padding: 12px;
+  }
+
+  .agenda-coluna {
+    padding: 14px 12px;
+  }
+
+  .agenda-coluna-body {
+    max-height: 420px;
+  }
+
+  .agenda-modal-card {
+    border-radius: 18px;
+  }
+
+}
+
+@media (max-width: 380px) {
+
+  .topbar-title {
+    max-width: 110px;
+  }
+
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+  }
+
+  .agenda-hero h1 {
+    font-size: 1.3rem;
+  }
+
+  .agenda-stat-card strong {
+    font-size: 1.35rem;
   }
 
 }

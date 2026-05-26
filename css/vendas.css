@@ -406,20 +406,247 @@
   border-radius: 999px;
 }
 
-/* ===== RESPONSIVE ===== */
+/* ======================================================
+   RESPONSIVE — VENDAS
+   Mobile sempre no final do arquivo
+====================================================== */
+
 @media (max-width: 1100px) {
-  .vendas-resumo { grid-template-columns: repeat(3, 1fr); }
+
+  .vendas-resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .vendas-table-card {
+    overflow: hidden;
+  }
+
 }
 
 @media (max-width: 768px) {
-  .vendas-resumo { grid-template-columns: repeat(2, 1fr); }
+
+  .main-content {
+    padding: 18px 14px 90px;
+  }
+
+  .topbar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .topbar-title {
+    font-size: 1rem;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .topbar-datetime {
+    display: none;
+  }
+
+  .caixa-status {
+    padding: 8px 10px;
+  }
+
+  .caixa-status span:last-child {
+    display: none;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .page-header h2 {
+    font-size: 1.45rem;
+    line-height: 1.15;
+  }
+
+  .page-header p {
+    font-size: .86rem;
+  }
+
+  .page-header .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vendas-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .resumo-card {
+    min-width: 0;
+    padding: 16px 14px;
+  }
+
+  .card-title {
+    font-size: .72rem;
+    gap: 6px;
+  }
+
+  .card-value {
+    font-size: 1.4rem;
+    word-break: break-word;
+  }
+
+  .vendas-filtros {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .filtros-left,
+  .filtros-right {
+    width: 100%;
+  }
+
+  .filtro-search-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filtro-search {
+    min-width: 0;
+  }
+
+  .filtros-right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .filtro-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vendas-table-card {
+    overflow: hidden;
+  }
+
+  .vendas-table-wrap,
+  .vendas-table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vendas-table {
+    min-width: 760px;
+  }
+
+  .vendas-table th,
+  .vendas-table td {
+    white-space: nowrap;
+  }
+
   .vendas-table th:nth-child(5),
-  .vendas-table td:nth-child(5) { display: none; }
-  .vendas-filtros { flex-direction: column; align-items: flex-start; }
+  .vendas-table td:nth-child(5) {
+    display: none;
+  }
+
+  .table-empty {
+    padding: 24px 14px;
+  }
+
+  .modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .user-modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+
+  .user-actions {
+    grid-template-columns: 1fr;
+  }
+
 }
 
-@media (max-width: 480px) {
-  .vendas-resumo { grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) {
+
+  .main-content {
+    padding: 16px 12px 90px;
+  }
+
+  .vendas-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .resumo-card {
+    padding: 15px 14px;
+  }
+
+  .card-value {
+    font-size: 1.5rem;
+  }
+
+  .vendas-filtros {
+    padding: 12px;
+  }
+
+  .filtros-right {
+    grid-template-columns: 1fr;
+  }
+
+  .vendas-table {
+    min-width: 620px;
+  }
+
   .vendas-table th:nth-child(3),
-  .vendas-table td:nth-child(3) { display: none; }
+  .vendas-table td:nth-child(3) {
+    display: none;
+  }
+
+}
+
+@media (max-width: 380px) {
+
+  .topbar-title {
+    max-width: 110px;
+  }
+
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+  }
+
+  .page-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .card-value {
+    font-size: 1.35rem;
+  }
+
 }
