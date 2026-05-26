@@ -213,7 +213,7 @@ async function enviarRecuperacaoSenha(email) {
       log("Logout realizado", "success");
 
       // redirecionamento opcional
-      window.location.href = "index.html";
+      window.location.href = "login.html";
 
     } catch (err) {
       log("Erro no logout: " + err.message, "error");
@@ -229,7 +229,7 @@ async function enviarRecuperacaoSenha(email) {
 
     if (!USER) {
       log("Acesso bloqueado - redirecionando", "warn");
-      window.location.href = "index.html";
+      window.location.href = "login.html";
     }
   }
 
@@ -253,6 +253,7 @@ window.auth = {
     const paginasPublicas = [
       "",
       "index.html",
+      "login.html",
       "cadastro.html",
       "nova-senha.html",
       "recuperar-senha.html",
@@ -260,7 +261,7 @@ window.auth = {
     ];
 
     const paginaAtual =
-      window.location.pathname.split("/").pop() || "index.html";
+      window.location.pathname.split("/").pop() || "login.html";
 
     return paginasPublicas.includes(paginaAtual);
   }
@@ -276,7 +277,7 @@ window.auth = {
 
     if (!paginaPublica() && !USER) {
       log("Acesso direto bloqueado - redirecionando", "warn");
-      window.location.href = "index.html";
+      window.location.href = "login.html";
       return;
     }
   });

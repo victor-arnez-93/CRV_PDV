@@ -633,7 +633,7 @@ function crvAbrirModalConfirmacaoSaidaGlobal() {
     }
 
     await sb.auth.signOut();
-    window.location.href = "index.html";
+    window.location.href = "login.html";
   };
 }
 

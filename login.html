@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CRV PDV — Login</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="stylesheet" href="css/main.css" />
+<link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div id="scanline"></div>
+
+<!-- Cantos HUD -->
+<div class="hud-corner hc-tl"></div>
+<div class="hud-corner hc-tr"></div>
+<div class="hud-corner hc-bl"></div>
+<div class="hud-corner hc-br"></div>
+
+<!-- Status bar topo -->
+<div class="status-bar">
+  <span><span class="status-dot"></span>SISTEMA ONLINE</span>
+  <span id="stime" class="status-time"></span>
+  <span>CRV PDV v1.0</span>
+</div>
+
+<!-- Card central -->
+<div class="card">
+  <div class="cc tl"></div><div class="cc tr"></div>
+  <div class="cc bl"></div><div class="cc br"></div>
+
+  <!-- Logo com glitch -->
+  <div class="logo-wrap">
+    <img src="assets/logo1.png" alt="CRV PDV" />
+    <img class="g1" src="assets/logo1.png" alt="" />
+    <img class="g2" src="assets/logo1.png" alt="" />
+  </div>
+
+  <!-- Brand tags -->
+  <div class="brand-tags">
+    <span class="brand-tag">Fluxo de Caixa</span>
+    <span class="brand-tag">PDV</span>
+    <span class="brand-tag">Offline Ready</span>
+  </div>
+
+  <div class="subtitle">
+    <h2>Bem-vindo!</h2>
+    <p>Faça login ou cadastre-se para acessar o sistema.</p>
+  </div>
+
+  <form id="loginForm" novalidate onsubmit="handleLogin(event)">
+    <div class="field">
+      <label for="email">E-mail</label>
+      <div class="iw">
+        <svg class="ico" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <input type="email" id="email" placeholder="operador@seucomercio.com" autocomplete="email" required />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="password">Senha</label>
+      <div class="iw">
+        <svg class="ico" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required />
+        <button type="button" class="eye" id="eyeBtn">
+          <svg id="eyeIco" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-enter" id="btnLogin">
+      <span class="bt">ENTRAR NO SISTEMA</span>
+    </button>
+
+    <button type="button" class="forgot-password" id="btnEsqueciSenha">
+      Esqueceu sua senha?
+    </button>
+
+    <div class="login-divider"><span>ou</span></div>
+
+    <button type="button" class="btn btn-demo" id="btnMostrarCadastro">
+      <span class="bt">CRIAR MINHA CONTA</span>
+    </button>
+
+<button type="button" class="btn btn-demo" onclick="entrarDemo()" style="display:none;">
+  <span class="bt">ENTRAR COMO DEMO</span>
+</button>
+
+    <div class="err" id="err">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <span id="errTxt">Credenciais inválidas.</span>
+    </div>
+  </form>
+
+  <form id="recuperarForm" novalidate style="display:none;">
+  <div class="subtitle">
+    <h2>Recuperar senha</h2>
+    <p class="recovery-text">Informe seu e-mail para receber o link de redefinição.</p>
+  </div>
+
+  <div class="field">
+    <label for="recEmail">E-mail</label>
+    <div class="iw">
+      <input type="email" id="recEmail" placeholder="seuemail@email.com" required />
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-enter" id="btnEnviarRecuperacao">
+    <span class="bt">ENVIAR LINK</span>
+  </button>
+
+  <button type="button" class="btn btn-demo" id="btnVoltarLoginRecuperacao">
+    <span class="bt">VOLTAR AO LOGIN</span>
+  </button>
+</form>
+
+  <form id="cadastroForm" novalidate style="display:none;">
+  <div class="subtitle">
+    <h2>Criar conta</h2>
+    <p>Cadastre seu acesso e confirme pelo e-mail.</p>
+  </div>
+
+  <div class="field">
+    <label for="cadNome">Nome</label>
+    <div class="iw">
+      <input type="text" id="cadNome" placeholder="Seu nome" required />
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="cadEmail">E-mail</label>
+    <div class="iw">
+      <input
+        type="email"
+        id="cadEmail"
+        placeholder="seuemail@email.com"
+        autocomplete="email"
+        required
+      />
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="cadSenha">Senha</label>
+    <div class="iw">
+      <input
+        type="password"
+        id="cadSenha"
+        placeholder="Mínimo 6 caracteres"
+        autocomplete="new-password"
+        required
+      />
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-enter" id="btnCadastro">
+    <span class="bt">CRIAR CONTA</span>
+  </button>
+
+  <button type="button" class="btn btn-demo" id="btnVoltarLogin">
+    <span class="bt">VOLTAR AO LOGIN</span>
+  </button>
+</form>
+
+  <div class="div">PROTOCOLO SEGURO</div>
+  <div class="foot">
+  <strong>CRV PDV v1.0</strong>
+  &nbsp;·&nbsp;
+  <a href="https://crvsolucoesti.com" target="_blank" rel="noopener">
+    CRV Soluções em TI
+  </a>
+</div>
+</div>
+
+<!-- Roda antes do render para evitar flash de tema errado -->
+<script>
+  (function () {
+    const saved = localStorage.getItem('crv-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
+
+</body>
+
+<!-- Fim do body -->
+
+<!-- SCRIPTS -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+<script src="js/login.js"></script>
+
+</html>

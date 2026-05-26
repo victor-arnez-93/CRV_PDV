@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
       mostrarFeedback("Senha alterada com sucesso. Redirecionando...", "sucesso");
 
       setTimeout(() => {
-        window.location.href = "index.html";
+        window.location.href = "login.html";
       }, 1800);
 
     } catch (err) {

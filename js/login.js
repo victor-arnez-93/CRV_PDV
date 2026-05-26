@@ -294,7 +294,7 @@ if (emailConfirmado) {
   errEl.classList.remove("warn");
   errEl.classList.add("on", "ok");
 
-  history.replaceState(null, "", "index.html");
+  history.replaceState(null, "", "login.html");
 }
 
 const recuperarForm = document.getElementById("recuperarForm");

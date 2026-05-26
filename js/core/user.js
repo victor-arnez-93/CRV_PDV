@@ -57,7 +57,7 @@ async function crvLogout() {
 
     if (error) throw error;
 
-    window.location.href = "index.html";
+    window.location.href = "login.html";
   } catch (err) {
     console.error("[CRV PDV][USER] Erro ao sair:", err);
     alert("Erro ao sair do sistema.");

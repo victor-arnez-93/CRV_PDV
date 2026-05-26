@@ -1,200 +1,252 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CRV PDV — Login</title>
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-<link rel="stylesheet" href="css/main.css" />
-<link rel="stylesheet" href="css/login.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRV PDV — Sistema Web de PDV e Fluxo de Caixa</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/landing.css">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
+
 <body>
+  <header class="landing-header">
+    <div class="container nav">
+      <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="brand-link">
+        <img src="assets/logo2.png" alt="CRV Soluções em TI" class="brand-logo-crv">
+      </a>
 
-<canvas id="bg"></canvas>
-<div id="scanline"></div>
+      <div class="nav-actions">
+        <a href="login.html" class="btn btn-secondary">
+          <i data-lucide="log-in"></i>
+          <span>Entrar</span>
+        </a>
 
-<!-- Cantos HUD -->
-<div class="hud-corner hc-tl"></div>
-<div class="hud-corner hc-tr"></div>
-<div class="hud-corner hc-bl"></div>
-<div class="hud-corner hc-br"></div>
-
-<!-- Status bar topo -->
-<div class="status-bar">
-  <span><span class="status-dot"></span>SISTEMA ONLINE</span>
-  <span id="stime" class="status-time"></span>
-  <span>CRV PDV v1.0</span>
-</div>
-
-<!-- Card central -->
-<div class="card">
-  <div class="cc tl"></div><div class="cc tr"></div>
-  <div class="cc bl"></div><div class="cc br"></div>
-
-  <!-- Logo com glitch -->
-  <div class="logo-wrap">
-    <img src="assets/logo1.png" alt="CRV PDV" />
-    <img class="g1" src="assets/logo1.png" alt="" />
-    <img class="g2" src="assets/logo1.png" alt="" />
-  </div>
-
-  <!-- Brand tags -->
-  <div class="brand-tags">
-    <span class="brand-tag">Fluxo de Caixa</span>
-    <span class="brand-tag">PDV</span>
-    <span class="brand-tag">Offline Ready</span>
-  </div>
-
-  <div class="subtitle">
-    <h2>Bem-vindo!</h2>
-    <p>Faça login ou cadastre-se para acessar o sistema.</p>
-  </div>
-
-  <form id="loginForm" novalidate onsubmit="handleLogin(event)">
-    <div class="field">
-      <label for="email">E-mail</label>
-      <div class="iw">
-        <svg class="ico" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-        <input type="email" id="email" placeholder="operador@seucomercio.com" autocomplete="email" required />
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="password">Senha</label>
-      <div class="iw">
-        <svg class="ico" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required />
-        <button type="button" class="eye" id="eyeBtn">
-          <svg id="eyeIco" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-          </svg>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema">
+          <i data-lucide="moon"></i>
         </button>
       </div>
     </div>
+  </header>
 
-    <button type="submit" class="btn btn-enter" id="btnLogin">
-      <span class="bt">ENTRAR NO SISTEMA</span>
-    </button>
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="float-in">
+          <div class="kicker">
+            <i data-lucide="shield-check" width="16"></i>
+            Sistema web de PDV e fluxo de caixa
+          </div>
 
-    <button type="button" class="forgot-password" id="btnEsqueciSenha">
-      Esqueceu sua senha?
-    </button>
+          <h1 class="hero-title">
+            Um PDV moderno que se adapta ao <span>seu tipo de negócio</span>
+          </h1>
 
-    <div class="login-divider"><span>ou</span></div>
+          <p class="hero-text">
+            O CRV PDV conecta vendas, produtos, comandas, agenda, caixa, dashboard e relatórios em uma operação única. O sistema libera módulos conforme o segmento: arena, padaria, restaurante, bar, conveniência, serviços e outros modelos comerciais.
+          </p>
 
-    <button type="button" class="btn btn-demo" id="btnMostrarCadastro">
-      <span class="bt">CRIAR MINHA CONTA</span>
-    </button>
+          <div class="hero-actions">
+            <a href="login.html" class="btn btn-primary">
+              <i data-lucide="rocket"></i>
+              <span>Acessar o Sistema</span>
+            </a>
 
-<button type="button" class="btn btn-demo" onclick="entrarDemo()" style="display:none;">
-  <span class="bt">ENTRAR COMO DEMO</span>
-</button>
+            <a href="#features" class="btn btn-secondary">
+              <i data-lucide="layout-grid"></i>
+              <span>Ver Funcionalidades</span>
+            </a>
+          </div>
 
-    <div class="err" id="err">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-      <span id="errTxt">Credenciais inválidas.</span>
+          <div class="hero-tags">
+            <span class="tag">Supabase real</span>
+            <span class="tag">Multiempresa</span>
+            <span class="tag">Offline Ready</span>
+            <span class="tag">Responsivo</span>
+          </div>
+        </div>
+
+        <aside class="system-panel reveal soft-float">
+          <div class="panel-top">
+            <img src="assets/logo1.png" alt="CRV PDV" class="panel-logo">
+            <span class="live-pill">Operação viva</span>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-row">
+              <div>
+                <strong>Caixa em tempo real</strong>
+                <span>Vendas, pagamentos e fechamento conectados</span>
+              </div>
+              <div class="panel-icon"><i data-lucide="wallet"></i></div>
+            </div>
+
+            <div class="panel-row">
+              <div>
+                <strong>Agenda para arenas</strong>
+                <span>Jogo pago vira venda e entra nos relatórios</span>
+              </div>
+              <div class="panel-icon"><i data-lucide="calendar-days"></i></div>
+            </div>
+
+            <div class="panel-row">
+              <div>
+                <strong>Dashboard do dia</strong>
+                <span>Indicadores vivos para decisão rápida</span>
+              </div>
+              <div class="panel-icon"><i data-lucide="bar-chart-3"></i></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <div class="container">
+        <div class="section-head reveal">
+          <span>Funcionalidades</span>
+          <h2>Operação integrada do começo ao fim</h2>
+          <p>Do atendimento ao relatório final, tudo conversa entre si para evitar retrabalho, perda de dados e controle manual.</p>
+        </div>
+
+        <div class="features-grid">
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="shopping-cart"></i></div>
+            <h3>PDV Completo</h3>
+            <p>Venda produtos, controle itens rápidos, acompanhe estoque e registre pagamentos com fluxo simples para o operador.</p>
+          </article>
+
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="wallet"></i></div>
+            <h3>Fluxo de Caixa</h3>
+            <p>Abertura, fechamento, entradas, saídas e conferência financeira com dados conectados às vendas reais.</p>
+          </article>
+
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="bar-chart-3"></i></div>
+            <h3>Relatórios & Dashboard</h3>
+            <p>Métricas em tempo real, vendas do dia, pagamentos, ticket médio, lucro bruto e visão operacional limpa.</p>
+          </article>
+
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="users"></i></div>
+            <h3>Clientes & Agenda</h3>
+            <p>Controle clientes, horários, jogadores, cobranças e pagamentos quando o segmento do negócio exigir agenda.</p>
+          </article>
+
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="wifi-off"></i></div>
+            <h3>Offline Ready</h3>
+            <p>Base preparada para continuar operando mesmo sem conexão, com sincronização quando a internet voltar.</p>
+          </article>
+
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="smartphone"></i></div>
+            <h3>Responsivo Mobile</h3>
+            <p>Interface adaptada para desktop, tablets e celulares, mantendo operação rápida em diferentes telas.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="adaptive">
+      <div class="container">
+        <div class="adaptive-box reveal">
+          <div>
+            <h2>O sistema muda conforme o negócio</h2>
+            <p>Uma arena precisa de agenda e jogos no financeiro. Uma padaria precisa de PDV, produtos e caixa. O CRV PDV ativa os módulos certos para cada operação, sem poluir o sistema com telas desnecessárias.</p>
+          </div>
+
+          <div class="business-types">
+            <span>Arena</span>
+            <span>Padaria</span>
+            <span>Bar</span>
+            <span>Restaurante</span>
+            <span>Mercado</span>
+            <span>Serviços</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <div class="cta-box reveal">
+          <h2>Seu caixa, suas vendas e seus relatórios no mesmo fluxo</h2>
+          <p>Entre no sistema e acompanhe a operação em tempo real.</p>
+
+          <a href="login.html" class="btn btn-primary">
+            <i data-lucide="log-in"></i>
+            <span>Entrar no Sistema</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="footer-brand">
+        <img src="assets/logo2.png" alt="CRV Soluções em TI">
+        <span>© 2026 CRV Soluções em TI — CRV PDV</span>
+      </a>
+
+      <div class="footer-links">
+        <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="footer-icon" aria-label="Site CRV">
+          <i class="fa-solid fa-globe"></i>
+        </a>
+
+        <a href="https://www.instagram.com/crvsolucoesemti" target="_blank" rel="noopener" class="footer-icon" aria-label="Instagram CRV">
+          <i class="fa-brands fa-instagram"></i>
+        </a>
+
+        <a href="https://wa.me/5515997021387" target="_blank" rel="noopener" class="footer-icon" aria-label="WhatsApp CRV">
+          <i class="fa-brands fa-whatsapp"></i>
+        </a>
+      </div>
     </div>
-  </form>
+  </footer>
 
-  <form id="recuperarForm" novalidate style="display:none;">
-  <div class="subtitle">
-    <h2>Recuperar senha</h2>
-    <p class="recovery-text">Informe seu e-mail para receber o link de redefinição.</p>
-  </div>
+  <script>
+    let temaAtual = "dark";
+    const html = document.documentElement;
+    const themeToggle = document.getElementById("themeToggle");
 
-  <div class="field">
-    <label for="recEmail">E-mail</label>
-    <div class="iw">
-      <input type="email" id="recEmail" placeholder="seuemail@email.com" required />
-    </div>
-  </div>
+    function aplicarTema(tema) {
+      temaAtual = tema;
+      html.setAttribute("data-theme", tema);
 
-  <button type="submit" class="btn btn-enter" id="btnEnviarRecuperacao">
-    <span class="bt">ENVIAR LINK</span>
-  </button>
+      themeToggle.innerHTML = tema === "dark"
+        ? '<i data-lucide="moon"></i>'
+        : '<i data-lucide="sun"></i>';
 
-  <button type="button" class="btn btn-demo" id="btnVoltarLoginRecuperacao">
-    <span class="bt">VOLTAR AO LOGIN</span>
-  </button>
-</form>
+      lucide.createIcons();
+    }
 
-  <form id="cadastroForm" novalidate style="display:none;">
-  <div class="subtitle">
-    <h2>Criar conta</h2>
-    <p>Cadastre seu acesso e confirme pelo e-mail.</p>
-  </div>
+    themeToggle.addEventListener("click", () => {
+      aplicarTema(temaAtual === "dark" ? "light" : "dark");
+    });
 
-  <div class="field">
-    <label for="cadNome">Nome</label>
-    <div class="iw">
-      <input type="text" id="cadNome" placeholder="Seu nome" required />
-    </div>
-  </div>
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+        }
+      });
+    }, { threshold: .15 });
 
-  <div class="field">
-    <label for="cadEmail">E-mail</label>
-    <div class="iw">
-      <input
-        type="email"
-        id="cadEmail"
-        placeholder="seuemail@email.com"
-        autocomplete="email"
-        required
-      />
-    </div>
-  </div>
+    document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
 
-  <div class="field">
-    <label for="cadSenha">Senha</label>
-    <div class="iw">
-      <input
-        type="password"
-        id="cadSenha"
-        placeholder="Mínimo 6 caracteres"
-        autocomplete="new-password"
-        required
-      />
-    </div>
-  </div>
-
-  <button type="submit" class="btn btn-enter" id="btnCadastro">
-    <span class="bt">CRIAR CONTA</span>
-  </button>
-
-  <button type="button" class="btn btn-demo" id="btnVoltarLogin">
-    <span class="bt">VOLTAR AO LOGIN</span>
-  </button>
-</form>
-
-  <div class="div">PROTOCOLO SEGURO</div>
-  <div class="foot">
-  <strong>CRV PDV v1.0</strong>
-  &nbsp;·&nbsp;
-  <a href="https://crvsolucoesti.com" target="_blank" rel="noopener">
-    CRV Soluções em TI
-  </a>
-</div>
-</div>
-
-<!-- Roda antes do render para evitar flash de tema errado -->
-<script>
-  (function () {
-    const saved = localStorage.getItem('crv-theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', saved);
-  })();
-</script>
-
+    lucide.createIcons();
+  </script>
 </body>
-
-<!-- Fim do body -->
-
-<!-- SCRIPTS -->
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/app.js"></script>
-<script src="js/login.js"></script>
-
 </html>
