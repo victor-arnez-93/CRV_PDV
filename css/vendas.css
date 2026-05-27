@@ -408,26 +408,20 @@
 
 /* ======================================================
    RESPONSIVE — VENDAS
-   Mobile sempre no final do arquivo
 ====================================================== */
 
 @media (max-width: 1100px) {
-
   .vendas-resumo {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  .vendas-table-card {
-    overflow: hidden;
-  }
-
 }
 
 @media (max-width: 768px) {
-
   .main-content {
     padding: 18px 14px 90px;
   }
+
+  /* --- TOPBAR --- */
 
   .topbar {
     padding: 12px 14px;
@@ -436,7 +430,7 @@
 
   .topbar-title {
     font-size: 1rem;
-    max-width: 140px;
+    max-width: 145px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -458,15 +452,19 @@
     display: none;
   }
 
+  /* --- PAGE HEADER --- */
+
   .page-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 14px;
+    gap: 12px;
+    margin-bottom: 18px;
   }
 
   .page-header h2 {
-    font-size: 1.45rem;
-    line-height: 1.15;
+    font-size: clamp(1.3rem, 5vw, 1.5rem);
+    line-height: 1.2;
+    margin-bottom: 2px;
   }
 
   .page-header p {
@@ -475,12 +473,16 @@
 
   .page-header .btn-secondary {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
   }
+
+  /* --- RESUMO --- */
 
   .vendas-resumo {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    margin-bottom: 16px;
   }
 
   .resumo-card {
@@ -488,126 +490,206 @@
     padding: 16px 14px;
   }
 
-  .card-title {
-    font-size: .72rem;
-    gap: 6px;
+  .resumo-card .card-title {
+    font-size: .7rem;
+    gap: 5px;
   }
 
-  .card-value {
-    font-size: 1.4rem;
+  .resumo-card .card-value {
+    font-size: 1.2rem;
     word-break: break-word;
+    line-height: 1.15;
   }
+
+  /* --- FILTROS --- */
 
   .vendas-filtros {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
     padding: 14px;
+    margin-bottom: 14px;
   }
 
   .filtros-left,
   .filtros-right {
     width: 100%;
+    min-width: 0;
   }
 
   .filtro-search-wrap {
     width: 100%;
-    min-width: 0;
   }
 
   .filtro-search {
+    width: 100%;
+    font-size: 16px; /* evita zoom iOS */
     min-width: 0;
   }
 
   .filtros-right {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
   }
 
   .filtro-btn {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
   }
+
+  /* --- TABELA --- */
 
   .vendas-table-card {
     overflow: hidden;
   }
 
   .vendas-table-wrap,
-  .vendas-table-card {
+  .vendas-scroll-area {
     overflow-x: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
+  .vendas-scroll-area {
+    max-height: 320px;
+  }
+
   .vendas-table {
-    min-width: 760px;
+    min-width: 720px;
   }
 
   .vendas-table th,
   .vendas-table td {
     white-space: nowrap;
+    padding: 11px 14px;
   }
 
+  /* oculta coluna desconto */
   .vendas-table th:nth-child(5),
   .vendas-table td:nth-child(5) {
     display: none;
   }
 
+  .btn-ver {
+    width: 36px;
+    height: 36px;
+  }
+
   .table-empty {
-    padding: 24px 14px;
+    padding: 32px 14px !important;
   }
 
+  /* --- MODAL --- */
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  #modalDetalhe {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  #modalDetalhe .modal,
+  #modalDetalhe .modal-card,
+  #modalDetalhe .card,
   .modal {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 32px);
-    overflow-y: auto;
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 92dvh;
+    overflow: hidden;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    flex-direction: column;
   }
 
+  #modalDetalhe .modal-header,
+  .modal-header {
+    flex-shrink: 0;
+    margin-bottom: 14px;
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    z-index: 2;
+  }
+
+  #modalDetalheBody,
+  #modalDetalhe .modal-body,
   .modal-body {
+    flex: 1;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
   }
 
+  #modalDetalhe .modal-footer,
   .modal-footer {
+    flex-shrink: 0;
     flex-direction: column-reverse;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
+    margin-top: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
   }
 
+  #modalDetalhe .modal-footer button,
   .modal-footer button {
     width: 100%;
+    min-height: 48px;
     justify-content: center;
   }
 
-  .user-modal {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
+  #modalDetalhe .detalhe-itens {
+    max-height: 200px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  .user-actions {
-    grid-template-columns: 1fr;
+  .detalhe-row {
+    font-size: .86rem;
   }
 
+  .detalhe-row.total {
+    font-size: 1.1rem;
+  }
 }
 
 @media (max-width: 520px) {
-
   .main-content {
-    padding: 16px 12px 90px;
+    padding: 14px 12px 90px;
   }
+
+  /* --- RESUMO --- */
 
   .vendas-resumo {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .resumo-card {
-    padding: 15px 14px;
+    padding: 14px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
   }
 
-  .card-value {
-    font-size: 1.5rem;
+  .resumo-card .card-value {
+    font-size: 1.35rem;
+    text-align: right;
   }
+
+  /* --- FILTROS --- */
 
   .vendas-filtros {
     padding: 12px;
@@ -617,36 +699,64 @@
     grid-template-columns: 1fr;
   }
 
-  .vendas-table {
-    min-width: 620px;
+  .filtro-btn {
+    min-height: 44px;
   }
 
+  /* --- TABELA --- */
+
+  .vendas-table {
+    min-width: 580px;
+  }
+
+  /* oculta também coluna de itens no 520px */
   .vendas-table th:nth-child(3),
   .vendas-table td:nth-child(3) {
     display: none;
   }
 
+  .vendas-scroll-area {
+    max-height: 280px;
+  }
 }
 
 @media (max-width: 380px) {
+  .main-content {
+    padding: 12px 10px 88px;
+  }
 
   .topbar-title {
-    max-width: 110px;
+    max-width: 106px;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
   .page-header h2 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
   }
 
-  .card-value {
-    font-size: 1.35rem;
+  .resumo-card {
+    padding: 12px;
   }
 
+  .resumo-card .card-value {
+    font-size: 1.25rem;
+  }
+
+  .vendas-filtros {
+    padding: 10px;
+  }
+
+  .vendas-table {
+    min-width: 520px;
+  }
+
+  .vendas-scroll-area {
+    max-height: 260px;
+  }
 }

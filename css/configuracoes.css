@@ -383,13 +383,12 @@
 
 /* ======================================================
    RESPONSIVE — CONFIGURAÇÕES
-   Mobile sempre no final do arquivo
 ====================================================== */
 
 @media (max-width: 1180px) {
-
   .config-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .config-card-wide {
@@ -398,13 +397,12 @@
   }
 
   .crv-card {
+    min-height: auto;
     max-height: none;
   }
-
 }
 
 @media (max-width: 768px) {
-
   .main-content {
     padding: 18px 14px 90px;
   }
@@ -416,7 +414,7 @@
 
   .topbar-title {
     font-size: 1rem;
-    max-width: 150px;
+    max-width: 145px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -433,12 +431,14 @@
   .page-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 14px;
+    gap: 12px;
+    margin-bottom: 18px;
   }
 
   .page-header h2 {
-    font-size: 1.45rem;
-    line-height: 1.15;
+    font-size: clamp(1.3rem, 5vw, 1.5rem);
+    line-height: 1.2;
+    margin-bottom: 2px;
   }
 
   .page-header p {
@@ -449,27 +449,26 @@
     width: 100%;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 
   .page-header .btn-primary,
   .page-header .btn-secondary,
-  .page-header-actions button {
+  .page-header-actions button,
+  .page-header-actions a {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
-  }
-
-  .config-grid {
-    gap: 14px;
   }
 
   .config-card {
     padding: 16px 14px;
     overflow: hidden;
+    gap: 14px;
   }
 
   .config-card h2 {
-    font-size: 1rem;
+    font-size: .98rem;
   }
 
   .config-muted {
@@ -479,14 +478,12 @@
 
   .form-grid {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
   }
 
+  .form-group,
   .form-group.full {
-    grid-column: span 1;
-  }
-
-  .form-group {
+    grid-column: auto;
     min-width: 0;
   }
 
@@ -494,187 +491,223 @@
   .form-group select,
   .form-group textarea {
     min-width: 0;
+    width: 100%;
+    font-size: 16px;
   }
 
-  .segment-preview-header {
-    gap: 10px;
-    align-items: flex-start;
-  }
-
-  .segment-preview-header h2 {
-    font-size: .98rem;
-  }
-
-  .segment-preview-content {
-    max-height: 340px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-
-  .segment-preview-item {
-    min-width: 0;
-  }
-
-  .segment-preview-item strong,
-  .segment-preview-item span,
-  .segment-preview-item p {
-    word-break: break-word;
+  .form-group input,
+  .form-group select {
+    height: 48px;
   }
 
   .logo-upload-control {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+    height: auto;
+    padding: 10px;
   }
 
   .logo-upload-btn {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
   }
 
   .logo-upload-name {
     width: 100%;
     text-align: center;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
     word-break: break-word;
   }
 
   .logo-preview-box {
+    min-height: 110px;
     padding: 16px;
   }
 
   .logo-preview-box img {
     max-width: 180px;
-    max-height: 120px;
+    max-height: 100px;
   }
 
   #btnRemoverLogoEmpresa {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
   }
 
+  .crv-card {
+    align-items: stretch;
+    text-align: left;
+    padding: 16px 14px;
+    gap: 12px;
+  }
+
   .crv-card-title {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
     gap: 10px;
   }
 
   .crv-card-logo {
-    width: 52px;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .crv-card p {
+    max-width: 100%;
+    margin: 0;
   }
 
   .crv-links {
-    gap: 10px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .crv-links a {
-    width: 100%;
-    justify-content: flex-start;
-    word-break: break-word;
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    flex: 0 0 44px;
+  }
+
+  .setup-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
   }
 
   .setup-modal,
   .modal {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 32px);
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 94dvh;
     overflow-y: auto;
+    border-radius: 20px 20px 0 0;
   }
 
   .setup-modal {
     padding: 24px 18px;
   }
 
+  .setup-modal-logo {
+    width: 88px;
+    margin-bottom: 18px;
+  }
+
   .setup-modal h2 {
-    font-size: 1.35rem;
+    font-size: 1.1rem;
+    letter-spacing: .18em;
+    line-height: 1.2;
   }
 
   .setup-modal p {
     font-size: .86rem;
     line-height: 1.5;
+    margin-bottom: 20px;
   }
 
   .modal-actions-row {
     flex-direction: column-reverse;
-    gap: 10px;
+    gap: 8px;
   }
 
   .modal-actions-row button {
     width: 100%;
+    min-height: 48px;
     justify-content: center;
   }
 
   .toast-config {
+    top: auto;
     left: 12px;
     right: 12px;
     bottom: 14px;
-    width: auto;
     min-width: 0;
+    max-width: none;
+    width: auto;
+    padding: 12px 14px;
+    font-size: .84rem;
   }
-
-  .user-modal {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
-  }
-
-  .user-actions {
-    grid-template-columns: 1fr;
-  }
-
 }
 
 @media (max-width: 520px) {
-
   .main-content {
-    padding: 16px 12px 90px;
+    padding: 14px 12px 90px;
   }
 
   .config-card {
-    padding: 15px 14px;
+    padding: 14px 12px;
   }
 
   .page-header-actions {
     gap: 8px;
   }
 
-  .segment-preview-content {
-    max-height: 300px;
-  }
-
   .logo-preview-box img {
     max-width: 150px;
-    max-height: 100px;
+    max-height: 88px;
+  }
+
+  .crv-card-title h2 {
+    font-size: .92rem;
   }
 
   .setup-modal {
     padding: 22px 16px;
-    border-radius: 20px;
   }
 
   .setup-modal-logo {
-    width: 72px;
+    width: 76px;
   }
 
+  .toast-config {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
 }
 
 @media (max-width: 380px) {
+  .main-content {
+    padding: 12px 10px 88px;
+  }
 
   .topbar-title {
-    max-width: 110px;
+    max-width: 106px;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
   .page-header h2 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
+  }
+
+  .config-card {
+    padding: 12px 10px;
   }
 
   .setup-modal h2 {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
 
+  .setup-modal p {
+    font-size: .82rem;
+  }
+
+  .crv-links a {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
 }

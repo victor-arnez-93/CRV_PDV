@@ -406,8 +406,225 @@ body {
   color: rgba(255, 210, 130, .95);
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 480px) {
-  .card { width: 90vw; padding: 32px 24px 28px; }
-  .hud-corner { display: none; }
+/* ======================================================
+   RESPONSIVE — LOGIN
+====================================================== */
+
+@media (max-width: 600px) {
+  html, body {
+    height: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 16px 32px;
+  }
+
+  /* --- HUD --- */
+
+  .hud-corner {
+    display: none;
+  }
+
+  /* --- STATUS BAR --- */
+
+  .status-bar {
+    padding: 8px 14px;
+    font-size: 8px;
+    letter-spacing: .12em;
+  }
+
+  .status-bar .status-right {
+    display: none;
+  }
+
+  /* --- THEME TOGGLE --- */
+
+  .login-topbar {
+    top: 36px;
+    right: 12px;
+  }
+
+  .theme-toggle {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  /* --- CARD --- */
+
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    padding: 32px 22px 28px;
+    margin-inline: auto;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* --- LOGO --- */
+
+  .logo-wrap img {
+    height: 80px;
+  }
+
+  .logo-wrap .g1,
+  .logo-wrap .g2 {
+    height: 54px;
+  }
+
+  /* --- BRAND TAGS --- */
+
+  .brand-tags {
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .brand-tag {
+    font-size: .58rem;
+    padding: 3px 8px;
+  }
+
+  /* --- SUBTITLE --- */
+
+  .subtitle {
+    margin-bottom: 20px;
+  }
+
+  .subtitle h2 {
+    font-size: 9px;
+    letter-spacing: .35em;
+  }
+
+  .subtitle p {
+    font-size: 11px;
+  }
+
+  /* --- FIELDS --- */
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    font-size: 9px;
+    letter-spacing: .2em;
+    margin-bottom: 6px;
+  }
+
+  .iw input {
+    height: 52px;
+    font-size: 16px; /* evita zoom automático no iOS */
+    padding: 0 46px 0 42px;
+    border-radius: 4px;
+  }
+
+  /* --- BOTÕES --- */
+
+  .btn {
+    height: 52px;
+    font-size: 10px;
+    letter-spacing: .3em;
+    border-radius: 4px;
+  }
+
+  .forgot-password {
+    font-size: .76rem;
+    margin: -4px 0 16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* --- DIVIDER --- */
+
+  .login-divider {
+    margin: 10px 0 12px;
+    gap: 10px;
+  }
+
+  .login-divider span {
+    font-size: 8px;
+    letter-spacing: .2em;
+  }
+
+  /* --- ERROR / FEEDBACK --- */
+
+  .err {
+    font-size: 11px;
+    padding: 8px 10px;
+    gap: 7px;
+  }
+
+  /* --- FOOTER --- */
+
+  .div {
+    margin: 16px 0;
+    font-size: 8px;
+    letter-spacing: .2em;
+  }
+
+  .foot {
+    font-size: 9px;
+    letter-spacing: .1em;
+    line-height: 1.7;
+  }
+}
+
+@media (max-width: 380px) {
+  body {
+    padding: 56px 12px 24px;
+  }
+
+  .card {
+    padding: 26px 16px 22px;
+  }
+
+  .logo-wrap img {
+    height: 68px;
+  }
+
+  .brand-tag {
+    font-size: .54rem;
+    padding: 2px 7px;
+  }
+
+  .subtitle h2 {
+    font-size: 8px;
+    letter-spacing: .25em;
+  }
+
+  .iw input {
+    height: 50px;
+    font-size: 16px;
+  }
+
+  .btn {
+    height: 50px;
+    font-size: 9px;
+    letter-spacing: .25em;
+  }
+
+  .theme-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .forgot-password {
+    font-size: .72rem;
+  }
+
+  .foot {
+    font-size: 8px;
+  }
 }

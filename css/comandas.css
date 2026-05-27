@@ -306,7 +306,6 @@ textarea.input {
 
 /* ======================================================
    RESPONSIVE — COMANDAS
-   Mobile sempre no final do arquivo
 ====================================================== */
 
 @media (max-width: 1100px) {
@@ -317,16 +316,14 @@ textarea.input {
   .comandas-toolbar {
     grid-template-columns: 1fr;
   }
-
-  .comandas-table-wrap {
-    overflow-x: auto;
-  }
 }
 
 @media (max-width: 768px) {
   .main-content {
     padding: 18px 14px 90px;
   }
+
+  /* --- TOPBAR --- */
 
   .topbar {
     padding: 12px 14px;
@@ -335,7 +332,7 @@ textarea.input {
 
   .topbar-title {
     font-size: 1rem;
-    max-width: 140px;
+    max-width: 145px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -357,15 +354,19 @@ textarea.input {
     display: none;
   }
 
+  /* --- HEADER --- */
+
   .comandas-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 14px;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
   .comandas-header h1 {
-    font-size: 1.45rem;
-    line-height: 1.15;
+    font-size: clamp(1.3rem, 5vw, 1.5rem);
+    line-height: 1.2;
+    margin-bottom: 4px;
   }
 
   .comandas-header p {
@@ -376,17 +377,21 @@ textarea.input {
     width: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 
   .comandas-header-actions button {
     width: 100%;
+    min-height: 44px;
     justify-content: center;
   }
+
+  /* --- CARDS --- */
 
   .comandas-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    margin-bottom: 14px;
   }
 
   .comandas-card {
@@ -394,15 +399,27 @@ textarea.input {
     padding: 16px 14px;
   }
 
+  .comandas-card-label {
+    font-size: .68rem;
+  }
+
   .comandas-card-value {
     font-size: 1.45rem;
     word-break: break-word;
+    line-height: 1.15;
   }
+
+  .comandas-card-sub {
+    font-size: .76rem;
+  }
+
+  /* --- TOOLBAR --- */
 
   .comandas-toolbar {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
     padding: 14px;
+    margin-bottom: 14px;
   }
 
   .comandas-search-wrap {
@@ -410,61 +427,101 @@ textarea.input {
   }
 
   .comandas-search-wrap input {
+    font-size: 16px; /* evita zoom iOS */
     min-width: 0;
+    width: 100%;
   }
+
+  /* --- TABELA --- */
 
   .comandas-table-card {
     overflow: hidden;
   }
 
   .comandas-table-header {
+    padding: 14px 16px;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 4px;
+  }
+
+  .comandas-table-header h3 {
+    font-size: .92rem;
   }
 
   .comandas-table-wrap {
     overflow-x: auto;
     overflow-y: hidden;
+    overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
 
   .comandas-table {
-    min-width: 760px;
+    min-width: 780px;
   }
 
   .comandas-table th,
   .comandas-table td {
     white-space: nowrap;
+    padding: 12px 14px;
   }
 
-  .text-right {
-    text-align: right;
+  .comanda-action-btn {
+    width: 36px;
+    height: 36px;
   }
+
+  /* --- EMPTY STATE --- */
 
   .empty-state {
-    padding: 24px 14px;
+    padding: 28px 14px;
+  }
+
+  /* --- MODAL --- */
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
   }
 
   .modal {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 32px);
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 92dvh;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal-header {
+    margin-bottom: 16px;
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
   }
 
   .modal-body {
-    overflow-y: auto;
+    gap: 10px;
   }
 
   .modal-footer {
     flex-direction: column-reverse;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
+    margin-top: 16px;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
   }
 
   .modal-footer button {
     width: 100%;
+    min-height: 48px;
     justify-content: center;
   }
 
@@ -474,21 +531,13 @@ textarea.input {
 
   .lote-preview {
     word-break: break-word;
-  }
-
-  .user-modal {
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
-  }
-
-  .user-actions {
-    grid-template-columns: 1fr;
+    font-size: .8rem;
   }
 }
 
 @media (max-width: 520px) {
   .main-content {
-    padding: 16px 12px 90px;
+    padding: 14px 12px 90px;
   }
 
   .comandas-header-actions {
@@ -497,14 +546,25 @@ textarea.input {
 
   .comandas-cards {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .comandas-card {
-    padding: 15px 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
   }
 
   .comandas-card-value {
-    font-size: 1.55rem;
+    font-size: 1.5rem;
+    text-align: right;
+  }
+
+  .comandas-card-sub {
+    text-align: right;
   }
 
   .comandas-toolbar {
@@ -516,33 +576,49 @@ textarea.input {
   }
 
   .modal-header h3 {
-    font-size: 1rem;
+    font-size: .96rem;
+  }
+
+  textarea.input {
+    font-size: 16px;
+    min-height: 80px;
   }
 }
 
 @media (max-width: 380px) {
+  .main-content {
+    padding: 12px 10px 88px;
+  }
+
   .topbar-title {
-    max-width: 110px;
+    max-width: 106px;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
   .comandas-header h1 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
+  }
+
+  .comandas-card {
+    padding: 12px;
   }
 
   .comandas-card-value {
     font-size: 1.35rem;
   }
 
-  .comandas-card,
   .comandas-toolbar {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 10px;
+  }
+
+  .comanda-action-btn {
+    width: 38px;
+    height: 38px;
   }
 }
