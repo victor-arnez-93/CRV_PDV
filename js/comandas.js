@@ -183,6 +183,14 @@ function setupEventosComandas() {
   const lotePrefixo = document.getElementById("lotePrefixo");
   const loteDigitos = document.getElementById("loteDigitos");
 
+    const codigoComandaInput = document.getElementById("comandaCodigoInput");
+
+  if (codigoComandaInput) {
+    codigoComandaInput.addEventListener("input", () => {
+      codigoComandaInput.value = codigoComandaInput.value.replace(/\D/g, "");
+    });
+  }
+
   if (btnNova) {
     btnNova.onclick = abrirModalNovaComanda;
   }
@@ -233,6 +241,50 @@ function setupEventosComandas() {
     if (event.key === "Escape") {
       fecharModalComanda();
       fecharModalLote();
+    }
+  });
+}
+
+function abrirConfirmacaoComanda({
+  titulo = "Confirmar ação",
+  mensagem = "Deseja confirmar esta ação?",
+  textoConfirmar = "Confirmar"
+}) {
+  return new Promise(resolve => {
+    const modal = document.getElementById("modalConfirmComanda");
+    const tituloEl = document.getElementById("confirmComandaTitulo");
+    const mensagemEl = document.getElementById("confirmComandaMensagem");
+    const btnFechar = document.getElementById("btnFecharConfirmComanda");
+    const btnCancelar = document.getElementById("btnCancelarConfirmComanda");
+    const btnOk = document.getElementById("btnOkConfirmComanda");
+
+    if (!modal || !btnOk || !btnCancelar) {
+      resolve(window.confirm(mensagem));
+      return;
+    }
+
+    tituloEl.textContent = titulo;
+    mensagemEl.innerHTML = mensagem;
+    btnOk.textContent = textoConfirmar;
+
+    modal.style.display = "flex";
+
+    const fechar = resposta => {
+      modal.style.display = "none";
+
+      btnOk.onclick = null;
+      btnCancelar.onclick = null;
+      if (btnFechar) btnFechar.onclick = null;
+
+      resolve(resposta);
+    };
+
+    btnOk.onclick = () => fechar(true);
+    btnCancelar.onclick = () => fechar(false);
+    if (btnFechar) btnFechar.onclick = () => fechar(false);
+
+    if (window.lucide) {
+      lucide.createIcons();
     }
   });
 }
@@ -700,11 +752,17 @@ if (!sistemaOnlineComandas()) {
     return;
   }
 
-  const confirmar = confirm(
-    `Gerar ${quantidade} comandas offline?\n\nDe ${gerarCodigoLote(inicio, digitos, prefixo)} até ${gerarCodigoLote(fim, digitos, prefixo)}`
-  );
+const confirmar = await abrirConfirmacaoComanda({
+  titulo: "Gerar lote offline",
+  mensagem: `
+    Gerar <strong>${quantidade}</strong> comandas?<br><br>
+    De <strong>${gerarCodigoLote(inicio, digitos, prefixo)}</strong>
+    até <strong>${gerarCodigoLote(fim, digitos, prefixo)}</strong>
+  `,
+  textoConfirmar: "Gerar Offline"
+});
 
-  if (!confirmar) return;
+if (!confirmar) return;
 
   const empresaId = obterEmpresaIdComandas();
 
@@ -751,11 +809,17 @@ if (!sistemaOnlineComandas()) {
     return;
   }
 
-  const confirmar = confirm(
-    `Gerar ${quantidade} comandas?\n\nDe ${gerarCodigoLote(inicio, digitos, prefixo)} até ${gerarCodigoLote(fim, digitos, prefixo)}`
-  );
+const confirmar = await abrirConfirmacaoComanda({
+  titulo: "Gerar lote de comandas",
+  mensagem: `
+    Gerar <strong>${quantidade}</strong> comandas?<br><br>
+    De <strong>${gerarCodigoLote(inicio, digitos, prefixo)}</strong>
+    até <strong>${gerarCodigoLote(fim, digitos, prefixo)}</strong>
+  `,
+  textoConfirmar: "Gerar Comandas"
+});
 
-  if (!confirmar) return;
+if (!confirmar) return;
 
   const empresaId = obterEmpresaIdComandas();
 
@@ -794,26 +858,34 @@ if (!sistemaOnlineComandas()) {
 // ======================================================
 // AÇÕES
 // ======================================================
-
 async function liberarComanda(id) {
   const comanda = comandas.find(c => c.id === id);
 
   if (!comanda) return;
 
   if (comanda.status === "aberta") {
-    const confirmarAberta = confirm(
-      `A comanda ${comanda.codigo} está aberta.\n\nLiberar mesmo assim apagará os itens vinculados a ela.`
-    );
+    const confirmarAberta = await abrirConfirmacaoComanda({
+      titulo: "Liberar comanda aberta",
+      mensagem: `
+        A comanda <strong>${comanda.codigo}</strong> está aberta.<br><br>
+        Liberar agora apagará os itens vinculados a ela.
+      `,
+      textoConfirmar: "Liberar Mesmo Assim"
+    });
 
     if (!confirmarAberta) return;
 
     await apagarItensComanda(id);
   }
 
-  if (comanda.status === "fechada" || comanda.status === "cancelada" || comanda.status === "aberta") {
-    const confirmar = confirm(
-      `Liberar comanda ${comanda.codigo} para novo uso?`
-    );
+  if (comanda.status === "fechada" || comanda.status === "cancelada") {
+    const confirmar = await abrirConfirmacaoComanda({
+      titulo: "Liberar comanda",
+      mensagem: `
+        Liberar a comanda <strong>${comanda.codigo}</strong> para novo uso?
+      `,
+      textoConfirmar: "Liberar"
+    });
 
     if (!confirmar) return;
   }
@@ -832,7 +904,6 @@ async function liberarComanda(id) {
 
     if (error) throw error;
 
-    await apagarItensComanda(id);
     await carregarComandas();
 
   } catch (err) {
@@ -851,11 +922,15 @@ async function cancelarComanda(id) {
     return;
   }
 
-  const confirmar = confirm(
-    `Cancelar comanda ${comanda.codigo}?`
-  );
+const confirmar = await abrirConfirmacaoComanda({
+  titulo: "Cancelar comanda",
+  mensagem: `
+    Cancelar a comanda <strong>${comanda.codigo}</strong>?
+  `,
+  textoConfirmar: "Cancelar Comanda"
+});
 
-  if (!confirmar) return;
+if (!confirmar) return;
 
   try {
     const { error } = await sb
@@ -887,11 +962,16 @@ async function excluirComanda(id) {
     return;
   }
 
-  const confirmar = confirm(
-    `Excluir comanda ${comanda.codigo}?\n\nEssa ação não poderá ser desfeita.`
-  );
+const confirmar = await abrirConfirmacaoComanda({
+  titulo: "Excluir comanda",
+  mensagem: `
+    Excluir a comanda <strong>${comanda.codigo}</strong>?<br><br>
+    Essa ação não poderá ser desfeita.
+  `,
+  textoConfirmar: "Excluir"
+});
 
-  if (!confirmar) return;
+if (!confirmar) return;
 
   try {
     await apagarItensComanda(id);

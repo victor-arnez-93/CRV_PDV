@@ -297,9 +297,12 @@
         <label class="input-label" for="comandaCodigoInput">Código da comanda</label>
         <input
           class="input"
-          type="text"
+          type="tel"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="6"
           id="comandaCodigoInput"
-          placeholder="Ex: 001, 002, MESA-01"
+          placeholder="Ex: 001, 002, 003"
           autocomplete="off"
         />
       </div>
@@ -416,6 +419,37 @@
       <button class="btn-secondary" id="btnConfirmarLote">
         <i data-lucide="copy-plus" width="15" height="15"></i>
         <span>Gerar Comandas</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAÇÃO COMANDAS -->
+<div class="modal-overlay" id="modalConfirmComanda" style="display:none;">
+  <div class="modal card confirm-modal">
+
+    <div class="modal-header">
+      <h3 id="confirmComandaTitulo">Confirmar ação</h3>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharConfirmComanda">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="confirm-modal-text" id="confirmComandaMensagem">
+        Deseja confirmar esta ação?
+      </p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnCancelarConfirmComanda">
+        Cancelar
+      </button>
+
+      <button class="btn-secondary" id="btnOkConfirmComanda">
+        Confirmar
       </button>
     </div>
 

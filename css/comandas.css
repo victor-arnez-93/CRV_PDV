@@ -304,6 +304,36 @@ textarea.input {
   font-size: 0.82rem;
 }
 
+/* ===== SCROLL INTERNO — TABELA LIMITADA A 5 REGISTROS ===== */
+
+.comandas-table-wrap {
+  max-height: 367px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.comandas-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* ===== MODAL DE CONFIRMAÇÃO ===== */
+
+.confirm-modal {
+  max-width: 420px;
+}
+
+.confirm-modal-text {
+  color: var(--text-secondary);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.confirm-modal-text strong {
+  color: var(--text-primary);
+}
+
 /* ======================================================
    MOBILE FINAL — COMANDAS
 ====================================================== */

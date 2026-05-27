@@ -125,6 +125,70 @@ function logVenda(mensagem, tipo = "info") {
   }
 }
 
+function abrirConfirmacaoCaixa({
+  titulo = "Confirmar ação",
+  mensagem = "Deseja confirmar esta ação?",
+  textoConfirmar = "Confirmar",
+  mostrarCancelar = true
+}) {
+  return new Promise(resolve => {
+    const modal = document.getElementById("modalConfirmCaixa");
+    const tituloEl = document.getElementById("confirmCaixaTitulo");
+    const mensagemEl = document.getElementById("confirmCaixaMensagem");
+    const btnFechar = document.getElementById("btnFecharConfirmCaixa");
+    const btnCancelar = document.getElementById("btnCancelarConfirmCaixa");
+    const btnOk = document.getElementById("btnOkConfirmCaixa");
+
+    if (!modal || !btnOk || !mensagemEl) {
+      resolve(window.confirm(mensagem));
+      return;
+    }
+
+    if (tituloEl) tituloEl.textContent = titulo;
+    mensagemEl.innerHTML = mensagem;
+    btnOk.textContent = textoConfirmar;
+
+    if (btnCancelar) {
+      btnCancelar.style.display = mostrarCancelar ? "inline-flex" : "none";
+    }
+
+    modal.style.display = "flex";
+
+    const fechar = resposta => {
+      modal.style.display = "none";
+
+      btnOk.onclick = null;
+      if (btnCancelar) btnCancelar.onclick = null;
+      if (btnFechar) btnFechar.onclick = null;
+
+      resolve(resposta);
+    };
+
+    btnOk.onclick = () => fechar(true);
+
+    if (btnCancelar) {
+      btnCancelar.onclick = () => fechar(false);
+    }
+
+    if (btnFechar) {
+      btnFechar.onclick = () => fechar(false);
+    }
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
+}
+
+async function alertaCaixa(titulo, mensagem) {
+  await abrirConfirmacaoCaixa({
+    titulo,
+    mensagem,
+    textoConfirmar: "OK",
+    mostrarCancelar: false
+  });
+}
+
 // ======================================================
 // OFFLINE HELPER
 // ======================================================
@@ -835,28 +899,40 @@ function renderSugestoes(lista) {
 // ======================================================
 // CARRINHO
 // ======================================================
-function adicionarCarrinho(produto) {
+async function adicionarCarrinho(produto) {
   if (!caixa || caixa.status !== "aberto") {
-    alert("Abra o caixa antes de vender.");
+    await alertaCaixa(
+      "Caixa fechado",
+      "Abra o caixa antes de vender."
+    );
     return;
   }
 
   if (!produto || !produto.id) {
-    alert("Produto inválido.");
+    await alertaCaixa(
+      "Produto inválido",
+      "Produto inválido."
+    );
     return;
   }
 
   const preco = normalizarNumero(produto.preco);
 
   if (preco <= 0) {
-    alert("Produto sem preço válido.");
+    await alertaCaixa(
+      "Preço inválido",
+      "Produto sem preço válido."
+    );
     return;
   }
 
   const estoqueDisponivel = Number(produto.estoque || 0);
 
   if (estoqueDisponivel <= 0) {
-    alert(`Produto sem estoque: ${produto.nome}`);
+    await alertaCaixa(
+      "Sem estoque",
+      `Produto sem estoque: <strong>${produto.nome}</strong>`
+    );
     return;
   }
 
@@ -866,7 +942,14 @@ function adicionarCarrinho(produto) {
     const novaQuantidade = Number(existente.quantidade || 0) + 1;
 
     if (novaQuantidade > estoqueDisponivel) {
-      alert(`Estoque insuficiente para ${produto.nome}. Disponível: ${estoqueDisponivel}`);
+      await alertaCaixa(
+      "Estoque insuficiente",
+      `
+        Estoque insuficiente para
+        <strong>${produto.nome}</strong>.<br><br>
+        Disponível: ${estoqueDisponivel}
+      `
+    );
       return;
     }
 
@@ -887,9 +970,12 @@ function adicionarCarrinho(produto) {
   renderCarrinho();
 }
 
-function adicionarManual() {
+async function adicionarManual() {
   if (!caixa || caixa.status !== "aberto") {
-    alert("Abra o caixa antes de vender.");
+    await alertaCaixa(
+      "Caixa fechado",
+      "Abra o caixa antes de vender."
+    );
     return;
   }
 
@@ -901,15 +987,21 @@ function adicionarManual() {
   const preco = normalizarNumero(precoInput?.value || 0);
   const quantidade = Math.max(1, parseInt(qtdInput?.value || "1", 10));
 
-  if (!nome) {
-    alert("Informe o nome do item manual.");
-    return;
-  }
+if (!nome) {
+  await alertaCaixa(
+    "Item manual",
+    "Informe o nome do item manual."
+  );
+  return;
+}
 
-  if (preco <= 0) {
-    alert("Informe um preço válido.");
-    return;
-  }
+if (preco <= 0) {
+  await alertaCaixa(
+    "Item manual",
+    "Informe um preço válido."
+  );
+  return;
+}
 
   carrinho.push({
     id: "manual-" + Date.now(),
@@ -1013,15 +1105,22 @@ if (btnPlus) {
   atualizarTotais();
 }
 
-function limparCarrinho() {
+async function limparCarrinho() {
   if (modoPDV === "comanda" && comandaAtiva) {
-    alert("Para sair da comanda, use o botão Limpar do card da comanda ativa.");
+    await alertaCaixa(
+      "Comanda ativa",
+      "Para sair da comanda, use o botão <strong>Limpar</strong> do card da comanda ativa."
+    );
     return;
   }
 
   if (!carrinho.length) return;
 
-  const confirmar = confirm("Deseja limpar o carrinho atual?");
+  const confirmar = await abrirConfirmacaoCaixa({
+    titulo: "Limpar carrinho",
+    mensagem: "Deseja limpar o carrinho atual?",
+    textoConfirmar: "Limpar"
+  });
 
   if (!confirmar) return;
 
@@ -1300,7 +1399,10 @@ if (!sistemaOnline()) {
   }
 
   if (!carrinho.length) {
-    alert("Adicione itens ao carrinho.");
+    await alertaCaixa(
+      "Carrinho vazio",
+      "Adicione itens ao carrinho."
+    );
     return;
   }
 
@@ -1323,7 +1425,10 @@ if (!sistemaOnline()) {
   );
 
   if (metodoPagamento === "dinheiro" && valorRecebido > 0 && valorRecebido < total) {
-    alert("Valor recebido menor que o total da venda.");
+    await alertaCaixa(
+      "Pagamento insuficiente",
+      "O valor recebido é menor que o total da venda."
+    );
     return;
   }
 
@@ -2100,7 +2205,10 @@ async function adicionarProdutoNaComanda(produto) {
   }
 
   if (estoque <= 0) {
-    alert(`Produto sem estoque: ${produto.nome}`);
+    await alertaCaixa(
+      "Sem estoque",
+      `Produto sem estoque: <strong>${produto.nome}</strong>`
+    );
     return;
   }
 
@@ -2223,8 +2331,17 @@ async function carregarItensComanda() {
 // ======================================================
 // LIMPAR COMANDA ATIVA
 // ======================================================
+async function limparComandaAtiva() {
+const confirmar = await abrirConfirmacaoCaixa({
+  titulo: "Sair da comanda",
+  mensagem: `
+    Deseja sair da comanda atual?
+  `,
+  textoConfirmar: "Sair"
+});
 
-function limparComandaAtiva() {
+if (!confirmar) return;
+
   comandaAtiva = null;
   carrinho = [];
 
@@ -2363,15 +2480,22 @@ if (!sistemaOnline()) {
   await carregarItensComanda();
 
   if (!carrinho.length) {
-    alert("Esta comanda não possui itens.");
+    await alertaCaixa(
+      "Comanda vazia",
+      "Esta comanda não possui itens."
+    );
     return;
   }
 
-  const confirmar = confirm(
-    `Fechar comanda ${comandaAtiva.codigo}?\n\nTotal: ${fmt(calcularTotalCarrinho())}`
-  );
+const confirmar = await abrirConfirmacaoCaixa({
+  titulo: "Fechar comanda",
+  mensagem: `
+    Fechar a comanda <strong>${comandaAtiva.codigo}</strong>?
+  `,
+  textoConfirmar: "Fechar Comanda"
+});
 
-  if (!confirmar) return;
+if (!confirmar) return;
 
   const subtotal = calcularSubtotalCarrinho();
   const desconto = calcularDesconto();
@@ -2551,7 +2675,15 @@ async function removerItemCarrinho(index) {
       return;
     }
 
-    const confirmar = confirm(`Remover "${item.nome}" da comanda?`);
+    const confirmar = await abrirConfirmacaoCaixa({
+  titulo: "Remover item",
+  mensagem: `
+    Remover
+    <strong>${item.nome}</strong>
+    da comanda?
+  `,
+  textoConfirmar: "Remover"
+});
 
     if (!confirmar) return;
 

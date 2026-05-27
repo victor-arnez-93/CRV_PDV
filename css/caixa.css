@@ -299,10 +299,20 @@
 }
 
 .pdv-quick-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-bottom: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+}
+
+.pdv-quick-grid .quick-item {
+  flex: 0 0 150px;
+  min-width: 150px;
 }
 
 .quick-item {
@@ -391,11 +401,13 @@
 
 .cart-items {
   min-height: 120px;
-  max-height: 260px;
+  max-height: 174px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-right: 3px;
+  overscroll-behavior: contain;
 }
 
 .cart-item {
@@ -773,6 +785,23 @@
   width: 100%;
 }
 
+/* ===== MODAL CONFIRMAÇÃO CAIXA ===== */
+
+.confirm-modal {
+  max-width: 420px;
+}
+
+.confirm-modal-text {
+  color: var(--text-secondary);
+  font-size: .9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.confirm-modal-text strong {
+  color: var(--text-primary);
+}
+
 /* ===== INPUT MONEY ===== */
 .input-money {
   font-family: var(--font-display);
@@ -1122,14 +1151,22 @@
     min-width: 0;
   }
 
-  .pdv-quick-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    max-height: 280px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 2px;
-  }
+.pdv-quick-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  padding-right: 0;
+  padding-bottom: 4px;
+}
+
+.pdv-quick-grid .quick-item {
+  flex: 0 0 135px;
+  min-width: 135px;
+}
 
   .quick-item {
     min-width: 0;

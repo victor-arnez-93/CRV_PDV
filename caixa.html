@@ -515,6 +515,37 @@
   </div>
 </div>
 
+<!-- MODAL CONFIRMAÇÃO / ALERTA CAIXA -->
+<div class="modal-overlay" id="modalConfirmCaixa" style="display:none;">
+  <div class="modal card confirm-modal">
+
+    <div class="modal-header">
+      <h3 id="confirmCaixaTitulo">Confirmar ação</h3>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharConfirmCaixa">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="confirm-modal-text" id="confirmCaixaMensagem">
+        Deseja confirmar esta ação?
+      </p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnCancelarConfirmCaixa">
+        Cancelar
+      </button>
+
+      <button class="btn-secondary" id="btnOkConfirmCaixa">
+        Confirmar
+      </button>
+    </div>
+
+  </div>
+</div>
+
 <!-- MODAL USUÁRIO -->
 <div class="modal-overlay hidden" id="userModal">
   <div class="user-modal">
