@@ -236,6 +236,7 @@
 @media (max-width: 1100px) {
   .dash-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .dash-middle {
@@ -250,27 +251,58 @@
 }
 
 @media (max-width: 768px) {
-  .main-content {
-    padding: 18px 14px 90px;
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
-  /* --- TOPBAR --- */
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 18px 12px 90px;
+    overflow-x: hidden;
+  }
 
   .topbar {
-    padding: 12px 14px;
-    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    gap: 8px;
+    overflow: hidden;
   }
 
   .topbar-title {
-    font-size: 1rem;
-    max-width: 145px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 110px;
+    font-size: .92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    min-width: 0;
+    max-width: 84px;
+    overflow: hidden;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    max-width: 100%;
+    height: auto;
+  }
+
   .topbar-actions {
-    gap: 8px;
+    flex: 0 0 auto;
+    gap: 6px;
+    min-width: 0;
   }
 
   .topbar-datetime {
@@ -278,11 +310,20 @@
   }
 
   .caixa-status {
-    padding: 8px 10px;
+    padding: 6px 8px;
+    min-width: 0;
   }
 
   .caixa-status span:last-child {
     display: none;
+  }
+
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
   }
 
   /* --- GREETING --- */
@@ -290,206 +331,215 @@
   .dash-greeting {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   .dash-greeting h1 {
-    font-size: clamp(1.3rem, 5vw, 1.5rem);
-    line-height: 1.2;
+    font-size: 1.28rem;
+    line-height: 1.15;
   }
 
   .dash-greeting p {
-    font-size: .84rem;
+    font-size: .82rem;
   }
 
   .dash-greeting .btn-primary {
     width: 100%;
-    min-height: 44px;
+    max-width: 220px;
+    min-width: 0;
+    min-height: 40px;
+    height: 40px;
+    padding: 0 14px;
+    align-self: flex-start;
     justify-content: center;
+    font-size: .78rem;
+    white-space: nowrap;
   }
 
   /* --- CARDS --- */
 
   .dash-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .dash-card {
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
-    padding: 16px 14px;
+    padding: 12px 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title value"
+      "delta delta";
+    gap: 4px 10px;
+    align-items: center;
+    overflow: hidden;
   }
 
-  .card-title {
-    font-size: .72rem;
+  .dash-card .card-title {
+    grid-area: title;
+    min-width: 0;
+    font-size: .66rem;
     gap: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .card-value {
-    font-size: 1.35rem;
-    word-break: break-word;
-    line-height: 1.15;
+  .dash-card .card-value {
+    grid-area: value;
+    min-width: 0;
+    font-size: 1.18rem;
+    line-height: 1;
+    text-align: right;
+    white-space: nowrap;
   }
 
-  .card-delta {
-    font-size: .72rem;
+  .dash-card .card-delta {
+    grid-area: delta;
+    min-width: 0;
+    font-size: .68rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* --- MIDDLE ROW --- */
 
   .dash-middle {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 10px;
   }
 
-  /* --- GRÁFICO --- */
+  /* --- GRÁFICO / PAGAMENTOS --- */
 
   .dash-chart-card,
   .dash-payment-card {
-    padding: 16px 14px;
-    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    padding: 12px 10px;
+    overflow: hidden;
   }
 
   .dash-chart-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 6px;
+    margin-bottom: 12px;
   }
 
   .dash-chart-header h3,
   .dash-payment-card h3 {
-    font-size: .96rem;
+    font-size: .9rem;
   }
 
   .chart-legend {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
+    font-size: .7rem;
   }
 
   .dash-chart-wrap {
-    height: 240px;
+    width: 100%;
+    max-width: 100%;
+    height: 200px;
     min-height: unset;
     overflow: hidden;
   }
 
-  /* --- PAGAMENTOS --- */
+  .dash-chart-wrap canvas,
+  .dash-chart-wrap svg,
+  .dash-chart-wrap img {
+    max-width: 100% !important;
+  }
 
   .payment-list {
-    max-height: none;
-    overflow-y: visible;
-    gap: 12px;
+    gap: 10px;
+    margin-bottom: 0;
   }
 
   .payment-item {
-    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 8px;
     align-items: center;
   }
 
   .payment-icon {
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
   }
 
-  .payment-value {
-    font-size: .84rem;
-    min-width: 72px;
+  .payment-info {
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .payment-label {
+    font-size: .76rem;
+    line-height: 1.15;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .payment-value {
+    min-width: 52px;
+    font-size: .78rem;
+    white-space: nowrap;
+    text-align: right;
   }
 
   /* --- ÚLTIMAS VENDAS --- */
 
   .recent-sales {
-    max-height: 260px;
-    overflow-y: auto;
+    flex: initial;
+    max-height: none;
+    overflow: visible;
     gap: 8px;
-    padding-right: 2px;
+    padding-right: 0;
   }
 
   .sale-item {
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 12px;
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    align-items: start;
+    padding: 9px 10px;
   }
 
   .sale-item-left {
     min-width: 0;
-    flex: 1;
+    flex: initial;
   }
 
   .sale-item-desc {
-    white-space: normal;
-    word-break: break-word;
-    font-size: .82rem;
+    font-size: .78rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .sale-item-hora {
-    font-size: .68rem;
+    font-size: .65rem;
   }
 
   .sale-item-value {
-    font-size: .92rem;
+    font-size: .84rem;
     white-space: nowrap;
     flex-shrink: 0;
-  }
-}
-
-@media (max-width: 520px) {
-  .main-content {
-    padding: 14px 12px 90px;
-  }
-
-  /* --- CARDS --- */
-
-  .dash-cards {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .dash-card {
-    padding: 14px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .dash-card .card-title {
-    margin-bottom: 2px;
-  }
-
-  .card-value {
-    font-size: 1.4rem;
-    text-align: right;
-  }
-
-  .card-delta {
-    text-align: right;
-    display: block;
-  }
-
-  /* --- GRÁFICO --- */
-
-  .dash-chart-wrap {
-    height: 220px;
-  }
-
-  /* --- PAGAMENTOS --- */
-
-  .payment-item {
-    display: grid;
-    grid-template-columns: 36px 1fr auto;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .payment-value {
-    min-width: unset;
-    font-size: .82rem;
   }
 }
 
@@ -498,47 +548,71 @@
     padding: 12px 10px 88px;
   }
 
+  .topbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
   .topbar-title {
-    max-width: 110px;
+    max-width: 96px;
+    font-size: .88rem;
+  }
+
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    max-width: 72px;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 44px;
-    height: 44px;
-  }
-
-  .dash-greeting {
-    margin-bottom: 16px;
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
   }
 
   .dash-greeting h1 {
-    font-size: 1.25rem;
+    font-size: 1.18rem;
   }
 
   .dash-greeting .btn-primary {
-    min-height: 44px;
-    font-size: .88rem;
-  }
-
-  .dash-cards {
-    gap: 8px;
+    max-width: 208px;
+    min-height: 38px;
+    height: 38px;
+    font-size: .74rem;
   }
 
   .dash-card {
-    padding: 12px;
+    padding: 11px 9px;
   }
 
-  .card-value {
-    font-size: 1.3rem;
+  .dash-card .card-title {
+    font-size: .64rem;
+  }
+
+  .dash-card .card-value {
+    font-size: 1.08rem;
+  }
+
+  .dash-card .card-delta {
+    font-size: .66rem;
   }
 
   .dash-chart-wrap {
-    height: 200px;
+    height: 184px;
+  }
+
+  .payment-item {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+
+  .payment-icon {
+    width: 28px;
+    height: 28px;
   }
 
   .sale-item {
-    padding: 8px 10px;
+    padding: 8px 9px;
   }
 }

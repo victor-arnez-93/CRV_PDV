@@ -912,13 +912,6 @@
 
   .agenda-coluna {
     min-width: 0;
-    max-height: none;
-  }
-
-  .agenda-coluna-body {
-    max-height: 420px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
 }
 
@@ -928,33 +921,65 @@
   }
 
   .agenda-filtros-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .main-content {
-    padding: 18px 14px 90px;
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
-  /* --- TOPBAR --- */
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 18px 12px 90px;
+    overflow-x: hidden;
+  }
+
+  /* --- TOPBAR PADRÃO DASHBOARD / CAIXA --- */
 
   .topbar {
-    padding: 12px 14px;
-    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    gap: 8px;
+    overflow: hidden;
   }
 
   .topbar-title {
-    font-size: 1rem;
-    max-width: 145px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 110px;
+    font-size: .92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    min-width: 0;
+    max-width: 84px;
+    overflow: hidden;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    max-width: 100%;
+    height: auto;
+  }
+
   .topbar-actions {
-    gap: 8px;
+    flex: 0 0 auto;
+    gap: 6px;
+    min-width: 0;
   }
 
   .topbar-datetime {
@@ -962,11 +987,20 @@
   }
 
   .caixa-status {
-    padding: 8px 10px;
+    padding: 6px 8px;
+    min-width: 0;
   }
 
   .caixa-status span:last-child {
     display: none;
+  }
+
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
   }
 
   /* --- HERO --- */
@@ -975,109 +1009,172 @@
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .agenda-hero h1 {
-    font-size: clamp(1.3rem, 5vw, 1.5rem);
-    line-height: 1.2;
+    font-size: 1.2rem;
+    line-height: 1.15;
     margin-bottom: 4px;
   }
 
   .agenda-hero p {
-    font-size: .86rem;
+    font-size: .8rem;
+    line-height: 1.4;
+    max-width: 100%;
+    overflow: hidden;
   }
 
-  .agenda-hero .btn-primary {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-  }
+.agenda-hero .btn-primary {
+  width: 100%;
+  max-width: 300px;
+  min-height: 44px;
+  height: 44px;
 
-  /* --- STATS --- */
+  margin: 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 0 18px;
+
+  font-size: .88rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+  /* --- STATS COMPACTOS --- */
 
   .agenda-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 14px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .agenda-stat-card {
+    width: 100%;
     min-width: 0;
-    padding: 16px 14px;
+    padding: 12px 10px;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 10px;
+    align-items: center;
+
+    border-radius: 18px;
+    overflow: hidden;
   }
 
   .agenda-stat-label {
-    font-size: .68rem;
+    margin: 0;
+    font-size: .64rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .agenda-stat-card strong {
-    font-size: 1.45rem;
-    word-break: break-word;
-    line-height: 1.15;
+    font-size: 1.08rem;
+    line-height: 1;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .agenda-stat-card small {
-    font-size: .78rem;
+    grid-column: 1 / -1;
+    font-size: .68rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* --- FILTROS --- */
 
   .agenda-filtros {
-    padding: 14px;
-    margin-bottom: 14px;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    overflow: hidden;
   }
 
   .agenda-filtros-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .agenda-filtros .input,
+  .agenda-filtros select,
+  .agenda-filtros input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    height: 42px;
+    font-size: 16px;
   }
 
   .agenda-date-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 8px;
   }
 
   .agenda-date-btn {
-    flex: 1 1 auto;
-    min-width: 120px;
+    width: 100%;
+    min-height: 42px;
     justify-content: center;
-    min-height: 44px;
+    border-radius: 999px;
+    font-size: .78rem;
   }
 
-  /* --- GRID COLUNAS --- */
+  /* --- COLUNAS --- */
 
   .agenda-grid {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
   }
 
   .agenda-coluna {
+    width: 100%;
+    min-width: 0;
     min-height: auto;
-    max-height: none;
-    overflow: visible;
-    padding: 16px 14px;
+    max-height: 420px;
+    padding: 12px 10px;
+    border-radius: 18px;
+    overflow: hidden;
   }
 
   .agenda-coluna-header {
-    flex-shrink: 0;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  .agenda-coluna-title {
+    font-size: .72rem;
+    line-height: 1.15;
   }
 
   .agenda-coluna-body {
-    max-height: 480px;
+    max-height: 330px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-right: 4px;
+    padding-right: 3px;
   }
 
-  /* --- CARDS --- */
+  /* --- CARDS INTERNOS --- */
 
   .agenda-card {
     min-width: 0;
     min-height: auto;
+    padding: 12px 10px;
+    border-radius: 14px;
+  }
+
+  .agenda-card:hover {
+    transform: none;
   }
 
   .agenda-card-top {
@@ -1085,247 +1182,251 @@
     align-items: flex-start;
   }
 
-  .agenda-card-responsavel {
-    word-break: break-word;
+  .agenda-card-horario {
+    font-size: .88rem;
   }
 
+  .agenda-card-local,
   .agenda-card-info {
+    font-size: .72rem;
+  }
+
+  .agenda-card-responsavel {
+    font-size: .84rem;
     word-break: break-word;
   }
 
-  /* --- CARD FINALIZADOS --- */
+  .agenda-card-status {
+    font-size: .58rem;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  .agenda-card-footer {
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+  }
+
+  /* --- FINALIZADOS --- */
 
   #agendaFinalizados .agenda-card {
     grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto auto auto;
     grid-template-areas:
-      "horario  status"
-      "local    status"
-      "nome     trash"
-      "valores  valores";
-    column-gap: 12px;
-    row-gap: 6px;
-    padding: 16px 14px;
+      "horario status"
+      "local status"
+      "nome trash"
+      "valores valores";
+    column-gap: 10px;
+    row-gap: 5px;
+    padding: 12px 10px;
     min-height: auto;
   }
 
   #agendaFinalizados .agenda-card-footer {
-    grid-area: valores;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 10px;
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
+    gap: 8px;
+    padding-top: 8px;
     margin-top: 4px;
-  }
-
-  #agendaFinalizados .agenda-card-status {
-    align-self: flex-start;
+    border-top: 1px solid var(--border);
   }
 
   #agendaFinalizados .btn-remover-jogo {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
   /* --- MODAL --- */
+#modalReserva {
+  padding: 0;
+  align-items: flex-end;
+  justify-content: center;
+}
 
-  #modalReserva {
-    padding: 0;
-    align-items: flex-end;
-  }
+.agenda-modal-card {
+  width: 100%;
+  max-width: 100% !important;
+  height: auto;
+  max-height: 92dvh;
 
-  .agenda-modal-card {
-    width: 100%;
-    max-width: 100% !important;
-    max-height: 94dvh;
-    overflow: hidden;
-    border-radius: 20px 20px 0 0;
-    display: flex;
-    flex-direction: column;
-  }
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
 
-  .agenda-modal-card .modal-header {
-    padding: 18px 18px 14px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-    z-index: 2;
-  }
+  display: flex;
+  flex-direction: column;
+}
 
-  #btnFecharModalReserva {
-    position: static;
-    top: auto;
-    right: auto;
-  }
+.agenda-modal-card .modal-header {
+  position: relative;
+  flex-shrink: 0;
 
-  .agenda-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 16px 18px;
-    gap: 12px;
-  }
+  padding: 18px 18px 14px;
 
-  .agenda-modal-card .modal-footer {
-    flex-shrink: 0;
-    flex-direction: column-reverse;
-    gap: 8px;
-    padding: 14px 18px;
-    position: sticky;
-    bottom: 0;
-    background: var(--bg-card);
-    border-top: 1px solid var(--border);
-  }
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
 
-  .agenda-modal-card .modal-footer button {
-    width: 100%;
-    min-height: 48px;
-    justify-content: center;
-  }
+.agenda-modal-card .modal-header h3 {
+  font-size: 1rem;
+  line-height: 1.15;
+}
 
-  /* --- FORM ROWS --- */
+.agenda-modal-subtitle {
+  max-width: calc(100% - 48px);
+  font-size: .8rem;
+  line-height: 1.35;
+}
+
+#btnFecharModalReserva {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+
+  width: 34px;
+  height: 34px;
+  padding: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+}
+
+.agenda-modal-body {
+  flex: 1;
+  min-height: 0;
+
+  padding: 16px 18px;
+  gap: 12px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+.agenda-modal-card .modal-footer {
+  flex-shrink: 0;
+
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 8px;
+
+  padding: 14px 18px;
+
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+
+.agenda-modal-card .modal-footer button {
+  width: 100%;
+  max-width: 220px;
+
+  min-height: 44px;
+  height: 44px;
+
+  margin: 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 0 18px;
+
+  border-radius: 999px;
+
+  font-size: .84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.agenda-modal-card .modal-footer .btn-primary,
+.agenda-modal-card .modal-footer .btn-secondary {
+  background-size: 160% 160%;
+}
 
   .form-row {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
-
-  /* --- TOTALIZADOR --- */
 
   .agenda-totalizador-jogo {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
-
-  /* --- JOGADORES --- */
 
   .agenda-jogadores-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
   }
 
-  #btnAdicionarJogador {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-  }
+#btnAdicionarJogador {
+  width: 100%;
+  max-width: 220px;
+
+  min-height: 42px;
+  height: 42px;
+
+  margin: 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 0 16px;
+
+  border-radius: 999px;
+
+  font-size: .84rem;
+  white-space: nowrap;
+}
 
   .agenda-jogadores-lista {
-    max-height: 280px;
+    max-height: 260px;
     overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 2px;
   }
 
   .agenda-jogador-row,
   .agenda-jogador-row.modo-cobranca {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-columns: 1fr;
     gap: 8px;
-  }
-
-  .agenda-jogador-row .agenda-remover-jogador {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-    width: 44px;
-    height: 44px;
   }
 
   .agenda-jogador-row.modo-agendamento {
     grid-template-columns: 1fr auto;
   }
 
-  /* --- AVISO MODAL --- */
+  .agenda-remover-jogador {
+    width: 42px;
+    height: 42px;
+  }
+
+  .agenda-textarea {
+    font-size: 16px;
+    min-height: 90px;
+  }
 
   .agenda-aviso-modal {
     width: 100%;
     max-width: 100%;
-    padding: 28px 18px;
-    gap: 14px;
+    padding: 24px 16px;
   }
 
   .agenda-aviso-actions {
     flex-direction: column-reverse;
-    width: 100%;
     gap: 8px;
   }
 
   .agenda-aviso-actions button {
     width: 100%;
-    min-height: 48px;
+    min-height: 42px;
     justify-content: center;
-  }
-
-  /* --- TEXTAREA --- */
-
-  .agenda-textarea {
-    font-size: 16px;
-    min-height: 100px;
-  }
-}
-
-@media (max-width: 560px) {
-  .main-content {
-    padding: 14px 12px 90px;
-  }
-
-  .agenda-stats {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .agenda-stat-card {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px;
-  }
-
-  .agenda-stat-card strong {
-    font-size: 1.5rem;
-    text-align: right;
-  }
-
-  .agenda-stat-card small {
-    text-align: right;
-    display: block;
-  }
-
-  .agenda-filtros {
-    padding: 12px;
-  }
-
-  .agenda-coluna {
-    padding: 14px 12px;
-  }
-
-  .agenda-coluna-body {
-    max-height: 380px;
-  }
-
-  .agenda-date-btn {
-    flex: 1 1 100%;
-  }
-
-  .agenda-modal-card {
-    max-height: 96dvh;
-  }
-
-  .agenda-aviso-icon {
-    width: 58px;
-    height: 58px;
-  }
-
-  .agenda-aviso-icon svg {
-    width: 28px;
-    height: 28px;
+    border-radius: 999px;
   }
 }
 
@@ -1334,48 +1435,67 @@
     padding: 12px 10px 88px;
   }
 
+  .topbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
   .topbar-title {
-    max-width: 106px;
+    max-width: 96px;
+    font-size: .88rem;
+  }
+
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    max-width: 72px;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
   }
 
   .agenda-hero h1 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
   }
 
+  .agenda-hero p {
+    font-size: .74rem;
+  }
+
+.agenda-hero .btn-primary {
+  max-width: 280px;
+  min-height: 42px;
+  height: 42px;
+  font-size: .82rem;
+}
+
   .agenda-stat-card {
-    padding: 12px;
+    padding: 11px 9px;
   }
 
   .agenda-stat-card strong {
-    font-size: 1.3rem;
+    font-size: 1rem;
   }
 
   .agenda-coluna {
-    padding: 12px 10px;
+    padding: 11px 9px;
   }
 
   .agenda-card {
-    padding: 12px;
+    padding: 11px 9px;
   }
 
   .agenda-modal-body {
-    padding: 14px;
+    padding: 12px;
   }
 
   .agenda-modal-card .modal-header,
   .agenda-modal-card .modal-footer {
-    padding-inline: 14px;
-  }
-
-  .agenda-jogador-row .agenda-remover-jogador {
-    width: 40px;
-    height: 40px;
+    padding-inline: 12px;
   }
 }

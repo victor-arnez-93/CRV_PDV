@@ -802,23 +802,60 @@
 }
 
 @media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .main-content {
-    padding: 18px 14px 90px;
+    width: 100%;
+    max-width: 100%;
+    padding: 18px 12px 90px;
+    overflow-x: hidden;
   }
 
   /* --- TOPBAR --- */
 
   .topbar {
-    padding: 12px 14px;
-    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    gap: 8px;
+    overflow: hidden;
   }
 
   .topbar-title {
-    font-size: 1rem;
-    max-width: 150px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 116px;
+    font-size: .92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    min-width: 0;
+    max-width: 84px;
+    overflow: hidden;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    gap: 6px;
+    min-width: 0;
   }
 
   .topbar-datetime {
@@ -826,115 +863,200 @@
   }
 
   .caixa-status {
-    padding: 8px 10px;
+    padding: 6px 8px;
+    min-width: 0;
   }
 
   .caixa-status span:last-child {
     display: none;
   }
 
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
+
   /* --- CAIXA FECHADO --- */
 
   .caixa-closed-wrap {
-    min-height: calc(100dvh - 130px);
-    padding: 20px 0;
+    min-height: calc(100dvh - 120px);
+    padding: 18px 0;
     align-items: flex-start;
   }
 
   .caixa-closed-card {
     width: 100%;
-    padding: 28px 18px;
-    gap: 16px;
+    max-width: 100%;
+    padding: 24px 16px;
+    gap: 14px;
   }
 
   .caixa-closed-card h2 {
-    font-size: 1.35rem;
+    font-size: 1.26rem;
+    line-height: 1.15;
   }
 
   .caixa-closed-card p {
-    font-size: .88rem;
+    font-size: .84rem;
+    line-height: 1.45;
   }
 
   .closed-icon {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
   }
 
   /* --- INFOBAR --- */
 
   .caixa-infobar {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 14px;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    margin-bottom: 14px;
   }
 
   .caixa-info-item {
     min-width: 0;
-    padding: 10px 12px;
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .caixa-info-item:last-of-type {
+    border-bottom: none;
   }
 
   .caixa-info-item.highlight {
     border-left: none;
-    border-top: 1px solid var(--border);
     padding-left: 12px;
-    padding-top: 10px;
   }
 
   .caixa-info-label {
-    font-size: .68rem;
+    font-size: .66rem;
+    line-height: 1.2;
   }
 
   .caixa-info-value {
     font-size: .9rem;
+    line-height: 1.2;
     word-break: break-word;
   }
 
-  .caixa-info-abertura .caixa-info-value {
-    font-size: .82rem;
-    white-space: normal;
+  .caixa-info-abertura {
+    min-width: 0;
   }
 
-  #btnFecharCaixa {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
+  .caixa-info-abertura .caixa-info-value {
+    white-space: normal;
+    font-size: .84rem;
+  }
+
+#btnFecharCaixa {
+  width: 100%;
+  max-width: 320px;
+  margin: 12px auto 14px;
+
+  min-height: 44px;
+  height: 44px;
+
+  padding: 0 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-size: .82rem;
+  line-height: 1;
+  white-space: nowrap;
+
+  border-radius: 999px;
+}
+
+  #btnFecharCaixa i,
+  #btnFecharCaixa svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
   }
 
   /* --- PDV GRID --- */
 
   .pdv-grid {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
   }
 
   /* --- MODO SWITCH --- */
 
-  .pdv-mode-switch {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
+.pdv-mode-switch {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
 
-  .pdv-mode-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 12px 10px;
-    font-size: .8rem;
+  width: 100%;
+  max-width: 360px;
+
+  margin: 0 auto 12px;
+}
+
+.pdv-mode-btn {
+  flex: 1 1 0;
+
+  min-width: 0;
+  max-width: 170px;
+
+  min-height: 40px;
+  height: 40px;
+
+  padding: 0 12px;
+
+  justify-content: center;
+  align-items: center;
+
+  font-size: .76rem;
+  line-height: 1;
+  gap: 6px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  border-radius: 999px;
+}
+
+  .pdv-mode-btn i,
+  .pdv-mode-btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
   }
 
   /* --- COMANDA --- */
 
   .comanda-card {
-    padding: 14px;
+    padding: 12px 10px;
     gap: 10px;
+    overflow: hidden;
   }
 
   .comanda-card-top {
     gap: 10px;
     flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .comanda-codigo {
+    font-size: 1.05rem;
+  }
+
+  .comanda-status {
+    font-size: .68rem;
+    padding: 5px 8px;
   }
 
   .comanda-actions {
@@ -944,19 +1066,28 @@
   }
 
   .comanda-actions button {
+    width: 100%;
+    min-height: 40px;
     justify-content: center;
+    font-size: .76rem;
   }
 
   /* --- BUSCA --- */
 
   .pdv-search-wrap {
     min-width: 0;
+    margin-bottom: 8px;
   }
 
   .pdv-search {
-    font-size: 16px; /* evita zoom iOS */
-    padding-right: 16px;
-    height: 48px;
+    height: 44px;
+    padding-left: 40px;
+    padding-right: 14px;
+    font-size: 16px;
+  }
+
+  .pdv-search-icon {
+    left: 12px;
   }
 
   .pdv-kbd {
@@ -964,20 +1095,37 @@
   }
 
   .pdv-suggestions {
-    max-height: 240px;
+    max-height: 220px;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .suggestion-item {
-    padding: 12px 14px;
-    font-size: .88rem;
+    min-width: 0;
+    padding: 11px 12px;
+    gap: 10px;
+    font-size: .84rem;
+  }
+
+  .suggestion-price {
+    font-size: .84rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* --- PRODUTOS RÁPIDOS --- */
 
+  .pdv-quick-header {
+    margin: 14px 0 10px;
+    font-size: .7rem;
+    gap: 10px;
+    min-width: 0;
+  }
+
   .pdv-quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-height: 300px;
+    gap: 8px;
+    max-height: 280px;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-right: 2px;
@@ -986,20 +1134,24 @@
   .quick-item {
     min-width: 0;
     padding: 12px 8px;
+    gap: 5px;
   }
 
   .quick-item-name {
-    font-size: .78rem;
+    font-size: .76rem;
+    line-height: 1.15;
+    word-break: break-word;
   }
 
   .quick-item-price {
-    font-size: .9rem;
+    font-size: .86rem;
   }
 
   /* --- MANUAL --- */
 
   .pdv-manual {
-    padding: 14px;
+    padding: 12px 10px;
+    margin-top: 0;
   }
 
   .pdv-manual-row {
@@ -1012,52 +1164,84 @@
   .pdv-manual-row .input-group[style] {
     width: 100% !important;
     flex: none !important;
+    min-width: 0 !important;
   }
 
   .pdv-manual-row button {
     width: 100%;
-    min-height: 44px;
+    min-height: 42px;
+    height: 42px;
     justify-content: center;
+    font-size: .78rem;
   }
 
   /* --- CARRINHO --- */
 
   .pdv-cart {
-    padding: 16px 14px;
+    padding: 12px 10px;
     overflow: hidden;
+    gap: 10px;
+  }
+
+  .cart-header {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .cart-header h3 {
+    min-width: 0;
+    font-size: .9rem;
   }
 
   .cart-items {
-    max-height: 300px;
+    min-height: 0;
+    max-height: 260px;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-right: 2px;
   }
 
   .cart-item {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 8px;
+    align-items: center;
+    padding: 8px 9px;
   }
 
   .cart-item-name {
     min-width: 0;
+    font-size: .78rem;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
   }
 
   .cart-item-qty {
+    gap: 4px;
     flex-shrink: 0;
   }
 
   .qty-btn {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
+    font-size: .85rem;
+  }
+
+  .qty-num {
+    min-width: 16px;
+    font-size: .82rem;
   }
 
   .cart-item-price {
-    min-width: 64px;
+    min-width: 56px;
+    font-size: .82rem;
     text-align: right;
+    flex-shrink: 0;
+  }
+
+  .cart-item-remove {
     flex-shrink: 0;
   }
 
@@ -1071,36 +1255,43 @@
 
   .cart-discount input {
     width: 100% !important;
+    min-width: 0;
     font-size: 16px;
   }
 
   /* --- TOTAIS --- */
 
   .cart-total-row {
-    font-size: .84rem;
+    font-size: .82rem;
+    gap: 10px;
   }
 
   .cart-total-row.total {
-    font-size: 1.3rem;
-    margin-top: 6px;
+    font-size: 1.16rem;
+    margin-top: 4px;
   }
 
   /* --- PAGAMENTO --- */
 
   .payment-methods {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
   .pay-btn {
-    padding: 10px 6px;
-    font-size: .74rem;
-    gap: 4px;
+    min-height: 42px;
+    height: 42px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 14px;
+    font-size: .78rem;
   }
 
   /* --- TROCO --- */
 
   .cart-troco {
+    padding: 10px;
     gap: 8px;
   }
 
@@ -1109,139 +1300,139 @@
   }
 
   .troco-result {
-    font-size: .96rem;
+    font-size: .9rem;
   }
 
   /* --- FINALIZAR --- */
 
   .pdv-finalizar {
-    width: 100%;
-    min-height: 52px;
+    width: 100% !important;
+    min-height: 44px !important;
+    height: 44px;
+    padding: 0 14px !important;
     justify-content: center;
-    font-size: 1rem;
+    font-size: .84rem;
+    margin-top: 2px;
   }
 
   /* --- HISTÓRICO --- */
 
   .pdv-historico {
-    padding: 14px;
+    padding: 12px 10px;
+    margin-top: 12px;
+  }
+
+  .pdv-historico-header {
+    gap: 10px;
+    margin-bottom: 10px;
   }
 
   .historico-list {
-    max-height: 240px;
+    max-height: 220px;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-right: 2px;
   }
 
+  .historico-item {
+    min-width: 0;
+    padding: 8px 9px;
+    gap: 8px;
+  }
+
+  .historico-item-left {
+    min-width: 0;
+  }
+
+  .historico-pagto {
+    font-size: .76rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .historico-valor {
+    font-size: .82rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   /* --- MODAIS --- */
 
   .modal-overlay {
-    padding: 16px 12px;
+    padding: 0;
     align-items: flex-end;
   }
 
   .modal {
     width: 100%;
     max-width: 100% !important;
-    max-height: 90dvh;
+    max-height: 92dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border-radius: 20px 20px 12px 12px;
+    border-radius: 18px 18px 0 0;
+    padding: 18px 14px;
   }
 
   .modal-header {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+
+  .modal-body {
+    gap: 10px;
   }
 
   .modal-footer {
     flex-direction: column-reverse;
     align-items: stretch;
     gap: 8px;
-    margin-top: 16px;
+    margin-top: 14px;
   }
 
   .modal-footer button {
     width: 100%;
-    min-height: 48px;
+    min-height: 44px;
+    height: 44px;
     justify-content: center;
+    font-size: .82rem;
   }
 
   .fechamento-row {
-    font-size: .86rem;
+    font-size: .82rem;
+    gap: 10px;
   }
 
   .fechamento-row.total {
-    font-size: 1rem;
+    font-size: .94rem;
+  }
+
+  .fechamento-diferenca {
+    font-size: .88rem;
+    padding: 9px 12px;
   }
 
   /* --- MODAL SUCESSO --- */
 
   #modalSucesso .modal {
     max-width: 100% !important;
-    padding: 30px 20px;
+    padding: 24px 16px;
     text-align: center;
-    border-radius: 20px 20px 12px 12px;
+    border-radius: 18px 18px 0 0;
   }
 
   #modalSucesso h2 {
-    font-size: 1.4rem;
+    font-size: 1.18rem;
   }
 
   #modalSucesso .btn-secondary {
     width: 100%;
-    min-height: 52px;
-    font-size: .96rem;
-    margin-top: 12px;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 520px) {
-  .main-content {
-    padding: 14px 12px 90px;
-  }
-
-  .caixa-infobar {
-    grid-template-columns: 1fr;
-  }
-
-  .caixa-info-item.highlight {
-    border-top: 1px solid var(--border);
-    border-left: none;
-    padding-left: 12px;
-  }
-
-  .pdv-mode-switch {
-    grid-template-columns: 1fr;
-  }
-
-  .pdv-quick-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-height: 260px;
-  }
-
-  .payment-methods {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .pay-btn {
-    flex-direction: row;
-    gap: 10px;
-    padding: 14px 16px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 14px;
     font-size: .84rem;
+    margin-top: 10px;
     justify-content: center;
-    min-height: 48px;
-  }
-
-  .cart-total-row.total {
-    font-size: 1.2rem;
-  }
-
-  .closed-icon {
-    width: 60px;
-    height: 60px;
   }
 }
 
@@ -1250,51 +1441,105 @@
     padding: 12px 10px 88px;
   }
 
+  .topbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
   .topbar-title {
-    max-width: 110px;
+    max-width: 102px;
+    font-size: .88rem;
+  }
+
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    max-width: 72px;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
   }
 
   .caixa-closed-card {
-    padding: 22px 14px;
+    padding: 20px 12px;
   }
 
   .caixa-closed-card h2 {
-    font-size: 1.2rem;
+    font-size: 1.14rem;
+  }
+
+  .closed-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  #btnFecharCaixa,
+  .pdv-manual-row button,
+  .pay-btn,
+  .pdv-finalizar,
+  .modal-footer button,
+  #modalSucesso .btn-secondary {
+    min-height: 40px;
+    height: 40px;
+    font-size: .76rem;
+  }
+
+#btnFecharCaixa {
+  max-width: 300px;
+  min-height: 42px;
+  height: 42px;
+  margin: 10px auto 12px;
+  padding: 0 14px;
+  font-size: .76rem;
+}
+
+  .pdv-mode-switch {
+    gap: 4px;
+  }
+
+.pdv-mode-btn {
+  max-width: 150px;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 10px;
+  font-size: .72rem;
+  gap: 5px;
+}
+
+  .pdv-mode-btn i,
+  .pdv-mode-btn svg,
+  #btnFecharCaixa i,
+  #btnFecharCaixa svg {
+    width: 12px;
+    height: 12px;
   }
 
   .pdv-cart,
   .pdv-manual,
   .comanda-card,
-  .pdv-historico {
-    padding: 12px 10px;
-  }
-
-  .pdv-finalizar {
-    min-height: 50px;
-    font-size: .94rem;
+  .pdv-historico,
+  .dash-card {
+    padding: 10px 9px;
   }
 
   .cart-items {
-    max-height: 260px;
+    max-height: 240px;
   }
 
   .pdv-quick-grid {
     max-height: 240px;
   }
 
-  #modalSucesso .modal {
-    padding: 24px 16px;
+  .modal {
+    padding: 16px 12px;
   }
 
-  #modalSucesso .btn-secondary {
-    min-height: 48px;
-    font-size: .9rem;
+  #modalSucesso .modal {
+    padding: 22px 14px;
   }
 }

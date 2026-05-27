@@ -305,283 +305,204 @@ textarea.input {
 }
 
 /* ======================================================
-   RESPONSIVE — COMANDAS
+   RESPONSIVE — COMANDAS (CORRIGIDO)
 ====================================================== */
 
 @media (max-width: 1100px) {
   .comandas-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .comandas-toolbar {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
 
 @media (max-width: 768px) {
-  .main-content {
-    padding: 18px 14px 90px;
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
-  /* --- TOPBAR --- */
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 18px 12px 90px;
+    overflow-x: hidden;
+  }
 
+  /* --- TOPBAR (igual ao dashboard) --- */
   .topbar {
-    padding: 12px 14px;
-    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    gap: 8px;
+    overflow: hidden;
   }
 
   .topbar-title {
-    font-size: 1rem;
-    max-width: 145px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 110px;
+    font-size: .92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .topbar-actions {
-    gap: 8px;
   }
 
   .topbar-datetime {
     display: none;
   }
 
-  .caixa-status {
-    padding: 8px 10px;
-  }
-
   .caixa-status span:last-child {
     display: none;
   }
 
-  /* --- HEADER --- */
+  .theme-toggle,
+  .topbar-avatar,
+  .btn-menu {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
 
+  /* --- HEADER COMANDAS --- */
   .comandas-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
 
   .comandas-header h1 {
-    font-size: clamp(1.3rem, 5vw, 1.5rem);
+    font-size: 1.28rem;
     line-height: 1.2;
-    margin-bottom: 4px;
   }
 
   .comandas-header p {
-    font-size: .86rem;
+    font-size: .82rem;
+    line-height: 1.4;
   }
 
   .comandas-header-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
+    width: 100%;
   }
 
   .comandas-header-actions button {
     width: 100%;
-    min-height: 44px;
+    min-height: 42px;
+    height: 42px;
     justify-content: center;
+    font-size: .8rem;
+    white-space: nowrap;
   }
 
-  /* --- CARDS --- */
-
+  /* --- CARDS KPI (CORRIGIDO) --- */
   .comandas-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 14px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   .comandas-card {
-    min-width: 0;
-    padding: 16px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 12px;
+  }
+
+  .comandas-card > div:first-child {
+    flex: 1;
   }
 
   .comandas-card-label {
-    font-size: .68rem;
+    font-size: .7rem;
+    margin-bottom: 4px;
   }
 
   .comandas-card-value {
-    font-size: 1.45rem;
-    word-break: break-word;
-    line-height: 1.15;
+    font-size: 1.5rem;
+    line-height: 1.2;
   }
 
   .comandas-card-sub {
-    font-size: .76rem;
+    font-size: .68rem;
+    margin-top: 2px;
   }
 
   /* --- TOOLBAR --- */
-
   .comandas-toolbar {
     grid-template-columns: 1fr;
     gap: 10px;
-    padding: 14px;
-    margin-bottom: 14px;
+    padding: 14px 12px;
+    margin-bottom: 16px;
   }
 
-  .comandas-search-wrap {
-    min-width: 0;
+  .comandas-search-wrap .input {
+    height: 44px;
+    padding-left: 40px;
+    font-size: 16px;
   }
 
-  .comandas-search-wrap input {
-    font-size: 16px; /* evita zoom iOS */
-    min-width: 0;
+  .comandas-toolbar select {
     width: 100%;
+    height: 44px;
+    font-size: 16px;
   }
 
   /* --- TABELA --- */
-
-  .comandas-table-card {
-    overflow: hidden;
-  }
-
   .comandas-table-header {
-    padding: 14px 16px;
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
-  }
-
-  .comandas-table-header h3 {
-    font-size: .92rem;
+    gap: 6px;
+    padding: 14px 12px;
   }
 
   .comandas-table-wrap {
     overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
 
   .comandas-table {
-    min-width: 780px;
+    min-width: 750px;
   }
 
   .comandas-table th,
   .comandas-table td {
+    padding: 12px 10px;
+    font-size: .75rem;
     white-space: nowrap;
-    padding: 12px 14px;
   }
 
-  .comanda-action-btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  /* --- EMPTY STATE --- */
-
-  .empty-state {
-    padding: 28px 14px;
-  }
-
-  /* --- MODAL --- */
-
+  /* --- MODAIS (BOTTOM SHEET) --- */
   .modal-overlay {
-    padding: 0;
     align-items: flex-end;
+    padding: 0;
   }
 
   .modal {
     width: 100%;
     max-width: 100% !important;
-    max-height: 92dvh;
-    overflow-y: auto;
-    overscroll-behavior: contain;
     border-radius: 20px 20px 0 0;
-  }
-
-  .modal-header {
-    margin-bottom: 16px;
-    position: sticky;
-    top: 0;
-    background: var(--bg-card);
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
-    z-index: 1;
-  }
-
-  .modal-body {
-    gap: 10px;
+    padding: 20px 16px;
   }
 
   .modal-footer {
     flex-direction: column-reverse;
-    align-items: stretch;
-    gap: 8px;
-    margin-top: 16px;
-    position: sticky;
-    bottom: 0;
-    background: var(--bg-card);
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
+    gap: 10px;
   }
 
   .modal-footer button {
     width: 100%;
-    min-height: 48px;
     justify-content: center;
-  }
-
-  .input-group {
-    min-width: 0;
-  }
-
-  .lote-preview {
-    word-break: break-word;
-    font-size: .8rem;
-  }
-}
-
-@media (max-width: 520px) {
-  .main-content {
-    padding: 14px 12px 90px;
-  }
-
-  .comandas-header-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .comandas-cards {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .comandas-card {
-    padding: 14px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .comandas-card-value {
-    font-size: 1.5rem;
-    text-align: right;
-  }
-
-  .comandas-card-sub {
-    text-align: right;
-  }
-
-  .comandas-toolbar {
-    padding: 12px;
-  }
-
-  .comandas-table {
-    min-width: 680px;
-  }
-
-  .modal-header h3 {
-    font-size: .96rem;
-  }
-
-  textarea.input {
-    font-size: 16px;
-    min-height: 80px;
   }
 }
 
@@ -590,35 +511,32 @@ textarea.input {
     padding: 12px 10px 88px;
   }
 
+  .topbar {
+    padding: 8px 10px;
+  }
+
   .topbar-title {
-    max-width: 106px;
+    max-width: 96px;
+    font-size: .88rem;
   }
 
   .theme-toggle,
   .topbar-avatar,
   .btn-menu {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
   }
 
   .comandas-header h1 {
-    font-size: 1.25rem;
-  }
-
-  .comandas-card {
-    padding: 12px;
+    font-size: 1.18rem;
   }
 
   .comandas-card-value {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
   }
 
-  .comandas-toolbar {
-    padding: 10px;
-  }
-
-  .comanda-action-btn {
-    width: 38px;
-    height: 38px;
+  .comandas-table {
+    min-width: 680px;
   }
 }
