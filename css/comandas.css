@@ -305,238 +305,666 @@ textarea.input {
 }
 
 /* ======================================================
-   RESPONSIVE — COMANDAS (CORRIGIDO)
+   MOBILE FINAL — COMANDAS
 ====================================================== */
-
-@media (max-width: 1100px) {
-  .comandas-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .comandas-toolbar {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-}
 
 @media (max-width: 768px) {
   html,
   body {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  body * {
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .main-content {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
     padding: 18px 12px 90px;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
-  /* --- TOPBAR (igual ao dashboard) --- */
+  /* =========================================
+     TOPBAR
+  ========================================= */
+
   .topbar {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
     overflow: hidden;
+  }
+
+  .topbar > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .btn-menu {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex: 0 0 38px;
+    padding: 0;
+  }
+
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    display: block;
+    width: auto;
+    max-width: 88px;
+    height: 24px;
+    object-fit: contain;
   }
 
   .topbar-title {
     flex: 1 1 auto;
     min-width: 0;
-    max-width: 110px;
-    font-size: .92rem;
+    font-size: .9rem;
+    line-height: 1.1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .topbar-datetime {
-    display: none;
+    display: none !important;
   }
 
-  .caixa-status span:last-child {
-    display: none;
+  .caixa-status {
+    display: none !important;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
   }
 
   .theme-toggle,
-  .topbar-avatar,
-  .btn-menu {
+  .topbar-avatar {
     width: 38px;
     height: 38px;
+    min-width: 38px;
     flex: 0 0 38px;
+    padding: 0;
   }
 
-  /* --- HEADER COMANDAS --- */
+  /* =========================================
+     HEADER DA PÁGINA
+  ========================================= */
+
   .comandas-header {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
   }
 
   .comandas-header h1 {
-    font-size: 1.28rem;
-    line-height: 1.2;
+    font-size: 1.18rem;
+    line-height: 1.15;
+    margin: 0 0 4px;
   }
 
   .comandas-header p {
-    font-size: .82rem;
+    margin: 0;
+    font-size: .8rem;
     line-height: 1.4;
+    color: var(--text-muted);
+    max-width: 100%;
   }
 
   .comandas-header-actions {
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
+    align-items: center;
   }
 
-  .comandas-header-actions button {
-    width: 100%;
+  .comandas-header-actions > * {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .comandas-header-actions .btn,
+  .comandas-header-actions button,
+  .comandas-header-actions .btn-primary,
+  .comandas-header-actions .btn-secondary,
+  .comandas-header-actions .btn-outline,
+  #btnGerarLote,
+  #btnNovaComanda {
+    width: fit-content;
+    max-width: min(280px, 100%);
+    min-width: 220px;
     min-height: 42px;
     height: 42px;
+    margin: 0 auto;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    font-size: .8rem;
+    gap: 8px;
+    border-radius: 999px;
+    font-size: .83rem;
+    font-weight: 700;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* --- CARDS KPI (CORRIGIDO) --- */
+  /* =========================================
+     CARDS
+  ========================================= */
+
   .comandas-cards {
+    display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .comandas-card {
-    display: flex;
-    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 10px;
     align-items: center;
-    padding: 14px 12px;
-  }
-
-  .comandas-card > div:first-child {
-    flex: 1;
+    border-radius: 18px;
+    overflow: hidden;
   }
 
   .comandas-card-label {
-    font-size: .7rem;
-    margin-bottom: 4px;
+    margin: 0;
+    font-size: .64rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .comandas-card-value {
-    font-size: 1.5rem;
-    line-height: 1.2;
+    font-size: 1.05rem;
+    line-height: 1;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .comandas-card-sub {
+    grid-column: 1 / -1;
+    margin: 0;
     font-size: .68rem;
-    margin-top: 2px;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* --- TOOLBAR --- */
+  /* =========================================
+     TOOLBAR
+  ========================================= */
+
   .comandas-toolbar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px;
+    display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 14px 12px;
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .comandas-toolbar > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .comandas-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .comandas-search-wrap i {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .comandas-search-wrap .input,
+  .comandas-toolbar .input,
+  .comandas-toolbar input,
+  .comandas-toolbar select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 44px;
+    min-height: 44px;
+    font-size: 16px;
   }
 
   .comandas-search-wrap .input {
-    height: 44px;
     padding-left: 40px;
-    font-size: 16px;
   }
 
-  .comandas-toolbar select {
+  /* =========================================
+     TABELA
+  ========================================= */
+
+  .comandas-table-card {
     width: 100%;
-    height: 44px;
-    font-size: 16px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* --- TABELA --- */
   .comandas-table-header {
-    flex-direction: column;
-    align-items: flex-start;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 6px;
-    padding: 14px 12px;
+    padding: 12px 10px;
+    flex-shrink: 0;
+  }
+
+  .comandas-table-header h3 {
+    font-size: .86rem;
+    line-height: 1.15;
+  }
+
+  .comandas-table-header span {
+    font-size: .68rem;
+    text-align: right;
   }
 
   .comandas-table-wrap {
-    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    max-height: 360px;
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .comandas-table {
-    min-width: 750px;
+    width: max-content;
+    min-width: 680px;
+    border-collapse: collapse;
   }
 
   .comandas-table th,
   .comandas-table td {
-    padding: 12px 10px;
-    font-size: .75rem;
+    padding: 10px 9px;
+    font-size: .72rem;
     white-space: nowrap;
   }
 
-  /* --- MODAIS (BOTTOM SHEET) --- */
-  .modal-overlay {
-    align-items: flex-end;
+  .comandas-table th {
+    font-size: .58rem;
+  }
+
+  .comanda-status-badge {
+    padding: 4px 8px;
+    font-size: .58rem;
+  }
+
+  .comanda-actions-table {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .comanda-action-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 9px;
+  }
+
+  /* =========================================
+     MODAL
+  ========================================= */
+
+  .modal-overlay,
+  #modalReserva {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
     padding: 0;
-  }
-
-  .modal {
-    width: 100%;
-    max-width: 100% !important;
-    border-radius: 20px 20px 0 0;
-    padding: 20px 16px;
-  }
-
-  .modal-footer {
-    flex-direction: column-reverse;
-    gap: 10px;
-  }
-
-  .modal-footer button {
-    width: 100%;
+    display: none;
+    align-items: flex-end;
     justify-content: center;
+    background: rgba(0, 0, 0, .72);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal,
+  .agenda-modal-card {
+    width: calc(100% - 16px);
+    max-width: 420px !important;
+    max-height: 88dvh;
+    margin: 0 auto;
+    border-radius: 18px 18px 0 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header,
+  .agenda-modal-card .modal-header {
+    position: relative;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 16px 16px 12px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-header h3,
+  .agenda-modal-card .modal-header h3 {
+    font-size: .98rem;
+    line-height: 1.15;
+    color: var(--text-primary);
+    padding-right: 42px;
+    margin: 0;
+  }
+
+  .agenda-modal-subtitle,
+  .modal-subtitle {
+    margin-top: 4px;
+    max-width: calc(100% - 42px);
+    font-size: .76rem;
+    line-height: 1.3;
+    color: var(--text-muted);
+  }
+
+  .modal-header .btn-ghost,
+  #btnFecharModalReserva,
+  .modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    z-index: 2;
+  }
+
+  .modal-body,
+  .agenda-modal-body {
+    flex: 1;
+    min-height: 0;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .modal-body > *,
+  .agenda-modal-body > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .modal-body .input,
+  .modal-body input,
+  .modal-body select,
+  .modal-body textarea,
+  .agenda-modal-body .input,
+  .agenda-modal-body input,
+  .agenda-modal-body select,
+  .agenda-modal-body textarea {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  textarea.input,
+  .modal-body textarea,
+  .agenda-modal-body textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .modal-footer,
+  .agenda-modal-card .modal-footer {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 16px 14px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+  }
+
+  .modal-footer > *,
+  .agenda-modal-card .modal-footer > * {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .modal-footer button,
+  .modal-footer .btn,
+  .agenda-modal-card .modal-footer button,
+  .agenda-modal-card .modal-footer .btn,
+  #btnSalvarComanda,
+  #btnCancelarComanda {
+    width: fit-content;
+    max-width: min(280px, 100%);
+    min-width: 220px;
+    min-height: 42px;
+    height: 42px;
+    margin: 0 auto;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .lote-preview {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 12px;
+    font-size: .78rem;
+    line-height: 1.35;
+    border-radius: 14px;
+    overflow-wrap: anywhere;
   }
 }
 
 @media (max-width: 380px) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   .main-content {
     padding: 12px 10px 88px;
   }
 
   .topbar {
     padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    max-width: 78px;
+    height: 22px;
   }
 
   .topbar-title {
-    max-width: 96px;
-    font-size: .88rem;
+    font-size: .86rem;
   }
 
+  .btn-menu,
   .theme-toggle,
-  .topbar-avatar,
-  .btn-menu {
+  .topbar-avatar {
     width: 36px;
     height: 36px;
+    min-width: 36px;
     flex-basis: 36px;
   }
 
   .comandas-header h1 {
-    font-size: 1.18rem;
+    font-size: 1.08rem;
+  }
+
+  .comandas-header p {
+    font-size: .74rem;
+  }
+
+  .comandas-header-actions .btn,
+  .comandas-header-actions button,
+  #btnGerarLote,
+  #btnNovaComanda {
+    max-width: min(250px, 100%);
+    min-width: 200px;
+    min-height: 40px;
+    height: 40px;
+    font-size: .8rem;
+    padding-inline: 14px;
+  }
+
+  .comandas-card {
+    padding: 11px 9px;
   }
 
   .comandas-card-value {
-    font-size: 1.3rem;
+    font-size: 1rem;
+  }
+
+  .comandas-toolbar {
+    padding: 9px;
   }
 
   .comandas-table {
-    min-width: 680px;
+    min-width: 640px;
+  }
+
+  .modal,
+  .agenda-modal-card {
+    width: calc(100% - 12px);
+    max-width: 400px !important;
+    max-height: 86dvh;
+  }
+
+  .modal-header,
+  .agenda-modal-card .modal-header {
+    padding: 14px 12px 10px;
+  }
+
+  .modal-body,
+  .agenda-modal-body {
+    padding: 12px;
+    gap: 9px;
+  }
+
+  .modal-footer,
+  .agenda-modal-card .modal-footer {
+    padding: 10px 12px 12px;
+  }
+
+  .modal-header .btn-ghost,
+  #btnFecharModalReserva,
+  .modal-close {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .modal-footer button,
+  .modal-footer .btn,
+  .agenda-modal-card .modal-footer button,
+  .agenda-modal-card .modal-footer .btn,
+  #btnSalvarComanda,
+  #btnCancelarComanda {
+    max-width: min(250px, 100%);
+    min-width: 200px;
+    min-height: 40px;
+    height: 40px;
+    font-size: .79rem;
   }
 }

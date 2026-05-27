@@ -385,10 +385,186 @@
    RESPONSIVE — CONFIGURAÇÕES
 ====================================================== */
 
-@media (max-width: 1180px) {
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  body * {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 18px 12px 90px;
+    overflow-x: clip;
+  }
+
+  /* =========================================
+     TOPBAR
+  ========================================= */
+
+  .topbar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .topbar > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .btn-menu {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex: 0 0 38px;
+    padding: 0;
+  }
+
+  .topbar-logo,
+  .topbar-brand,
+  .topbar-center {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    display: block;
+    width: auto;
+    max-width: 88px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .topbar-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: .9rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-datetime {
+    display: none !important;
+  }
+
+  .caixa-status {
+    display: none !important;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .theme-toggle,
+  .topbar-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex: 0 0 38px;
+    padding: 0;
+  }
+
+  /* =========================================
+     PAGE HEADER
+  ========================================= */
+
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .page-header h2 {
+    font-size: 1.18rem;
+    line-height: 1.15;
+    margin: 0 0 4px;
+  }
+
+  .page-header p {
+    margin: 0;
+    font-size: .8rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    max-width: 100%;
+  }
+
+  .page-header-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .page-header-actions button,
+  .page-header-actions a,
+  .page-header .btn,
+  .page-header button,
+  .page-header .btn-primary,
+  .page-header .btn-secondary {
+    width: fit-content;
+    max-width: min(280px, 100%);
+    min-width: 220px;
+    min-height: 42px;
+    height: 42px;
+    margin: 0 auto;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: .82rem;
+    white-space: nowrap;
+  }
+
+  /* =========================================
+     GRID
+  ========================================= */
+
   .config-grid {
+    display: grid;
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
+    align-items: stretch;
   }
 
   .config-card-wide {
@@ -396,87 +572,30 @@
     grid-row: auto;
   }
 
-  .crv-card {
-    min-height: auto;
-    max-height: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    padding: 18px 14px 90px;
-  }
-
-  .topbar {
-    padding: 12px 14px;
-    gap: 10px;
-  }
-
-  .topbar-title {
-    font-size: 1rem;
-    max-width: 145px;
-    white-space: nowrap;
+  .config-card {
+    min-width: 0;
+    padding: 14px 12px;
+    gap: 14px;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
 
-  .topbar-actions {
-    gap: 8px;
-  }
-
-  .topbar-datetime {
-    display: none;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-bottom: 18px;
-  }
-
-  .page-header h2 {
-    font-size: clamp(1.3rem, 5vw, 1.5rem);
+  .config-card h2 {
+    font-size: .96rem;
     line-height: 1.2;
     margin-bottom: 2px;
   }
 
-  .page-header p {
-    font-size: .86rem;
-  }
-
-  .page-header-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .page-header .btn-primary,
-  .page-header .btn-secondary,
-  .page-header-actions button,
-  .page-header-actions a {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-  }
-
-  .config-card {
-    padding: 16px 14px;
-    overflow: hidden;
-    gap: 14px;
-  }
-
-  .config-card h2 {
-    font-size: .98rem;
-  }
-
   .config-muted {
-    font-size: .82rem;
+    font-size: .8rem;
     line-height: 1.45;
   }
 
+  /* =========================================
+     FORM
+  ========================================= */
+
   .form-grid {
+    display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
   }
@@ -487,35 +606,78 @@
     min-width: 0;
   }
 
+  .form-group label {
+    font-size: .8rem;
+  }
+
   .form-group input,
   .form-group select,
   .form-group textarea {
-    min-width: 0;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     font-size: 16px;
   }
 
   .form-group input,
   .form-group select {
-    height: 48px;
+    height: 46px;
+  }
+
+  .form-group small {
+    font-size: .73rem;
+    line-height: 1.35;
+  }
+
+  /* =========================================
+     LOGO EMPRESA
+  ========================================= */
+
+  .logo-preview-box {
+    width: 100%;
+    min-height: 110px;
+    padding: 16px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .logo-preview-box img {
+    max-width: 170px;
+    max-height: 90px;
+    object-fit: contain;
   }
 
   .logo-upload-control {
+    width: 100%;
+    height: auto;
+    padding: 10px;
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
-    height: auto;
-    padding: 10px;
   }
 
-  .logo-upload-btn {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-  }
+.logo-upload-btn,
+#btnRemoverLogoEmpresa {
+  width: fit-content;
+  max-width: min(280px, 100%);
+  min-width: 220px;
+  min-height: 42px;
+  height: 42px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
 
   .logo-upload-name {
     width: 100%;
+    font-size: .76rem;
     text-align: center;
     white-space: normal;
     overflow: visible;
@@ -523,30 +685,24 @@
     word-break: break-word;
   }
 
-  .logo-preview-box {
-    min-height: 110px;
-    padding: 16px;
-  }
-
-  .logo-preview-box img {
-    max-width: 180px;
-    max-height: 100px;
-  }
-
-  #btnRemoverLogoEmpresa {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-  }
+  /* =========================================
+     CARD CRV
+  ========================================= */
 
   .crv-card {
+    min-height: auto;
+    max-height: none;
+    padding: 14px 12px;
+    display: flex;
     align-items: stretch;
+    justify-content: flex-start;
     text-align: left;
-    padding: 16px 14px;
     gap: 12px;
   }
 
   .crv-card-title {
+    width: 100%;
+    display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
@@ -554,17 +710,26 @@
   }
 
   .crv-card-logo {
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     flex-shrink: 0;
+  }
+
+  .crv-card-title h2 {
+    font-size: .92rem;
+    margin: 0;
   }
 
   .crv-card p {
     max-width: 100%;
     margin: 0;
+    font-size: .8rem;
+    line-height: 1.4;
   }
 
   .crv-links {
+    width: 100%;
+    display: flex;
     justify-content: flex-start;
     flex-wrap: wrap;
     gap: 8px;
@@ -573,66 +738,95 @@
   .crv-links a {
     width: 44px;
     height: 44px;
-    justify-content: center;
+    min-width: 44px;
     flex: 0 0 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
+  /* =========================================
+     MODAL SETUP
+  ========================================= */
+
   .setup-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
     padding: 0;
+    display: none;
     align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, .82);
+    backdrop-filter: blur(10px);
+  }
+
+  .setup-modal-overlay.active {
+    display: flex;
   }
 
   .setup-modal,
   .modal {
-    width: 100%;
-    max-width: 100% !important;
-    max-height: 94dvh;
+    width: calc(100% - 16px);
+    max-width: 420px !important;
+    max-height: 92dvh;
+    margin: 0 auto;
     overflow-y: auto;
-    border-radius: 20px 20px 0 0;
+    overflow-x: hidden;
+    border-radius: 18px 18px 0 0;
   }
 
   .setup-modal {
-    padding: 24px 18px;
+    padding: 22px 16px 18px;
+    text-align: center;
   }
 
   .setup-modal-logo {
-    width: 88px;
-    margin-bottom: 18px;
+    width: 84px;
+    margin: 0 auto 16px;
   }
 
   .setup-modal h2 {
-    font-size: 1.1rem;
-    letter-spacing: .18em;
+    font-size: 1.02rem;
     line-height: 1.2;
+    letter-spacing: .14em;
+    margin-bottom: 12px;
   }
 
   .setup-modal p {
-    font-size: .86rem;
+    font-size: .84rem;
     line-height: 1.5;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
 
   .modal-actions-row {
+    display: flex;
     flex-direction: column-reverse;
     gap: 8px;
+    justify-content: stretch;
   }
 
   .modal-actions-row button {
     width: 100%;
-    min-height: 48px;
+    min-height: 44px;
     justify-content: center;
   }
+
+  /* =========================================
+     TOAST
+  ========================================= */
 
   .toast-config {
     top: auto;
     left: 12px;
     right: 12px;
     bottom: 14px;
+    width: auto;
     min-width: 0;
     max-width: none;
-    width: auto;
     padding: 12px 14px;
-    font-size: .84rem;
+    font-size: .82rem;
+    border-radius: 14px;
   }
 }
 
@@ -649,21 +843,28 @@
     gap: 8px;
   }
 
-  .logo-preview-box img {
-    max-width: 150px;
-    max-height: 88px;
+  .page-header-actions button,
+  .page-header-actions a,
+  .page-header .btn,
+  .page-header button,
+  .page-header .btn-primary,
+  .page-header .btn-secondary {
+    max-width: min(260px, 100%);
+    min-width: 210px;
   }
 
-  .crv-card-title h2 {
-    font-size: .92rem;
+  .logo-preview-box img {
+    max-width: 150px;
+    max-height: 82px;
   }
 
   .setup-modal {
-    padding: 22px 16px;
+    width: calc(100% - 14px);
+    padding: 20px 14px 16px;
   }
 
   .setup-modal-logo {
-    width: 76px;
+    width: 74px;
   }
 
   .toast-config {
@@ -674,40 +875,111 @@
 }
 
 @media (max-width: 380px) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   .main-content {
     padding: 12px 10px 88px;
   }
 
-  .topbar-title {
-    max-width: 106px;
+  .topbar {
+    padding: 8px 10px;
+    gap: 6px;
   }
 
+  .topbar-title {
+    max-width: 106px;
+    font-size: .86rem;
+  }
+
+  .topbar-logo img,
+  .topbar-brand img,
+  .topbar-center img {
+    max-width: 78px;
+    height: 22px;
+  }
+
+  .btn-menu,
   .theme-toggle,
-  .topbar-avatar,
-  .btn-menu {
-    width: 44px;
-    height: 44px;
+  .topbar-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    flex-basis: 36px;
   }
 
   .page-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.08rem;
+  }
+
+  .page-header p {
+    font-size: .74rem;
+  }
+
+  .page-header-actions button,
+  .page-header-actions a,
+  .page-header .btn,
+  .page-header button,
+  .page-header .btn-primary,
+  .page-header .btn-secondary {
+    max-width: min(240px, 100%);
+    min-width: 190px;
+    min-height: 40px;
+    height: 40px;
+    padding: 0 14px;
+    font-size: .79rem;
   }
 
   .config-card {
     padding: 12px 10px;
+    gap: 12px;
   }
 
-  .setup-modal h2 {
-    font-size: 1rem;
+  .config-card h2 {
+    font-size: .92rem;
   }
 
-  .setup-modal p {
-    font-size: .82rem;
+  .form-group label {
+    font-size: .78rem;
+  }
+
+  .form-group small {
+    font-size: .7rem;
+  }
+
+  .logo-preview-box {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .logo-preview-box img {
+    max-width: 138px;
+    max-height: 74px;
+  }
+
+  .crv-card-logo {
+    width: 42px;
+    height: 42px;
   }
 
   .crv-links a {
     width: 42px;
     height: 42px;
+    min-width: 42px;
     flex-basis: 42px;
+  }
+
+  .setup-modal {
+    width: calc(100% - 12px);
+  }
+
+  .setup-modal h2 {
+    font-size: .96rem;
+  }
+
+  .setup-modal p {
+    font-size: .8rem;
   }
 }
