@@ -16,6 +16,9 @@ const fmt = valor => {
 let produtos = [];
 let filtroAtivo = "todos";
 let idExcluir = null;
+const LIMITE_DIGITOS_MOEDA = 9;
+const LIMITE_DIGITOS_ESTOQUE = 6;
+const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
 
 const categoriaLabel = {
   bebidas: "Bebidas",
@@ -75,6 +78,8 @@ function formatarMoedaInput(valor) {
     return "";
   }
 
+  somenteNumeros = somenteNumeros.slice(0, LIMITE_DIGITOS_MOEDA);
+
   while (somenteNumeros.length < 3) {
     somenteNumeros = "0" + somenteNumeros;
   }
@@ -101,6 +106,40 @@ function aplicarMascaraMoedaInput(input) {
   });
 }
 
+function formatarEstoqueInput(valor) {
+  let numeros = String(valor || "")
+    .replace(/\D/g, "")
+    .slice(0, LIMITE_DIGITOS_ESTOQUE);
+
+  if (!numeros) {
+    return "";
+  }
+
+  return Number(numeros).toLocaleString("pt-BR");
+}
+
+function aplicarMascaraEstoqueInput(input) {
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    input.value = formatarEstoqueInput(input.value);
+  });
+
+  input.addEventListener("blur", () => {
+    input.value = formatarEstoqueInput(input.value);
+  });
+}
+
+function aplicarMascaraCodigoBarrasInput(input) {
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    input.value = String(input.value || "")
+      .replace(/\D/g, "")
+      .slice(0, LIMITE_DIGITOS_CODIGO_BARRAS);
+  });
+}
+
 function valorParaInputMoeda(valor) {
   const numero = Number(valor || 0);
 
@@ -115,13 +154,43 @@ function valorParaInputMoeda(valor) {
 }
 
 function normalizarEstoque(valor) {
-  const numero = parseInt(valor, 10);
+  const numero = parseInt(
+    String(valor || "").replace(/\D/g, ""),
+    10
+  );
 
   if (Number.isNaN(numero) || numero < 0) {
     return 0;
   }
 
   return numero;
+}
+
+function toggleCategoriaOutros() {
+  const categoria = document.getElementById("produtoCategoria");
+  const wrap = document.getElementById("categoriaOutrosWrap");
+  const input = document.getElementById("produtoCategoriaOutros");
+
+  if (!categoria || !wrap) return;
+
+  if (categoria.value === "outros") {
+    wrap.style.display = "flex";
+    setTimeout(() => input?.focus(), 60);
+  } else {
+    wrap.style.display = "none";
+    if (input) input.value = "";
+  }
+}
+
+function obterCategoriaProduto() {
+  const categoria = String(document.getElementById("produtoCategoria")?.value || "").trim();
+  const categoriaOutros = String(document.getElementById("produtoCategoriaOutros")?.value || "").trim();
+
+  if (categoria === "outros" && categoriaOutros) {
+    return categoriaOutros;
+  }
+
+  return categoria;
 }
 
 async function aguardarContextoSistema() {
@@ -423,6 +492,8 @@ function abrirModalNovo() {
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = "";
   document.getElementById("produtoCategoria").value = "";
+  document.getElementById("produtoCategoriaOutros").value = "";
+  toggleCategoriaOutros();
   document.getElementById("produtoAtivo").checked = true;
 
   const produtoRapido = document.getElementById("produtoRapido");
@@ -466,7 +537,17 @@ function abrirModalEditar(id) {
   document.getElementById("produtoEstoque").value = produto.estoque;
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = produto.codigo || "";
+  const categoriasFixas = ["", "bebidas", "alimentos", "combos", "servicos", "outros"];
+
+if (categoriasFixas.includes(produto.categoria || "")) {
   document.getElementById("produtoCategoria").value = produto.categoria || "";
+  document.getElementById("produtoCategoriaOutros").value = "";
+} else {
+  document.getElementById("produtoCategoria").value = "outros";
+  document.getElementById("produtoCategoriaOutros").value = produto.categoria || "";
+}
+
+toggleCategoriaOutros();
   document.getElementById("produtoAtivo").checked = produto.ativo === true;
 
   const produtoRapido = document.getElementById("produtoRapido");
@@ -491,7 +572,7 @@ async function salvarProduto() {
   const precoCusto = normalizarPreco(document.getElementById("produtoPrecoCusto")?.value);
   const estoque = normalizarEstoque(document.getElementById("produtoEstoque")?.value);
   const codigo = String(document.getElementById("produtoCodigo")?.value || "").trim();
-  const categoria = String(document.getElementById("produtoCategoria")?.value || "");
+  const categoria = obterCategoriaProduto();
   const ativo = document.getElementById("produtoAtivo")?.checked === true;
   const produtoRapido = document.getElementById("produtoRapido")?.checked === true;
   const id = String(document.getElementById("produtoId")?.value || "").trim();
@@ -735,10 +816,11 @@ document.addEventListener("input", event => {
 // ======================================================
 // MÁSCARAS DO FORMULÁRIO DE PRODUTOS
 // ======================================================
-
 function setupMascarasProdutos() {
   aplicarMascaraMoedaInput(document.getElementById("produtoPreco"));
   aplicarMascaraMoedaInput(document.getElementById("produtoPrecoCusto"));
+  aplicarMascaraEstoqueInput(document.getElementById("produtoEstoque"));
+  aplicarMascaraCodigoBarrasInput(document.getElementById("produtoCodigo"));
 }
 
 setTimeout(() => {

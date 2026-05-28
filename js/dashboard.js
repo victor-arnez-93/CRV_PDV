@@ -5,14 +5,14 @@ const fmt = v => Number(v || 0).toLocaleString("pt-BR", {
 });
 
 const fmtDataHora = valor => {
-  if (!valor) return "--:--";
+  const data = criarDataVendaBrasil(valor);
 
-  const data = new Date(valor);
-  if (Number.isNaN(data.getTime())) return "--:--";
+  if (!data) return "--:--";
 
   return data.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
   });
 };
 
@@ -28,6 +28,43 @@ function normalizarFormaPagamento(valor) {
 
 function obterDataVenda(venda) {
   return venda.data || venda.created_at || venda.createdAt || venda.criado_em || null;
+}
+
+function criarDataVendaBrasil(valor) {
+  if (!valor) return null;
+
+  let dataNormalizada = String(valor);
+
+  if (
+    dataNormalizada.includes("T") &&
+    !dataNormalizada.endsWith("Z") &&
+    !dataNormalizada.includes("+")
+  ) {
+    dataNormalizada += "Z";
+  }
+
+  const data = new Date(dataNormalizada);
+
+  if (Number.isNaN(data.getTime())) {
+    return null;
+  }
+
+  return data;
+}
+
+function obterPartesDataBrasil(data) {
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(data);
+
+  return {
+    dia: partes.find(p => p.type === "day")?.value,
+    mes: partes.find(p => p.type === "month")?.value,
+    ano: partes.find(p => p.type === "year")?.value
+  };
 }
 
 // ======================================================
@@ -79,23 +116,18 @@ async function obterDadosOfflineDashboard() {
 }
 
 function dataVendaEhHoje(venda) {
-
   const valor = obterDataVenda(venda);
+  const dataVenda = criarDataVendaBrasil(valor);
 
-  if (!valor) return false;
+  if (!dataVenda) return false;
 
-  const dataVenda = new Date(valor);
-
-  if (Number.isNaN(dataVenda.getTime())) {
-    return false;
-  }
-
-  const agora = new Date();
+  const hojeBrasil = obterPartesDataBrasil(new Date());
+  const vendaBrasil = obterPartesDataBrasil(dataVenda);
 
   return (
-    dataVenda.getDate() === agora.getDate() &&
-    dataVenda.getMonth() === agora.getMonth() &&
-    dataVenda.getFullYear() === agora.getFullYear()
+    vendaBrasil.dia === hojeBrasil.dia &&
+    vendaBrasil.mes === hojeBrasil.mes &&
+    vendaBrasil.ano === hojeBrasil.ano
   );
 }
 

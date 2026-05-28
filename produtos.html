@@ -211,17 +211,29 @@
         <input class="input" type="text" id="produtoCodigo" placeholder="EAN-13 ou código interno" />
       </div>
 
-      <div class="input-group">
-        <label class="input-label" for="produtoCategoria">Categoria</label>
-        <select class="input" id="produtoCategoria">
-          <option value="">Sem categoria</option>
-          <option value="bebidas">Bebidas</option>
-          <option value="alimentos">Alimentos</option>
-          <option value="combos">Combos</option>
-          <option value="servicos">Serviços</option>
-          <option value="outros">Outros</option>
-        </select>
-      </div>
+<div class="input-group">
+  <label class="input-label" for="produtoCategoria">Categoria</label>
+  <select class="input" id="produtoCategoria" onchange="toggleCategoriaOutros()">
+    <option value="">Sem categoria</option>
+    <option value="bebidas">Bebidas</option>
+    <option value="alimentos">Alimentos</option>
+    <option value="combos">Combos</option>
+    <option value="servicos">Serviços</option>
+    <option value="outros">Outros</option>
+  </select>
+</div>
+
+<div class="input-group categoria-outros-wrap" id="categoriaOutrosWrap" style="display:none;">
+  <label class="input-label" for="produtoCategoriaOutros">Nome da categoria</label>
+  <input
+    class="input"
+    type="text"
+    id="produtoCategoriaOutros"
+    placeholder="Ex: Limpeza, Acessórios, Brindes..."
+    maxlength="40"
+    autocomplete="off"
+  />
+</div>
 
 <div class="toggle-row toggle-row-info">
   <div>

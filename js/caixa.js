@@ -83,13 +83,58 @@ function formatarDataHoraBrasil(data) {
 }
 
 function normalizarNumero(valor) {
-  const numero = Number(valor);
+  let texto = String(valor || "")
+    .trim()
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const numero = Number(texto);
 
   if (Number.isNaN(numero) || numero < 0) {
     return 0;
   }
 
-  return numero;
+  return Number(numero.toFixed(2));
+}
+
+function formatarMoedaInput(valor) {
+  let numeros = String(valor || "").replace(/\D/g, "");
+
+  if (!numeros) {
+    return "";
+  }
+
+  numeros = numeros.slice(0, 9);
+
+  while (numeros.length < 3) {
+    numeros = "0" + numeros;
+  }
+
+  const centavos = numeros.slice(-2);
+  const reais = numeros.slice(0, -2);
+
+  return `${Number(reais).toLocaleString("pt-BR")},${centavos}`;
+}
+
+function aplicarMascaraMoedaCaixa(input, callback) {
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    input.value = formatarMoedaInput(input.value);
+
+    if (typeof callback === "function") {
+      callback();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    input.value = formatarMoedaInput(input.value);
+
+    if (typeof callback === "function") {
+      callback();
+    }
+  });
 }
 
 function obterEmpresaId() {
@@ -1682,13 +1727,13 @@ function renderHistorico() {
   if (!box) return;
 
   if (badge) {
-    badge.textContent = `${vendas.length} vendas`;
+    badge.textContent = `${vendas.length} registros`;
   }
 
   if (!vendas.length) {
     box.innerHTML = `
       <div class="empty-state" style="padding:16px;">
-        <p>Nenhuma venda ainda</p>
+        <p>Nenhuma movimentação ainda</p>
       </div>
     `;
     return;
@@ -1697,35 +1742,66 @@ function renderHistorico() {
   box.innerHTML = "";
 
   vendas.forEach(venda => {
+    const origem = String(venda.origem || "pdv").toLowerCase();
+
+    const icon =
+      origem === "comanda"
+        ? "ticket"
+        : origem === "agenda"
+          ? "calendar-check"
+          : "shopping-cart";
+
+    const classe =
+      origem === "comanda"
+        ? "comanda"
+        : origem === "agenda"
+          ? "agenda"
+          : "venda";
+
+    const titulo =
+      origem === "comanda"
+        ? (venda.descricao || "Comanda fechada")
+        : origem === "agenda"
+          ? (venda.descricao || "Jogo pago")
+          : (venda.descricao || "Venda finalizada");
+
+    const detalhe =
+      `${String(venda.forma_pagamento || "—").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`;
+
     const item = document.createElement("div");
 
     item.className = "historico-item";
 
     item.innerHTML = `
-      <div class="historico-item-left">
+      <div class="historico-item-icon ${classe}">
+        <i data-lucide="${icon}" width="16" height="16"></i>
+      </div>
+
+      <div class="historico-item-content">
         <span class="historico-pagto">
-          ${
-            venda.origem === "agenda"
-              ? (venda.descricao || "Pagamento de jogo")
-              : (venda.forma_pagamento || "Venda")
-          }
+          ${titulo}
         </span>
-        <small style="display:block;color:var(--text-muted);font-size:0.68rem;margin-top:3px;">
-          ${
-  venda.origem === "agenda"
-    ? `${String(venda.forma_pagamento || "").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`
-    : formatarDataHoraBrasil(venda.data)
-}
+
+        <small class="historico-hora">
+          ${detalhe}
         </small>
       </div>
 
       <div class="historico-valor">
         ${fmt(Number(venda.total || 0))}
       </div>
+
+      <div class="historico-item-action">
+        <i data-lucide="chevron-right" width="15" height="15"></i>
+      </div>
     `;
 
     box.appendChild(item);
   });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 // ======================================================
@@ -1749,6 +1825,28 @@ function setupInputs() {
   if (trocoBox) {
     trocoBox.style.display = metodoPagamento === "dinheiro" ? "block" : "none";
   }
+    aplicarMascaraMoedaCaixa(
+    document.getElementById("manualPreco")
+  );
+
+  aplicarMascaraMoedaCaixa(
+    document.getElementById("inputDesconto"),
+    atualizarTotais
+  );
+
+  aplicarMascaraMoedaCaixa(
+    document.getElementById("valorRecebido"),
+    calcularTroco
+  );
+
+  aplicarMascaraMoedaCaixa(
+    document.getElementById("valorInicial")
+  );
+
+  aplicarMascaraMoedaCaixa(
+    document.getElementById("valorFechamento"),
+    calcularDiferenca
+  );
 }
 
 function setupAtalhos() {
@@ -2824,17 +2922,20 @@ if (!confirmar) return;
 
     const empresaId = obterEmpresaId();
 
-    const vendaPayload = {
-      empresa_id: empresaId,
-      caixa_id: caixa.id,
-      cliente_id: null,
-      subtotal: subtotal,
-      desconto: desconto,
-      total: total,
-      forma_pagamento: metodoPagamento,
-      troco: troco,
-      data: new Date().toISOString()
-    };
+const vendaPayload = {
+  empresa_id: empresaId,
+  caixa_id: caixa.id,
+  cliente_id: null,
+  subtotal: subtotal,
+  desconto: desconto,
+  total: total,
+  forma_pagamento: metodoPagamento,
+  troco: troco,
+  origem: "comanda",
+  origem_id: comandaAtiva.id,
+  descricao: `Comanda ${comandaAtiva.codigo || ""}`,
+  data: new Date().toISOString()
+};
 
     const { data: vendaData, error: vendaError } = await sb
       .from("vendas")

@@ -285,6 +285,11 @@
   gap: 12px;
 }
 
+.categoria-outros-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Toggle */
 .toggle-row {
   display: flex;

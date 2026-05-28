@@ -138,7 +138,7 @@
               <label class="input-label" for="valorInicial">Valor inicial (troco)</label>
               <input
                 class="input input-money"
-                type="number"
+                type="text"
                 id="valorInicial"
                 placeholder="0,00"
                 min="0"
@@ -301,31 +301,58 @@
             </div>
             <div class="pdv-quick-grid" id="produtosRapidos"></div>
 
-            <!-- Entrada manual -->
+
+                        <!-- Entrada manual -->
             <div class="pdv-manual card">
               <h3 style="font-size:0.85rem;margin-bottom:12px;color:var(--text-muted);">
                 <i data-lucide="pencil" width="13" height="13"></i>
                 Adicionar item manual
               </h3>
+
               <div class="pdv-manual-row">
                 <div class="input-group" style="flex:2;margin:0;">
                   <input class="input" type="text" id="manualNome" placeholder="Nome do item" />
                 </div>
+
                 <div class="input-group" style="flex:1;margin:0;">
-                  <input class="input input-money" type="number" id="manualPreco" placeholder="R$ 0,00" min="0" step="0.01" />
+                  <input class="input input-money" type="text" id="manualPreco" placeholder="R$ 0,00" inputmode="decimal" autocomplete="off" />
                 </div>
+
                 <div class="input-group" style="width:70px;margin:0;">
                   <input class="input" type="number" id="manualQtd" placeholder="Qtd" value="1" min="1" />
                 </div>
+
                 <button class="btn-ghost" onclick="adicionarManual()">
                   <i data-lucide="plus" width="16" height="16"></i>
                 </button>
               </div>
             </div>
 
+            <div class="pdv-section-divider"></div>
+
+            <div class="card pdv-historico pdv-atividade">
+              <div class="pdv-historico-header">
+                <h3>
+                  <i data-lucide="activity" width="14" height="14"></i>
+                  Atividades recentes (histórico de vendas)
+                </h3>
+
+                <span class="badge badge-success" id="badgeVendas">
+                  0 registros
+                </span>
+              </div>
+
+              <div class="historico-list" id="historicoList">
+                <div class="empty-state" style="padding:16px;">
+                  <p>Nenhuma movimentação ainda</p>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- COLUNA DIREITA: carrinho + pagamento -->
+
           <div class="pdv-right">
 
             <div class="pdv-cart card">
@@ -357,7 +384,7 @@
                 <div style="display:flex;align-items:center;gap:8px;">
                   <input
                     class="input"
-                    type="number"
+                    type="text"
                     id="inputDesconto"
                     placeholder="R$ 0,00"
                     min="0"
@@ -409,7 +436,7 @@
               <div class="cart-troco" id="cartTroco" style="display:none;">
                 <div class="input-group" style="margin:0;">
                   <label class="input-label">Valor recebido</label>
-                  <input class="input input-money" type="number" id="valorRecebido" placeholder="R$ 0,00" min="0" step="0.01" oninput="calcularTroco()" />
+                  <input class="input input-money" type="text" id="valorRecebido" placeholder="R$ 0,00" min="0" step="0.01" oninput="calcularTroco()" />
                 </div>
                 <div class="troco-result" id="trocoResult">
                   Troco: <strong>R$ 0,00</strong>
@@ -422,19 +449,6 @@
                 <span>Finalizar Venda</span>
               </button>
 
-            </div>
-
-            <!-- Histórico rápido do dia -->
-            <div class="card pdv-historico">
-              <div class="pdv-historico-header">
-                <h3 style="font-size:0.85rem;">Vendas do dia</h3>
-                <span class="badge badge-success" id="badgeVendas">0 vendas</span>
-              </div>
-              <div class="historico-list" id="historicoList">
-                <div class="empty-state" style="padding:16px;">
-                  <p>Nenhuma venda ainda</p>
-                </div>
-              </div>
             </div>
 
           </div>
@@ -527,7 +541,7 @@
       </div>
       <div class="input-group" style="margin-top:16px;">
         <label class="input-label">Valor em caixa (contagem física)</label>
-        <input class="input input-money" type="number" id="valorFechamento" placeholder="R$ 0,00" min="0" step="0.01" oninput="calcularDiferenca()" />
+        <input class="input input-money" type="text" id="valorFechamento" placeholder="R$ 0,00" min="0" step="0.01" oninput="calcularDiferenca()" />
       </div>
       <div class="fechamento-diferenca" id="fechDiferenca"></div>
     </div>
