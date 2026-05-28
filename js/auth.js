@@ -110,13 +110,37 @@ async function verificarSessao() {
 
 async function cadastrarConta(nome, email, senha) {
   try {
+    log("Verificando e-mail antes do cadastro...");
+
+    const emailNormalizado = String(email || "").trim().toLowerCase();
+
+    const { data: usuarioExistente, error: erroUsuarioExistente } = await sb
+      .from("usuarios")
+      .select("id, email")
+      .ilike("email", emailNormalizado)
+      .maybeSingle();
+
+    if (erroUsuarioExistente) {
+      throw erroUsuarioExistente;
+    }
+
+    if (usuarioExistente) {
+      return {
+        ok: false,
+        mensagem: "Este e-mail já está cadastrado. Faça login ou recupere sua senha."
+      };
+    }
 
     log("Criando conta...");
 
+    const redirectTo =
+      `${window.location.origin}/login.html`;
+
     const { data, error } = await sb.auth.signUp({
-      email,
+      email: emailNormalizado,
       password: senha,
       options: {
+        emailRedirectTo: redirectTo,
         data: {
           nome
         }
@@ -124,28 +148,6 @@ async function cadastrarConta(nome, email, senha) {
     });
 
     if (error) throw error;
-
-    // ==========================================
-    // EMPRESA + USUÁRIO INTERNO
-    // ==========================================
-
-    if (data?.session) {
-
-      const { error: rpcError } =
-        await sb.rpc(
-          "criar_empresa_usuario",
-          {
-            p_nome: nome,
-            p_email: email
-          }
-        );
-
-      if (rpcError) throw rpcError;
-
-      // força confirmação de email
-      await sb.auth.signOut();
-
-    }
 
     return {
       ok: true,
@@ -155,7 +157,6 @@ async function cadastrarConta(nome, email, senha) {
     };
 
   } catch (err) {
-
     log(
       "Erro no cadastro: " + err.message,
       "error"
@@ -166,7 +167,6 @@ async function cadastrarConta(nome, email, senha) {
       mensagem:
         err.message || "Erro ao criar conta."
     };
-
   }
 }
 
