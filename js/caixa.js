@@ -702,7 +702,14 @@ function renderProdutosRapidos() {
       </div>
     `;
 
-    item.onclick = () => adicionarCarrinho(produto);
+    item.onclick = async () => {
+  if (modoPDV === "comanda" && comandaAtiva) {
+    await adicionarProdutoNaComanda(produto);
+    return;
+  }
+
+  await adicionarCarrinho(produto);
+};
 
     grid.appendChild(item);
   });
@@ -1004,6 +1011,20 @@ if (preco <= 0) {
     "Item manual",
     "Informe um preço válido."
   );
+  return;
+}
+
+if (modoPDV === "comanda" && comandaAtiva) {
+  await adicionarItemManualNaComanda({
+    nome,
+    preco,
+    quantidade
+  });
+
+  if (nomeInput) nomeInput.value = "";
+  if (precoInput) precoInput.value = "";
+  if (qtdInput) qtdInput.value = "1";
+
   return;
 }
 
@@ -2496,6 +2517,53 @@ async function adicionarProdutoNaComanda(produto) {
   }
 
   await carregarItensComanda();
+}
+
+async function adicionarItemManualNaComanda({
+  nome,
+  preco,
+  quantidade
+}) {
+  if (!comandaAtiva?.id) {
+    await alertaCaixa(
+      "Comanda",
+      "Nenhuma comanda ativa."
+    );
+    return;
+  }
+
+  try {
+    const empresaId = obterEmpresaId();
+
+    const total = Number(preco || 0) * Number(quantidade || 1);
+
+    const { error } = await sb
+      .from("comanda_itens")
+      .insert([
+        {
+          empresa_id: empresaId,
+          comanda_id: comandaAtiva.id,
+          produto_id: null,
+          nome: nome,
+          preco: Number(preco || 0),
+          preco_custo: 0,
+          quantidade: Number(quantidade || 1),
+          total: total
+        }
+      ]);
+
+    if (error) throw error;
+
+    await carregarItensComanda();
+
+  } catch (err) {
+    await alertaCaixa(
+      "Erro na comanda",
+      "Não foi possível adicionar o item manual na comanda."
+    );
+
+    console.error(err);
+  }
 }
 
 async function carregarItensComanda() {
