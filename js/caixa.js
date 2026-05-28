@@ -16,6 +16,9 @@ let modoPDV = "venda";
 let comandaAtiva = null;
 let caixaInicializado = false;
 let vendaEmProcessamento = false;
+let comandasCaixa = [];
+let comandasCaixaFiltradas = [];
+
 
 // ===== FORMATADORES =====
 const fmt = valor => {
@@ -277,6 +280,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAtalhos();
   setupInputs();
   setupModoPDV();
+  setupModalSelecionarComanda();
 
   caixaInicializado = true;
 
@@ -1765,18 +1769,22 @@ function setupModoPDV() {
   const btnVenda = document.getElementById("btnModoVenda");
   const btnComanda = document.getElementById("btnModoComanda");
 
-  if (btnVenda) {
-    btnVenda.onclick = () => alterarModoPDV("venda");
-  }
+if (btnVenda) {
+  btnVenda.onclick = async () => {
+    await alterarModoPDV("venda");
+  };
+}
 
-  if (btnComanda) {
-    btnComanda.onclick = () => alterarModoPDV("comanda");
-  }
+if (btnComanda) {
+  btnComanda.onclick = async () => {
+    await alterarModoPDV("comanda");
+  };
+}
 
   atualizarInterfaceModoPDV();
 }
 
-function alterarModoPDV(modo) {
+async function alterarModoPDV(modo) {
 
   modoPDV = modo;
 
@@ -1788,11 +1796,18 @@ function alterarModoPDV(modo) {
 
   if (modo === "venda") {
     btnVenda?.classList.add("active");
-  } else {
-    btnComanda?.classList.add("active");
+    comandaAtiva = null;
+    carrinho = [];
+    renderCarrinho();
+    atualizarInterfaceModoPDV();
+    return;
   }
 
+  btnComanda?.classList.add("active");
+
   atualizarInterfaceModoPDV();
+
+  await abrirModalSelecionarComanda();
 }
 
 function atualizarInterfaceModoPDV() {
@@ -1895,6 +1910,208 @@ function atualizarInterfaceModoPDV() {
     "Ler produto para adicionar na comanda...";
 
   inputBusca.focus();
+}
+
+// ======================================================
+// MODAL SELECIONAR COMANDA NO CAIXA
+// ======================================================
+
+function setupModalSelecionarComanda() {
+  const btnFechar = document.getElementById("btnFecharSelecionarComanda");
+  const inputBusca = document.getElementById("inputBuscaModalComanda");
+
+  if (btnFechar) {
+    btnFechar.onclick = fecharModalSelecionarComanda;
+  }
+
+  if (inputBusca) {
+    inputBusca.addEventListener("input", () => {
+      filtrarComandasCaixa(inputBusca.value);
+    });
+  }
+}
+
+async function abrirModalSelecionarComanda() {
+  const modal = document.getElementById("modalSelecionarComanda");
+  const inputBusca = document.getElementById("inputBuscaModalComanda");
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+
+  if (inputBusca) {
+    inputBusca.value = "";
+  }
+
+  await carregarComandasCaixa();
+  filtrarComandasCaixa("");
+
+  setTimeout(() => {
+    inputBusca?.focus();
+  }, 80);
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function fecharModalSelecionarComanda() {
+  const modal = document.getElementById("modalSelecionarComanda");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  const inputBusca = document.getElementById("inputBusca");
+
+  if (inputBusca) {
+    inputBusca.focus();
+  }
+}
+
+async function carregarComandasCaixa() {
+  const lista = document.getElementById("listaComandasCaixa");
+
+  if (lista) {
+    lista.innerHTML = `
+      <div class="empty-state">
+        <p>Carregando comandas...</p>
+      </div>
+    `;
+  }
+
+  try {
+    const { data, error } = await sb
+      .from("comandas")
+      .select("*")
+      .eq("empresa_id", obterEmpresaId())
+      .in("status", ["livre", "aberta"])
+      .order("codigo", { ascending: true });
+
+    if (error) throw error;
+
+    comandasCaixa = Array.isArray(data) ? data : [];
+
+  } catch (err) {
+    comandasCaixa = [];
+
+    await alertaCaixa(
+      "Erro ao carregar comandas",
+      "Não foi possível carregar as comandas disponíveis."
+    );
+
+    console.error(err);
+  }
+}
+
+function filtrarComandasCaixa(termoBusca) {
+  const termo = String(termoBusca || "").toLowerCase().trim();
+
+  comandasCaixaFiltradas = comandasCaixa.filter(comanda => {
+    const codigo = String(comanda.codigo || "").toLowerCase();
+    const nome = String(comanda.nome_cliente || "").toLowerCase();
+    const obs = String(comanda.observacoes || "").toLowerCase();
+
+    return (
+      !termo ||
+      codigo.includes(termo) ||
+      nome.includes(termo) ||
+      obs.includes(termo)
+    );
+  });
+
+  renderComandasCaixa();
+}
+
+function renderComandasCaixa() {
+  const lista = document.getElementById("listaComandasCaixa");
+
+  if (!lista) return;
+
+  if (!comandasCaixaFiltradas.length) {
+    lista.innerHTML = `
+      <div class="empty-state">
+        <i data-lucide="ticket" width="28" height="28"></i>
+        <p>Nenhuma comanda livre ou aberta encontrada.</p>
+      </div>
+    `;
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    return;
+  }
+
+  lista.innerHTML = "";
+
+  comandasCaixaFiltradas.forEach(comanda => {
+    const btn = document.createElement("button");
+
+    btn.className = "comanda-caixa-item";
+    btn.type = "button";
+
+    btn.innerHTML = `
+      <div>
+        <strong class="comanda-caixa-codigo">
+          ${comanda.codigo || "—"}
+        </strong>
+
+        <span class="comanda-caixa-cliente">
+          ${comanda.nome_cliente || "Sem identificação"}
+        </span>
+      </div>
+
+      <span class="comanda-caixa-status ${comanda.status || "livre"}">
+        ${comanda.status || "livre"}
+      </span>
+    `;
+
+    btn.onclick = () => selecionarComandaCaixa(comanda);
+
+    lista.appendChild(btn);
+  });
+}
+
+async function selecionarComandaCaixa(comanda) {
+  if (!comanda?.id) return;
+
+  try {
+    let comandaOperacional = comanda;
+
+    if (comanda.status === "livre") {
+      const { data, error } = await sb
+        .from("comandas")
+        .update({
+          status: "aberta",
+          data_abertura: new Date().toISOString()
+        })
+        .eq("id", comanda.id)
+        .eq("empresa_id", obterEmpresaId())
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      comandaOperacional = data;
+    }
+
+    comandaAtiva = comandaOperacional;
+
+    await carregarItensComanda();
+
+    fecharModalSelecionarComanda();
+
+    atualizarInterfaceModoPDV();
+
+  } catch (err) {
+    await alertaCaixa(
+      "Erro ao abrir comanda",
+      "Não foi possível abrir esta comanda no caixa."
+    );
+
+    console.error(err);
+  }
 }
 
 // ======================================================

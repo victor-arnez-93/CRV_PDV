@@ -162,7 +162,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ======================================================
 // EVENTOS
 // ======================================================
-
 function setupEventosComandas() {
   const btnNova = document.getElementById("btnNovaComanda");
   const btnGerarLote = document.getElementById("btnGerarLote");
@@ -221,6 +220,12 @@ function setupEventosComandas() {
 
   if (btnConfirmarLote) {
     btnConfirmarLote.onclick = gerarLoteComandas;
+  }
+
+  const btnFecharDetalhe = document.getElementById("btnFecharDetalheComanda");
+
+  if (btnFecharDetalhe) {
+    btnFecharDetalhe.onclick = fecharDetalheComanda;
   }
 
   if (inputBusca) {
@@ -292,7 +297,6 @@ function abrirConfirmacaoComanda({
 // ======================================================
 // SUPABASE
 // ======================================================
-
 async function carregarComandas() {
   try {
     const empresaId = obterEmpresaIdComandas();
@@ -324,7 +328,6 @@ async function carregarComandas() {
 // ======================================================
 // FILTROS
 // ======================================================
-
 function aplicarFiltrosComandas() {
   const termo = String(
     document.getElementById("inputBuscaComanda")?.value || ""
@@ -354,13 +357,13 @@ function aplicarFiltrosComandas() {
   });
 
   renderCardsComandas();
+  renderComandasAbertas();
   renderTabelaComandas();
 }
 
 // ======================================================
 // RENDER CARDS
 // ======================================================
-
 function renderCardsComandas() {
   const total = comandas.length;
 
@@ -380,6 +383,72 @@ function renderCardsComandas() {
   if (cardLivres) cardLivres.textContent = livres;
   if (cardAbertas) cardAbertas.textContent = abertas;
   if (cardTotalAberto) cardTotalAberto.textContent = fmt(totalAberto);
+}
+
+// ======================================================
+// RENDER COMANDAS ABERTAS
+// ======================================================
+
+function renderComandasAbertas() {
+  const lista = document.getElementById("listaComandasAbertas");
+  const totalEl = document.getElementById("totalComandasAbertasLista");
+
+  if (!lista) return;
+
+  const abertas = comandas.filter(comanda => {
+    return String(comanda.status || "").toLowerCase() === "aberta";
+  });
+
+  if (totalEl) {
+    totalEl.textContent = `${abertas.length} abertas`;
+  }
+
+  if (!abertas.length) {
+    lista.innerHTML = `
+      <div class="empty-state" style="min-width:220px;padding:18px;">
+        <i data-lucide="ticket" width="28" height="28"></i>
+        <p>Nenhuma comanda aberta no momento.</p>
+      </div>
+    `;
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    return;
+  }
+
+  lista.innerHTML = "";
+
+  abertas.forEach(comanda => {
+    const item = document.createElement("div");
+
+    item.className = "comanda-aberta-item";
+
+    item.innerHTML = `
+      <div class="comanda-aberta-top">
+        <strong class="comanda-aberta-codigo">
+          ${comanda.codigo || "—"}
+        </strong>
+
+        <span class="comanda-aberta-status">
+          aberta
+        </span>
+      </div>
+
+      <div class="comanda-aberta-cliente">
+        ${comanda.nome_cliente || "Sem identificação"}
+      </div>
+
+      <div class="comanda-aberta-total">
+        ${fmt(comanda.total || 0)}
+      </div>
+    `;
+
+    item.onclick = () => abrirDetalheComanda(comanda.id);
+
+    lista.appendChild(item);
+  });
 }
 
 // ======================================================
@@ -572,6 +641,145 @@ function fecharModalComanda() {
   if (modal) {
     modal.style.display = "none";
   }
+}
+
+// ======================================================
+// MODAL DETALHE OPERACIONAL
+// ======================================================
+
+async function abrirDetalheComanda(id) {
+  const comanda = comandas.find(c => c.id === id);
+
+  if (!comanda) {
+    alert("Comanda não encontrada.");
+    return;
+  }
+
+  const modal = document.getElementById("modalDetalheComanda");
+  const titulo = document.getElementById("detalheComandaTitulo");
+  const subtitulo = document.getElementById("detalheComandaSubtitulo");
+  const status = document.getElementById("detalheComandaStatus");
+  const total = document.getElementById("detalheComandaTotal");
+  const abertura = document.getElementById("detalheComandaAbertura");
+  const itensBox = document.getElementById("detalheComandaItens");
+  const btnCaixa = document.getElementById("btnAbrirComandaCaixa");
+  const btnFechar = document.getElementById("btnFecharComandaDetalhe");
+
+  if (titulo) titulo.textContent = `Comanda ${comanda.codigo || "—"}`;
+  if (subtitulo) subtitulo.textContent = comanda.nome_cliente || "Sem identificação";
+  if (status) status.textContent = comanda.status || "—";
+  if (total) total.textContent = fmt(comanda.total || 0);
+  if (abertura) abertura.textContent = formatarDataHoraBrasil(comanda.data_abertura);
+
+  if (itensBox) {
+    itensBox.innerHTML = `
+      <div class="empty-state">
+        <p>Carregando itens...</p>
+      </div>
+    `;
+  }
+
+  if (btnCaixa) {
+    btnCaixa.onclick = () => abrirComandaNoCaixa(comanda);
+  }
+
+  if (btnFechar) {
+    btnFechar.onclick = () => {
+      localStorage.setItem("crv_comanda_abrir_codigo", comanda.codigo || "");
+      window.location.href = "caixa.html";
+    };
+  }
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+
+  await carregarItensDetalheComanda(comanda);
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function fecharDetalheComanda() {
+  const modal = document.getElementById("modalDetalheComanda");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+async function carregarItensDetalheComanda(comanda) {
+  const itensBox = document.getElementById("detalheComandaItens");
+
+  if (!itensBox || !comanda?.id) return;
+
+  try {
+    const { data, error } = await sb
+      .from("comanda_itens")
+      .select("*")
+      .eq("empresa_id", obterEmpresaIdComandas())
+      .eq("comanda_id", comanda.id)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const itens = Array.isArray(data) ? data : [];
+
+    if (!itens.length) {
+      itensBox.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="shopping-cart" width="28" height="28"></i>
+          <p>Nenhum item lançado nesta comanda.</p>
+        </div>
+      `;
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      return;
+    }
+
+    itensBox.innerHTML = "";
+
+    itens.forEach(item => {
+      const linha = document.createElement("div");
+
+      const quantidade = Number(item.quantidade || 0);
+      const preco = Number(item.preco || 0);
+      const total = Number(item.total || quantidade * preco);
+
+      linha.className = "detalhe-comanda-item";
+
+      linha.innerHTML = `
+        <div>
+          <strong>${item.nome || "Item"}</strong>
+          <small>${quantidade}x ${fmt(preco)}</small>
+        </div>
+
+        <span>${fmt(total)}</span>
+      `;
+
+      itensBox.appendChild(linha);
+    });
+
+  } catch (err) {
+    itensBox.innerHTML = `
+      <div class="empty-state">
+        <p>Erro ao carregar itens da comanda.</p>
+      </div>
+    `;
+
+    console.error(err);
+  }
+}
+
+function abrirComandaNoCaixa(comanda) {
+  if (!comanda?.codigo) return;
+
+  localStorage.setItem("crv_comanda_abrir_codigo", comanda.codigo);
+  window.location.href = "caixa.html";
 }
 
 async function salvarComanda() {

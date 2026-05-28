@@ -445,6 +445,47 @@
   </div>
 </div>
 
+<!-- MODAL SELECIONAR COMANDA -->
+<div class="modal-overlay" id="modalSelecionarComanda" style="display:none;">
+  <div class="modal card modal-comandas-caixa">
+
+    <div class="modal-header">
+      <div>
+        <h3>Selecionar Comanda</h3>
+        <p class="modal-subtitle">
+          Escolha uma comanda livre ou aberta para operar no caixa.
+        </p>
+      </div>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharSelecionarComanda">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="pdv-search-wrap modal-comanda-search">
+        <i data-lucide="search" class="pdv-search-icon" width="17" height="17"></i>
+        <input
+          class="input pdv-search"
+          type="text"
+          id="inputBuscaModalComanda"
+          placeholder="Pesquisar comanda..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="lista-comandas-caixa" id="listaComandasCaixa">
+        <div class="empty-state">
+          <p>Carregando comandas...</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
 <!-- MODAL: Confirmar fechamento -->
 <div class="modal-overlay" id="modalFechamento" style="display:none;">
   <div class="modal card">

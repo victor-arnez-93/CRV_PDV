@@ -206,6 +206,27 @@
 
       </div>
 
+      <!-- COMANDAS ABERTAS -->
+<section class="card comandas-abertas-card">
+
+  <div class="comandas-abertas-header">
+    <div>
+      <h3>Comandas abertas agora</h3>
+      <p>Acompanhe o consumo ativo antes do fechamento no caixa.</p>
+    </div>
+
+    <span id="totalComandasAbertasLista">0 abertas</span>
+  </div>
+
+  <div class="comandas-abertas-lista" id="listaComandasAbertas">
+    <div class="empty-state">
+      <i data-lucide="ticket" width="28" height="28"></i>
+      <p>Nenhuma comanda aberta no momento.</p>
+    </div>
+  </div>
+
+</section>
+
       <!-- FILTROS -->
       <div class="card comandas-toolbar">
 
@@ -419,6 +440,63 @@
       <button class="btn-secondary" id="btnConfirmarLote">
         <i data-lucide="copy-plus" width="15" height="15"></i>
         <span>Gerar Comandas</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL DETALHES DA COMANDA -->
+<div class="modal-overlay" id="modalDetalheComanda" style="display:none;">
+  <div class="modal card detalhe-comanda-modal">
+
+    <div class="modal-header">
+      <div>
+        <h3 id="detalheComandaTitulo">Comanda</h3>
+        <p class="modal-subtitle" id="detalheComandaSubtitulo">
+          Detalhes do consumo atual
+        </p>
+      </div>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharDetalheComanda">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="detalhe-comanda-resumo">
+        <div>
+          <span>Status</span>
+          <strong id="detalheComandaStatus">—</strong>
+        </div>
+
+        <div>
+          <span>Total</span>
+          <strong id="detalheComandaTotal">R$ 0,00</strong>
+        </div>
+
+        <div>
+          <span>Abertura</span>
+          <strong id="detalheComandaAbertura">—</strong>
+        </div>
+      </div>
+
+      <div class="detalhe-comanda-itens" id="detalheComandaItens">
+        <div class="empty-state">
+          <p>Carregando itens...</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnAbrirComandaCaixa">
+        Abrir no Caixa
+      </button>
+
+      <button class="btn-secondary" id="btnFecharComandaDetalhe">
+        Fechar Comanda
       </button>
     </div>
 

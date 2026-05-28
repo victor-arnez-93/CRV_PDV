@@ -660,6 +660,89 @@
   font-size: 0.9rem;
 }
 
+/* ===== MODAL SELECIONAR COMANDA ===== */
+
+.modal-comandas-caixa {
+  max-width: 560px;
+}
+
+.modal-subtitle {
+  margin-top: 4px;
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+.modal-comanda-search {
+  margin-bottom: 10px;
+}
+
+.lista-comandas-caixa {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.comanda-caixa-item {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.comanda-caixa-item:hover {
+  border-color: var(--crv-orange);
+  background: var(--bg-hover);
+}
+
+.comanda-caixa-codigo {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.comanda-caixa-cliente {
+  display: block;
+  margin-top: 3px;
+  font-size: .76rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comanda-caixa-status {
+  align-self: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.comanda-caixa-status.livre {
+  color: #54CD16;
+  background: rgba(84,205,22,.12);
+  border: 1px solid rgba(84,205,22,.25);
+}
+
+.comanda-caixa-status.aberta {
+  color: var(--crv-orange);
+  background: rgba(249,137,72,.12);
+  border: 1px solid rgba(249,137,72,.28);
+}
+
 /* ===== MODAIS ===== */
 .modal-overlay {
   position: fixed;
