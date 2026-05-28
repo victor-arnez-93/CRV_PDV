@@ -1253,6 +1253,20 @@
     gap: 12px;
   }
 
+.pdv-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.pdv-right {
+  order: 1;
+}
+
+.pdv-section-divider,
+.pdv-atividade {
+  order: 2;
+}
+
   /* --- MODO SWITCH --- */
 
 .pdv-mode-switch {
