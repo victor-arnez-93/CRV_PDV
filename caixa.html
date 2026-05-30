@@ -192,7 +192,6 @@
 <!-- ========================================= -->
 <!-- MODO VENDA / COMANDA -->
 <!-- ========================================= -->
-
 <div class="pdv-mode-switch">
 
   <button
@@ -213,6 +212,17 @@
   >
     <i data-lucide="ticket" width="16" height="16"></i>
     <span>Comanda</span>
+  </button>
+
+  <button
+    class="pdv-mode-btn pdv-mode-jogos"
+    id="btnModoJogos"
+    data-mode="jogos"
+    type="button"
+    style="display:none;"
+  >
+    <i data-lucide="calendar-check" width="16" height="16"></i>
+    <span>Jogos</span>
   </button>
 
 </div>
@@ -306,7 +316,7 @@
             <div class="pdv-manual card">
               <h3 style="font-size:0.85rem;margin-bottom:12px;color:var(--text-muted);">
                 <i data-lucide="pencil" width="13" height="13"></i>
-                Adicionar item manual
+                ADICIONAR VENDA MANUAL
               </h3>
 
               <div class="pdv-manual-row">
@@ -495,6 +505,99 @@
         </div>
       </div>
 
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL SELECIONAR JOGO -->
+<div class="modal-overlay" id="modalSelecionarJogo" style="display:none;">
+  <div class="modal card modal-jogos-caixa">
+
+    <div class="modal-header">
+      <div>
+        <h3>Selecionar Jogo</h3>
+        <p class="modal-subtitle">
+          Pesquise jogos futuros, em andamento ou aguardando cobrança.
+        </p>
+      </div>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharSelecionarJogo">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="pdv-search-wrap modal-jogo-search">
+        <i data-lucide="search" class="pdv-search-icon" width="17" height="17"></i>
+        <input
+          class="input pdv-search"
+          type="text"
+          id="inputBuscaModalJogo"
+          placeholder="Pesquisar responsável, jogador ou quadra..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="jogos-caixa-filtros">
+        <button class="jogo-filtro-btn active" type="button" data-status="todos">Todos</button>
+        <button class="jogo-filtro-btn" type="button" data-status="agendado">Futuros</button>
+        <button class="jogo-filtro-btn" type="button" data-status="andamento">Andamento</button>
+        <button class="jogo-filtro-btn" type="button" data-status="cobranca">Cobrança</button>
+        <button class="jogo-filtro-btn" type="button" data-status="fechado">Fechados</button>
+      </div>
+
+      <div class="lista-jogos-caixa" id="listaJogosCaixa">
+        <div class="empty-state">
+          <p>Carregando jogos...</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL FINALIZAR JOGO NO CAIXA -->
+<div class="modal-overlay" id="modalFinalizarJogoCaixa" style="display:none;">
+  <div class="modal card modal-finalizar-jogo-caixa">
+
+    <div class="modal-header">
+      <div>
+        <h3 id="finalizarJogoTitulo">Finalizar jogo</h3>
+        <p class="modal-subtitle" id="finalizarJogoSubtitulo">
+          Marque os jogadores pagos e confirme a cobrança.
+        </p>
+      </div>
+
+      <button class="btn-ghost" style="padding:6px;" id="btnFecharFinalizarJogo">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="jogo-caixa-resumo" id="jogoCaixaResumo"></div>
+
+      <div class="jogo-caixa-jogadores" id="jogoCaixaJogadores"></div>
+
+      <div class="jogo-caixa-totalizador">
+        <span>Total selecionado</span>
+        <strong id="jogoCaixaTotalSelecionado">R$ 0,00</strong>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnCancelarFinalizarJogo">
+        Cancelar
+      </button>
+
+      <button class="btn-secondary" id="btnConfirmarFinalizarJogo">
+        <i data-lucide="check-circle" width="15" height="15"></i>
+        <span>Confirmar pagamento</span>
+      </button>
     </div>
 
   </div>

@@ -16,6 +16,7 @@ let vendasData = [];
 let itensData = [];
 let caixasHistorico = [];
 let agendaFechadaData = [];
+let nomeFantasiaRelatorio = "empresa";
 
 const TIPOS_COM_AGENDA_ESPORTIVA = [
   "arena",
@@ -147,6 +148,7 @@ async function carregarDados() {
     let vendas = [];
     let itens = [];
     let caixas = [];
+    let empresa = null;
 
     if (
       window.APP_STATUS?.online &&
@@ -176,6 +178,16 @@ async function carregarDados() {
         .order("data_abertura", { ascending: false });
 
       if (erroCaixas) throw erroCaixas;
+
+            const { data: empresaSupabase, error: erroEmpresa } = await sb
+        .from("empresas")
+        .select("nome_fantasia,nome")
+        .eq("id", empresaId)
+        .maybeSingle();
+
+      if (erroEmpresa) throw erroEmpresa;
+
+      empresa = empresaSupabase || null;
 
       vendas = Array.isArray(vendasSupabase)
         ? vendasSupabase
@@ -238,6 +250,14 @@ async function carregarDados() {
 
     agendaFechadaData = [];
 
+    nomeFantasiaRelatorio =
+      limparNomeArquivo(
+        empresa?.nome_fantasia ||
+        empresa?.nome ||
+        window.CRV_CONFIG?.empresa?.nome_fantasia ||
+        "empresa"
+      );
+
   } catch (err) {
     console.error(err);
 
@@ -275,6 +295,12 @@ function aplicarPeriodo() {
   periodoAtivo = "custom";
   document.querySelectorAll(".periodo-btn").forEach(b => b.classList.remove("active"));
   renderRelatorio();
+}
+
+function getPeriodoDetalhado() {
+  const { inicio, fim } = getIntervaloPeriodo();
+
+  return `${inicio.toLocaleDateString("pt-BR")} a ${fim.toLocaleDateString("pt-BR")}`;
 }
 
 function getPeriodoLabel() {
@@ -360,6 +386,7 @@ function renderRelatorio() {
   renderGraficoPagamentos(vendas);
   renderTopProdutos(vendas);
   renderTopProdutosLucro(vendas);
+  renderRecebimentosJogos(vendas);
   renderHistoricoCaixas();
 }
 
@@ -458,12 +485,26 @@ function renderGraficoPagamentos(vendas) {
 // ======================================================
 // TOP PRODUTOS
 // ======================================================
+function itemEhPagamentoJogo(item) {
+  const nome = String(item.nome || "").toLowerCase().trim();
+
+  return (
+    nome.startsWith("pagamento de jogo") ||
+    nome.includes("jogo -") ||
+    nome.includes("jogo avulso") ||
+    nome.includes("jogo mensal")
+  );
+}
 
 function montarRankingProdutos(vendas) {
   const mapa = {};
 
   vendas.forEach(venda => {
     (venda.itens || []).forEach(item => {
+      if (itemEhPagamentoJogo(item)) {
+        return;
+      }
+
       const nome = item.nome || "Produto";
 
       if (!mapa[nome]) {
@@ -487,7 +528,7 @@ function montarRankingProdutos(vendas) {
 function renderTopProdutos(vendas) {
   const lista = montarRankingProdutos(vendas)
     .sort((a, b) => b.qtd - a.qtd)
-    .slice(0, 8);
+    .slice(0, 5);
 
   const container = document.getElementById("topProdutos");
   const badge = document.getElementById("badgeTopQtd");
@@ -521,7 +562,7 @@ function renderTopProdutos(vendas) {
 function renderTopProdutosLucro(vendas) {
   const lista = montarRankingProdutos(vendas)
     .sort((a, b) => b.lucro - a.lucro)
-    .slice(0, 8);
+    .slice(0, 5);
 
   const container = document.getElementById("topProdutosLucro");
   const badge = document.getElementById("badgeTopLucro");
@@ -548,6 +589,63 @@ function renderTopProdutosLucro(vendas) {
         <div class="top-bar" style="width:${((p.lucro / max) * 100).toFixed(1)}%"></div>
       </div>
       <span class="top-produto-lucro">${fmt(p.lucro)}</span>
+    </div>
+  `).join("");
+}
+
+function renderRecebimentosJogos(vendas) {
+  const card = document.getElementById("cardRelatorioJogos");
+  const lista = document.getElementById("listaJogosRelatorio");
+  const badge = document.getElementById("badgeJogosQtd");
+
+  if (!card || !lista) return;
+
+  const mapaJogos = {};
+
+  vendas.forEach(venda => {
+    if (String(venda.origem || "").toLowerCase() !== "agenda") return;
+
+    const chave = venda.origem_id || venda.id;
+    const descricao = venda.descricao || "Jogo";
+
+    if (!mapaJogos[chave]) {
+      mapaJogos[chave] = {
+        descricao,
+        forma: venda.forma_pagamento || "—",
+        data: venda.data,
+        total: 0
+      };
+    }
+
+    mapaJogos[chave].total += Number(venda.total || 0);
+  });
+
+  const jogos = Object.values(mapaJogos);
+
+  if (badge) {
+    badge.textContent = `${jogos.length} jogo(s)`;
+  }
+
+  if (!jogos.length) {
+    card.style.display = "none";
+    lista.innerHTML = "";
+    return;
+  }
+
+  card.style.display = "block";
+
+  lista.innerHTML = jogos.map(item => `
+    <div class="jogo-relatorio-item">
+      <div>
+        <strong>${item.descricao}</strong>
+        <small>
+          ${new Date(item.data).toLocaleDateString("pt-BR")}
+          ·
+          ${String(item.forma).toUpperCase()}
+        </small>
+      </div>
+
+      <span>${fmt(item.total)}</span>
     </div>
   `).join("");
 }
@@ -610,10 +708,52 @@ function formatarHora(data) {
   });
 }
 
+function limparNomeArquivo(texto) {
+  return String(texto || "empresa")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function obterResponsavelJogoRelatorio(venda) {
+  const descricao = String(venda.descricao || "").trim();
+
+  if (descricao.includes(" - ")) {
+    const partes = descricao.split(" - ");
+    return partes[partes.length - 1] || "Responsável";
+  }
+
+  return descricao || "Responsável";
+}
+
+function montarRecebimentosJogosAgrupados(vendas) {
+  const mapa = {};
+
+  vendas.forEach(venda => {
+    if (String(venda.origem || "").toLowerCase() !== "agenda") return;
+
+    const chave = venda.origem_id || venda.id;
+
+    if (!mapa[chave]) {
+      mapa[chave] = {
+        responsavel: obterResponsavelJogoRelatorio(venda),
+        data: venda.data,
+        forma: venda.forma_pagamento || "—",
+        total: 0
+      };
+    }
+
+    mapa[chave].total += Number(venda.total || 0);
+  });
+
+  return Object.values(mapa);
+}
+
 // ======================================================
 // EXPORTAR EXCEL COMPATÍVEL
 // ======================================================
-
 function exportarCSV() {
   const vendas = getVendasFiltradas();
 
@@ -624,7 +764,7 @@ function exportarCSV() {
 
   const linhas = [
     ["RELATÓRIO FINANCEIRO - CRV PDV"],
-    [`Período: ${getPeriodoLabel()}`],
+    [`Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
     [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
     [],
     ["Data", "Hora", "Pagamento", "Subtotal", "Desconto", "Total", "Lucro bruto", "Margem"]
@@ -652,7 +792,11 @@ function exportarCSV() {
   linhas.push(["Produto", "Quantidade", "Preço venda", "Custo", "Total vendido", "Lucro"]);
 
   vendas.forEach(v => {
+    if (String(v.origem || "").toLowerCase() === "agenda") return;
+
     (v.itens || []).forEach(item => {
+      if (itemEhPagamentoJogo(item)) return;
+
       linhas.push([
         item.nome,
         item.quantidade,
@@ -664,6 +808,23 @@ function exportarCSV() {
     });
   });
 
+  const jogosAgrupados = montarRecebimentosJogosAgrupados(vendas);
+
+  if (jogosAgrupados.length) {
+    linhas.push([]);
+    linhas.push(["RECEBIMENTOS DE JOGOS"]);
+    linhas.push(["Data", "Responsável", "Pagamento", "Total"]);
+
+    jogosAgrupados.forEach(jogo => {
+      linhas.push([
+        new Date(jogo.data).toLocaleDateString("pt-BR"),
+        jogo.responsavel,
+        jogo.forma,
+        numeroExcel(jogo.total)
+      ]);
+    });
+  }
+
   const csv = linhas
     .map(linha => linha.map(campo => `"${String(campo ?? "").replace(/"/g, '""')}"`).join(";"))
     .join("\n");
@@ -674,7 +835,7 @@ function exportarCSV() {
 
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `relatorio_crv_pdv_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `relatorio_financeiro_${nomeFantasiaRelatorio}_crv_pdv_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
 }
 
@@ -707,6 +868,9 @@ function exportarPDF() {
   const rankingLucro = montarRankingProdutos(vendas)
     .sort((a, b) => b.lucro - a.lucro)
     .slice(0, 10);
+
+  const recebimentosJogos =
+    montarRecebimentosJogosAgrupados(vendas);
 
   const html = `
     <html>
@@ -849,7 +1013,7 @@ function exportarPDF() {
       <h1>Relatório Financeiro</h1>
 
       <div class="subtitulo">
-        Período: ${getPeriodoLabel()} • Gerado em ${new Date().toLocaleString("pt-BR")}
+        Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()}) • Gerado em ${new Date().toLocaleString("pt-BR")}
       </div>
 
       <h2>Resumo do período</h2>
@@ -956,6 +1120,35 @@ function exportarPDF() {
           `).join("")}
         </tbody>
       </table>
+
+      ${
+        recebimentosJogos.length
+          ? `
+            <h2>Recebimentos de jogos</h2>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Responsável</th>
+                  <th>Data</th>
+                  <th>Pagamento</th>
+                  <th class="right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recebimentosJogos.map(item => `
+                  <tr>
+                    <td>${item.responsavel}</td>
+                    <td>${new Date(item.data).toLocaleDateString("pt-BR")}</td>
+                    <td>${item.forma}</td>
+                    <td class="right">${fmt(item.total)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          `
+          : ""
+      }
 
       <div class="footer">
         CRV PDV • Relatório gerado automaticamente pelo sistema

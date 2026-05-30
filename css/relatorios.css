@@ -237,6 +237,66 @@
   text-align: right;
 }
 
+/* ===== RECEBIMENTOS DE JOGOS ===== */
+
+.relatorio-jogos {
+  margin-bottom: 20px;
+}
+
+.jogo-relatorio-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.jogo-relatorio-item:last-child {
+  border-bottom: none;
+}
+
+.jogo-relatorio-item strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: .9rem;
+}
+
+.jogo-relatorio-item small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: .74rem;
+}
+
+.jogo-relatorio-item span {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--crv-green);
+  white-space: nowrap;
+}
+
+/* ===== LIMITE VISUAL TOP PRODUTOS ===== */
+
+#topProdutos,
+#topProdutosLucro {
+  max-height: 330px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+#topProdutos::-webkit-scrollbar,
+#topProdutosLucro::-webkit-scrollbar {
+  width: 5px;
+}
+
+#topProdutos::-webkit-scrollbar-thumb,
+#topProdutosLucro::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
 /* ===== HISTÓRICO CAIXAS ===== */
 .relatorio-caixas { margin-bottom: 20px; }
 

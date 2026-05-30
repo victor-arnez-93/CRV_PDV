@@ -855,6 +855,314 @@
   border: 1px solid rgba(249,137,72,.28);
 }
 
+/* ===== MODAL COMANDAS EM GRADE ===== */
+
+.modal-comandas-caixa {
+  max-width: 760px;
+}
+
+.lista-comandas-caixa {
+  max-height: 430px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.comanda-caixa-item {
+  min-height: 116px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.comanda-caixa-codigo {
+  font-size: 1.35rem;
+}
+
+.comanda-caixa-cliente {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.comanda-caixa-total {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: .92rem;
+  font-weight: 800;
+  color: var(--crv-green);
+}
+
+/* ===== MODAL JOGOS NO CAIXA ===== */
+
+.modal-jogos-caixa,
+.modal-finalizar-jogo-caixa {
+  max-width: 820px;
+}
+
+.modal-jogo-search {
+  margin-bottom: 10px;
+}
+
+.jogos-caixa-filtros {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.jogo-filtro-btn {
+  all: unset;
+  cursor: pointer;
+
+  padding: 8px 12px;
+  border-radius: 999px;
+
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+
+  transition: all var(--transition);
+}
+
+.jogo-filtro-btn:hover,
+.jogo-filtro-btn.active {
+  border-color: var(--crv-orange);
+  color: var(--crv-orange);
+  background: rgba(249,137,72,.08);
+}
+
+.lista-jogos-caixa {
+  max-height: 430px;
+  overflow-y: auto;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+
+  padding-right: 4px;
+}
+
+.jogo-caixa-item {
+  all: unset;
+  box-sizing: border-box;
+
+  min-height: 146px;
+  padding: 14px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.jogo-caixa-item:hover {
+  border-color: var(--crv-orange);
+  background: var(--bg-hover);
+  transform: translateY(-1px);
+}
+
+.jogo-caixa-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.jogo-caixa-horario {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.jogo-caixa-status {
+  padding: 5px 8px;
+  border-radius: 999px;
+
+  font-size: .62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.jogo-caixa-status.agendado {
+  color: var(--crv-cyan);
+  background: rgba(0,212,255,.12);
+  border: 1px solid rgba(0,212,255,.25);
+}
+
+.jogo-caixa-status.andamento {
+  color: var(--crv-green);
+  background: rgba(84,205,22,.12);
+  border: 1px solid rgba(84,205,22,.25);
+}
+
+.jogo-caixa-status.cobranca {
+  color: #ffd56a;
+  background: rgba(255,193,7,.12);
+  border: 1px solid rgba(255,193,7,.32);
+}
+
+.jogo-caixa-status.fechado {
+  color: var(--text-muted);
+  background: rgba(120,130,150,.14);
+  border: 1px solid var(--border);
+}
+
+.jogo-caixa-local {
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+
+.jogo-caixa-responsavel {
+  font-weight: 800;
+  color: var(--text-primary);
+  font-size: .9rem;
+}
+
+.jogo-caixa-valores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.jogo-caixa-valores div {
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.jogo-caixa-valores span {
+  display: block;
+  color: var(--text-muted);
+  font-size: .64rem;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.jogo-caixa-valores strong {
+  font-family: var(--font-display);
+  font-size: .86rem;
+}
+
+.jogo-caixa-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.jogo-caixa-resumo div {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.jogo-caixa-resumo span {
+  display: block;
+  font-size: .66rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.jogo-caixa-resumo strong {
+  font-family: var(--font-display);
+  color: var(--text-primary);
+}
+
+.jogo-caixa-jogadores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.jogo-caixa-jogador-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 110px 130px;
+  gap: 8px;
+  align-items: center;
+
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.jogo-caixa-jogador-row.pago {
+  opacity: .65;
+}
+
+.jogo-caixa-jogador-row input[type="checkbox"] {
+  accent-color: var(--crv-orange);
+}
+
+.jogo-caixa-jogador-nome {
+  min-width: 0;
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jogo-caixa-jogador-valor {
+  font-family: var(--font-display);
+  color: var(--crv-green);
+  font-weight: 800;
+  font-size: .86rem;
+}
+
+.jogo-caixa-jogador-row select {
+  height: 38px;
+  font-size: .78rem;
+}
+
+.jogo-caixa-totalizador {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(84,205,22,.25);
+  background: rgba(84,205,22,.08);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.jogo-caixa-totalizador span {
+  color: var(--text-muted);
+  font-size: .76rem;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.jogo-caixa-totalizador strong {
+  font-family: var(--font-display);
+  color: var(--crv-green);
+  font-size: 1.1rem;
+}
+
 /* ===== MODAIS ===== */
 .modal-overlay {
   position: fixed;
@@ -1639,6 +1947,47 @@
     font-size: .82rem;
     white-space: nowrap;
     flex-shrink: 0;
+  }
+
+  .lista-comandas-caixa,
+  .lista-jogos-caixa {
+    grid-template-columns: 1fr 1fr;
+    max-height: 58dvh;
+    gap: 8px;
+  }
+
+  .comanda-caixa-item,
+  .jogo-caixa-item {
+    min-height: 104px;
+    padding: 11px;
+  }
+
+  .comanda-caixa-codigo {
+    font-size: 1.05rem;
+  }
+
+  .jogo-caixa-resumo {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .jogo-caixa-jogador-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .jogo-caixa-jogador-valor,
+  .jogo-caixa-jogador-row select {
+    grid-column: 2;
+  }
+
+  .jogo-caixa-jogador-row select {
+    width: 100%;
+  }
+
+  .jogo-caixa-totalizador {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   /* --- MODAIS --- */
