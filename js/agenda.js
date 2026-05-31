@@ -458,36 +458,62 @@ function agruparJogadores(lista) {
 function verificarAvisosFimDeJogo() {
   const agora = new Date();
   const hoje = hojeISOAgenda();
+  const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
 
   agendaDados.forEach(jogo => {
     if (String(jogo.data_agendamento || "").slice(0, 10) !== hoje) return;
-    if (jogo.status_jogo === "cancelado" || jogo.status_jogo === "fechado") return;
+    if (jogo.status_jogo === "cancelado") return;
 
+    const inicioMinutos = horaParaMinutos(jogo.hora_inicio);
     const fimMinutos = horaParaMinutos(jogo.hora_fim);
-    if (!fimMinutos) return;
 
-    const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
+    if (!inicioMinutos || !fimMinutos) return;
+
+    if (minutosAgora >= inicioMinutos && minutosAgora <= inicioMinutos + 1) {
+      const chave = `${jogo.id}-inicio`;
+
+      if (!avisosJogosEmitidos.has(chave)) {
+        avisosJogosEmitidos.add(chave);
+
+        crvToast({
+          titulo: "Jogo iniciado",
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} começou agora.`,
+          tipo: "info",
+          tempo: 8000
+        });
+      }
+    }
+
     const faltam = fimMinutos - minutosAgora;
 
-    if (faltam > 0 && faltam <= 5) {
+    if (faltam > 0 && faltam <= 5 && jogo.status_jogo !== "fechado") {
       const chave = `${jogo.id}-fim-5min`;
 
-      if (avisosJogosEmitidos.has(chave)) return;
+      if (!avisosJogosEmitidos.has(chave)) {
+        avisosJogosEmitidos.add(chave);
 
-      avisosJogosEmitidos.add(chave);
+        crvToast({
+          titulo: "Jogo quase finalizando",
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} termina em ${faltam} minuto(s).`,
+          tipo: "warn",
+          tempo: 8000
+        });
+      }
+    }
 
-      crvToast({
-        titulo: "Jogo quase finalizando",
-        mensagem: `${jogo.local_recurso || "Quadra/Campo"} termina em ${faltam} minuto(s).`,
-        tipo: "warn",
-        tempo: 8000
-      });
+    if (minutosAgora >= fimMinutos && minutosAgora <= fimMinutos + 1 && jogo.status_jogo !== "fechado") {
+      const chave = `${jogo.id}-finalizado`;
 
-      crvLog(
-        "AGENDA",
-        `Aviso: jogo ${jogo.id} termina em ${faltam} minuto(s).`,
-        "warn"
-      );
+      if (!avisosJogosEmitidos.has(chave)) {
+        avisosJogosEmitidos.add(chave);
+
+        crvToast({
+          titulo: "Jogo finalizado",
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} finalizou. Verifique a cobrança.`,
+          tipo: "warn",
+          tempo: 9000
+        });
+      }
     }
   });
 }

@@ -25,6 +25,10 @@ let jogosCaixaFiltrados = [];
 let jogadoresCaixaPorAgenda = {};
 let filtroStatusJogosCaixa = "todos";
 let jogoSelecionadoCaixa = null;
+let avisosJogosCaixaEmitidos = new Set();
+let intervaloAvisosJogosCaixa = null;
+let jogosPendentesSincronizacaoCaixa = [];
+let jogadorComandaPendenteCaixa = null;
 
 
 // ===== FORMATADORES =====
@@ -337,6 +341,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   caixaInicializado = true;
 
+  iniciarAvisosFimDeJogoCaixa();
+
   logCaixa("Tela pronta para operação.", "success");
 });
 
@@ -349,6 +355,7 @@ async function inicializarCaixa() {
   renderProdutosRapidos();
   renderCarrinho();
   aplicarVisibilidadeBotaoJogos();
+  await verificarJogosPendentesSincronizacaoCaixa();
 
   if (window.lucide) {
     lucide.createIcons();
@@ -2147,6 +2154,244 @@ function atualizarInterfaceModoPDV() {
 }
 
 // ======================================================
+// SINCRONIZAÇÃO AUTOMÁTICA DE JOGOS PAGOS SEM VENDA
+// ======================================================
+async function verificarJogosPendentesSincronizacaoCaixa() {
+  if (!caixaPermiteJogos()) return;
+  if (!caixa || caixa.status !== "aberto") return;
+
+  try {
+    await carregarJogosCaixa();
+
+    const jogosComRecebimento = jogosCaixa.filter(jogo => {
+      const jogadores = jogadoresCaixaPorAgenda[jogo.id] || [];
+
+const totalPago = jogadores
+  .filter(jogador => {
+    return (
+      jogador.pago === true &&
+      String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
+    );
+  })
+  .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+
+      return totalPago > 0;
+    });
+
+    if (!jogosComRecebimento.length) {
+      jogosPendentesSincronizacaoCaixa = [];
+      removerAvisoSincronizacaoJogosCaixa();
+      return;
+    }
+
+    const idsJogos = jogosComRecebimento.map(jogo => jogo.id);
+
+    const { data: vendasAgenda, error } = await sb
+      .from("vendas")
+      .select("origem_id")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("origem", "agenda")
+      .in("origem_id", idsJogos);
+
+    if (error) throw error;
+
+    const idsComVenda = new Set(
+      (vendasAgenda || []).map(venda => String(venda.origem_id))
+    );
+
+    jogosPendentesSincronizacaoCaixa = jogosComRecebimento.filter(jogo => {
+      return !idsComVenda.has(String(jogo.id));
+    });
+
+    renderAvisoSincronizacaoJogosCaixa();
+
+  } catch (err) {
+    console.error("[CAIXA][SYNC JOGOS]", err);
+  }
+}
+
+function renderAvisoSincronizacaoJogosCaixa() {
+  removerAvisoSincronizacaoJogosCaixa();
+
+  if (!jogosPendentesSincronizacaoCaixa.length) return;
+
+  const pdvLeft = document.querySelector(".pdv-left");
+
+  if (!pdvLeft) return;
+
+  const aviso = document.createElement("div");
+
+  aviso.className = "card aviso-sync-jogos-caixa";
+  aviso.id = "avisoSyncJogosCaixa";
+
+  aviso.innerHTML = `
+    <div>
+      <strong>
+        ${jogosPendentesSincronizacaoCaixa.length} jogo(s) pago(s) sem venda
+      </strong>
+
+      <span>
+        Existem cobranças da agenda que ainda não entraram no caixa.
+      </span>
+    </div>
+
+    <button class="btn-secondary" type="button" id="btnSincronizarJogosPendentes">
+      <i data-lucide="refresh-cw" width="15" height="15"></i>
+      <span>Sincronizar tudo</span>
+    </button>
+  `;
+
+  pdvLeft.prepend(aviso);
+
+  document
+    .getElementById("btnSincronizarJogosPendentes")
+    ?.addEventListener("click", sincronizarJogosPendentesCaixa);
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function removerAvisoSincronizacaoJogosCaixa() {
+  document.getElementById("avisoSyncJogosCaixa")?.remove();
+}
+
+async function sincronizarJogosPendentesCaixa() {
+  if (!jogosPendentesSincronizacaoCaixa.length) return;
+
+  const confirmar = await abrirConfirmacaoCaixa({
+    titulo: "Sincronizar jogos pendentes",
+    mensagem: `
+      Sincronizar
+      <strong>${jogosPendentesSincronizacaoCaixa.length}</strong>
+      jogo(s) já pago(s) que ainda não entraram no caixa?
+    `,
+    textoConfirmar: "Sincronizar tudo"
+  });
+
+  if (!confirmar) return;
+
+  try {
+    vendaEmProcessamento = true;
+
+    for (const jogo of jogosPendentesSincronizacaoCaixa) {
+      await atualizarVendaAgendaPeloCaixa(jogo);
+    }
+
+    await carregarDadosSupabase();
+    await verificarJogosPendentesSincronizacaoCaixa();
+
+    renderEstado();
+    renderHistorico();
+    atualizarInfobar();
+
+    await alertaCaixa(
+      "Sincronização concluída",
+      "Jogos pendentes foram lançados no caixa, vendas e relatórios."
+    );
+
+  } catch (err) {
+    console.error(err);
+
+    await alertaCaixa(
+      "Erro ao sincronizar",
+      err.message || "Não foi possível sincronizar os jogos pendentes."
+    );
+
+  } finally {
+    vendaEmProcessamento = false;
+  }
+}
+
+// ======================================================
+// AVISO DE FIM DE JOGO NO CAIXA
+// ======================================================
+
+function iniciarAvisosFimDeJogoCaixa() {
+  if (!caixaPermiteJogos()) {
+    return;
+  }
+
+  verificarAvisosFimDeJogoCaixa();
+
+  if (intervaloAvisosJogosCaixa) {
+    clearInterval(intervaloAvisosJogosCaixa);
+  }
+
+  intervaloAvisosJogosCaixa = setInterval(async () => {
+    if (!caixaPermiteJogos()) return;
+
+    await carregarJogosCaixa();
+    verificarAvisosFimDeJogoCaixa();
+  }, 15000);
+}
+
+function verificarAvisosFimDeJogoCaixa() {
+  if (!caixaPermiteJogos()) return;
+
+  const agora = new Date();
+  const hoje = new Date().toISOString().slice(0, 10);
+  const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
+
+  jogosCaixa.forEach(jogo => {
+    if (String(jogo.data_agendamento || "").slice(0, 10) !== hoje) return;
+    if (jogo.status_jogo === "cancelado") return;
+
+    const inicioMinutos = horaParaMinutosCaixa(jogo.hora_inicio);
+    const fimMinutos = horaParaMinutosCaixa(jogo.hora_fim);
+
+    if (!inicioMinutos || !fimMinutos) return;
+
+    if (minutosAgora >= inicioMinutos && minutosAgora <= inicioMinutos + 1) {
+      const chave = `${jogo.id}-inicio-caixa`;
+
+      if (!avisosJogosCaixaEmitidos.has(chave)) {
+        avisosJogosCaixaEmitidos.add(chave);
+
+        crvToast({
+          titulo: "Jogo iniciado",
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} começou agora.`,
+          tipo: "info",
+          tempo: 8000
+        });
+      }
+    }
+
+    const faltam = fimMinutos - minutosAgora;
+
+    if (faltam > 0 && faltam <= 5 && jogo.status_jogo !== "fechado") {
+      const chave = `${jogo.id}-fim-5min-caixa`;
+
+      if (!avisosJogosCaixaEmitidos.has(chave)) {
+        avisosJogosCaixaEmitidos.add(chave);
+
+        crvToast({
+          titulo: "Jogo quase finalizando",
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} termina em ${faltam} minuto(s).`,
+          tipo: "warn",
+          tempo: 8000
+        });
+      }
+    }
+
+    if (minutosAgora >= fimMinutos && minutosAgora <= fimMinutos + 1 && jogo.status_jogo !== "fechado") {
+      const chave = `${jogo.id}-finalizado-caixa`;
+
+      if (!avisosJogosCaixaEmitidos.has(chave)) {
+        avisosJogosCaixaEmitidos.add(chave);
+
+        crvToast({
+          titulo: "Jogo finalizado",
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} finalizou. Verifique a cobrança.`,
+          tipo: "warn",
+          tempo: 9000
+        });
+      }
+    }
+  });
+}
+
+// ======================================================
 // MODAL SELECIONAR JOGO NO CAIXA
 // ======================================================
 
@@ -2558,18 +2803,33 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
 
             <div class="jogo-caixa-jogador-nome">
               ${jogador.nome || "Jogador"}
-              ${pago ? " · pago" : ""}
+              ${pago ? ` · pago${jogador.forma_pagamento === "comanda" ? " na comanda" : ""}` : ""}
             </div>
 
-            <div class="jogo-caixa-jogador-valor">
-              ${fmt(jogador.valor || 0)}
-            </div>
+            <input
+              class="input jogo-caixa-valor-input"
+              value="${Number(jogador.valor || 0).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}"
+              ${pago ? "disabled" : ""}
+            >
 
             <select class="input jogo-caixa-pagamento" ${pago ? "disabled" : ""}>
               <option value="dinheiro" ${metodoPagamento === "dinheiro" ? "selected" : ""}>Dinheiro</option>
               <option value="cartao" ${metodoPagamento === "cartao" ? "selected" : ""}>Cartão</option>
               <option value="pix" ${metodoPagamento === "pix" ? "selected" : ""}>PIX</option>
             </select>
+
+            <button
+              class="btn-ghost jogo-caixa-btn-comanda"
+              type="button"
+              data-jogador-id="${jogador.id}"
+              ${pago ? "disabled" : ""}
+            >
+              <i data-lucide="ticket" width="14" height="14"></i>
+              <span>Comanda</span>
+            </button>
           </div>
         `;
       }).join("");
@@ -2580,6 +2840,23 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
     .querySelectorAll(".jogo-caixa-check, .jogo-caixa-pagamento")
     .forEach(el => {
       el.addEventListener("change", atualizarTotalSelecionadoJogoCaixa);
+    });
+
+  document
+    .querySelectorAll(".jogo-caixa-valor-input")
+    .forEach(input => {
+      aplicarMascaraMoedaCaixa(input, atualizarTotalSelecionadoJogoCaixa);
+    });
+
+  document
+    .querySelectorAll(".jogo-caixa-btn-comanda")
+    .forEach(btn => {
+      btn.addEventListener("click", async event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        await prepararEnvioJogadorParaComandaCaixa(btn.dataset.jogadorId);
+      });
     });
 
   atualizarTotalSelecionadoJogoCaixa();
@@ -2609,13 +2886,9 @@ function atualizarTotalSelecionadoJogoCaixa() {
   const total = [...document.querySelectorAll(".jogo-caixa-jogador-row")]
     .filter(row => row.querySelector(".jogo-caixa-check")?.checked)
     .reduce((acc, row) => {
-      const jogadorId = row.dataset.jogadorId;
+      const valorInput = row.querySelector(".jogo-caixa-valor-input");
 
-      const jogadores = jogadoresCaixaPorAgenda[jogoSelecionadoCaixa?.id] || [];
-
-      const jogador = jogadores.find(item => String(item.id) === String(jogadorId));
-
-      return acc + Number(jogador?.valor || 0);
+      return acc + normalizarNumero(valorInput?.value || 0);
     }, 0);
 
   if (totalEl) {
@@ -2623,6 +2896,226 @@ function atualizarTotalSelecionadoJogoCaixa() {
   }
 
   return total;
+}
+
+async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
+  if (!caixa || caixa.status !== "aberto") {
+    await alertaCaixa(
+      "Caixa fechado",
+      "Abra o caixa antes de enviar jogador para comanda."
+    );
+    return;
+  }
+
+  if (!jogoSelecionadoCaixa?.id) {
+    await alertaCaixa(
+      "Jogo não selecionado",
+      "Selecione um jogo para vincular o jogador à comanda."
+    );
+    return;
+  }
+
+  const row = document.querySelector(`.jogo-caixa-jogador-row[data-jogador-id="${jogadorId}"]`);
+
+  if (!row) {
+    await alertaCaixa(
+      "Jogador não encontrado",
+      "Não foi possível localizar a linha do jogador."
+    );
+    return;
+  }
+
+  const jogadores = jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [];
+  const jogador = jogadores.find(item => String(item.id) === String(jogadorId));
+
+  if (!jogador) {
+    await alertaCaixa(
+      "Jogador não encontrado",
+      "Não foi possível localizar este jogador na agenda."
+    );
+    return;
+  }
+
+  if (jogador.pago === true) {
+    await alertaCaixa(
+      "Jogador já pago",
+      "Este jogador já foi marcado como pago."
+    );
+    return;
+  }
+
+  const valorCobrado = normalizarNumero(
+    row.querySelector(".jogo-caixa-valor-input")?.value || jogador.valor || 0
+  );
+
+  if (valorCobrado <= 0) {
+    await alertaCaixa(
+      "Valor inválido",
+      "Informe um valor válido antes de enviar para comanda."
+    );
+    return;
+  }
+
+  jogadorComandaPendenteCaixa = {
+    jogo: jogoSelecionadoCaixa,
+    jogador,
+    valorCobrado
+  };
+
+  const modalComanda = document.getElementById("modalSelecionarComanda");
+
+  if (modalComanda) {
+    modalComanda.style.zIndex = "650";
+  }
+
+  await abrirModalSelecionarComanda();
+}
+
+async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
+  if (!jogadorComandaPendenteCaixa?.jogo?.id || !jogadorComandaPendenteCaixa?.jogador?.id) {
+    jogadorComandaPendenteCaixa = null;
+    return;
+  }
+
+  const empresaId = obterEmpresaId();
+  const jogo = jogadorComandaPendenteCaixa.jogo;
+  const jogador = jogadorComandaPendenteCaixa.jogador;
+  const valorCobrado = Number(jogadorComandaPendenteCaixa.valorCobrado || 0);
+
+  const itemNome = `Jogo - ${jogador.nome || "Jogador"}`;
+
+  const { data: itemDuplicado, error: erroBuscaItem } = await sb
+    .from("comanda_itens")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .eq("comanda_id", comanda.id)
+    .eq("agenda_jogador_id", jogador.id)
+    .limit(1);
+
+  if (erroBuscaItem) throw erroBuscaItem;
+
+  if (itemDuplicado?.length) {
+    await alertaCaixa(
+      "Item já enviado",
+      "Este jogador já está vinculado a uma comanda."
+    );
+
+    jogadorComandaPendenteCaixa = null;
+    return;
+  }
+
+  const { error: erroItem } = await sb
+    .from("comanda_itens")
+    .insert([
+      {
+        empresa_id: empresaId,
+        comanda_id: comanda.id,
+        produto_id: null,
+        nome: itemNome,
+        preco: valorCobrado,
+        preco_custo: 0,
+        quantidade: 1,
+        total: valorCobrado,
+        origem: "agenda",
+        origem_id: jogo.id,
+        agenda_jogador_id: jogador.id
+      }
+    ]);
+
+  if (erroItem) throw erroItem;
+
+  const { error: erroJogador } = await sb
+    .from("agenda_jogadores")
+    .update({
+      valor: valorCobrado,
+      pago: true,
+      forma_pagamento: "comanda",
+      pago_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString()
+    })
+    .eq("id", jogador.id)
+    .eq("empresa_id", empresaId);
+
+  if (erroJogador) throw erroJogador;
+
+  await atualizarResumoAgendaAposComandaCaixa(jogo.id);
+
+  const { data: itensComanda, error: erroItensComanda } = await sb
+    .from("comanda_itens")
+    .select("total")
+    .eq("empresa_id", empresaId)
+    .eq("comanda_id", comanda.id);
+
+  if (erroItensComanda) throw erroItensComanda;
+
+  const totalComanda = (itensComanda || []).reduce((acc, item) => {
+    return acc + Number(item.total || 0);
+  }, 0);
+
+  await sb
+    .from("comandas")
+    .update({
+      total: totalComanda
+    })
+    .eq("id", comanda.id)
+    .eq("empresa_id", empresaId);
+
+  jogadorComandaPendenteCaixa = null;
+
+  await carregarComandasCaixa();
+  await carregarJogosCaixa();
+
+  if (jogoSelecionadoCaixa?.id) {
+    abrirFinalizacaoJogoCaixa(jogoSelecionadoCaixa.id);
+  }
+
+  await verificarJogosPendentesSincronizacaoCaixa();
+
+  await alertaCaixa(
+    "Jogador enviado para comanda",
+    `<strong>${jogador.nome || "Jogador"}</strong> foi enviado para a comanda <strong>${comanda.codigo || "—"}</strong>.`
+  );
+}
+
+async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
+  const { data: jogadores, error } = await sb
+    .from("agenda_jogadores")
+    .select("*")
+    .eq("empresa_id", obterEmpresaId())
+    .eq("agenda_id", agendaId);
+
+  if (error) throw error;
+
+  const lista = jogadores || [];
+
+  const totalPago = lista
+    .filter(jogador => jogador.pago === true)
+    .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+
+  const totalPendente = lista
+    .filter(jogador => jogador.pago !== true)
+    .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+
+  const statusJogo =
+    lista.length > 0 &&
+    totalPendente === 0 &&
+    totalPago > 0
+      ? "fechado"
+      : "cobranca";
+
+  const { error: erroAgenda } = await sb
+    .from("agenda")
+    .update({
+      status_jogo: statusJogo,
+      total_jogadores: lista.length,
+      total_pago_jogadores: totalPago,
+      total_pendente_jogadores: totalPendente,
+      atualizado_em: new Date().toISOString()
+    })
+    .eq("id", agendaId)
+    .eq("empresa_id", obterEmpresaId());
+
+  if (erroAgenda) throw erroAgenda;
 }
 
 async function confirmarPagamentoJogoCaixa() {
@@ -2644,10 +3137,67 @@ async function confirmarPagamentoJogoCaixa() {
     return;
   }
 
-  const jogadores = jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [];
+  const jogadores =
+    jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [];
 
-  const linhasSelecionadas = [...document.querySelectorAll(".jogo-caixa-jogador-row")]
-    .filter(row => row.querySelector(".jogo-caixa-check")?.checked);
+  const linhasSelecionadas =
+    [...document.querySelectorAll(".jogo-caixa-jogador-row")]
+      .filter(row => row.querySelector(".jogo-caixa-check")?.checked);
+
+  const jogadoresJaPagos =
+    jogadores.filter(jogador => {
+      return jogador.pago === true && Number(jogador.valor || 0) > 0;
+    });
+
+  if (!linhasSelecionadas.length && jogadoresJaPagos.length) {
+    const confirmarSync = await abrirConfirmacaoCaixa({
+      titulo: "Sincronizar venda do jogo",
+      mensagem: `
+        Este jogo já está marcado como pago na agenda, mas pode não ter sido lançado no caixa.<br><br>
+        Deseja sincronizar a venda agora?
+      `,
+      textoConfirmar: "Sincronizar venda"
+    });
+
+    if (!confirmarSync) return;
+
+    try {
+      vendaEmProcessamento = true;
+
+      await atualizarVendaAgendaPeloCaixa(jogoSelecionadoCaixa);
+
+      await carregarDadosSupabase();
+      await carregarJogosCaixa();
+      await verificarJogosPendentesSincronizacaoCaixa();
+
+      renderEstado();
+      renderHistorico();
+      atualizarInfobar();
+
+      fecharModalFinalizarJogoCaixa();
+      fecharModalSelecionarJogo();
+
+      await alertaCaixa(
+        "Venda sincronizada",
+        "O pagamento do jogo foi lançado no caixa, vendas e relatórios."
+      );
+
+      await alterarModoPDV("venda");
+
+    } catch (err) {
+      console.error(err);
+
+      await alertaCaixa(
+        "Erro ao sincronizar jogo",
+        err.message || "Não foi possível sincronizar a venda do jogo."
+      );
+
+    } finally {
+      vendaEmProcessamento = false;
+    }
+
+    return;
+  }
 
   if (!linhasSelecionadas.length) {
     await alertaCaixa(
@@ -2656,6 +3206,29 @@ async function confirmarPagamentoJogoCaixa() {
     );
     return;
   }
+
+  const pagamentos = linhasSelecionadas.map(row => {
+    const jogadorId = row.dataset.jogadorId;
+
+    const formaPagamento =
+      row.querySelector(".jogo-caixa-pagamento")?.value ||
+      metodoPagamento ||
+      "dinheiro";
+
+    const valorCobrado = normalizarNumero(
+      row.querySelector(".jogo-caixa-valor-input")?.value || 0
+    );
+
+    if (valorCobrado <= 0) {
+      throw new Error("Informe um valor válido para todos os jogadores selecionados.");
+    }
+
+    return {
+      jogadorId,
+      formaPagamento,
+      valorCobrado
+    };
+  });
 
   const confirmar = await abrirConfirmacaoCaixa({
     titulo: "Confirmar pagamento do jogo",
@@ -2672,18 +3245,16 @@ async function confirmarPagamentoJogoCaixa() {
   try {
     vendaEmProcessamento = true;
 
-    for (const row of linhasSelecionadas) {
-      const jogadorId = row.dataset.jogadorId;
-      const formaPagamento = row.querySelector(".jogo-caixa-pagamento")?.value || metodoPagamento || "dinheiro";
-
+    for (const pagamento of pagamentos) {
       const { error } = await sb
         .from("agenda_jogadores")
         .update({
+          valor: pagamento.valorCobrado,
           pago: true,
-          forma_pagamento: formaPagamento,
+          forma_pagamento: pagamento.formaPagamento,
           pago_em: new Date().toISOString()
         })
-        .eq("id", jogadorId)
+        .eq("id", pagamento.jogadorId)
         .eq("empresa_id", obterEmpresaId());
 
       if (error) throw error;
@@ -2703,7 +3274,7 @@ async function confirmarPagamentoJogoCaixa() {
 
     await alertaCaixa(
       "Jogo atualizado",
-      "Pagamento do jogo lançado no caixa e nas vendas."
+      "Pagamento do jogo lançado no caixa, vendas e relatórios."
     );
 
     await alterarModoPDV("venda");
@@ -2732,15 +3303,27 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
 
   const jogadores = jogadoresAtualizados || [];
 
-  const pagos = jogadores.filter(jogador => {
+  const pagosTodos = jogadores.filter(jogador => {
     return jogador.pago === true && Number(jogador.valor || 0) > 0;
+  });
+
+  const pagosDiretos = jogadores.filter(jogador => {
+    return (
+      jogador.pago === true &&
+      Number(jogador.valor || 0) > 0 &&
+      String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
+    );
   });
 
   const pendentes = jogadores.filter(jogador => {
     return jogador.pago !== true && Number(jogador.valor || 0) > 0;
   });
 
-  const totalPago = pagos.reduce((acc, jogador) => {
+  const totalPagoAgenda = pagosTodos.reduce((acc, jogador) => {
+    return acc + Number(jogador.valor || 0);
+  }, 0);
+
+  const totalPagoDireto = pagosDiretos.reduce((acc, jogador) => {
     return acc + Number(jogador.valor || 0);
   }, 0);
 
@@ -2751,30 +3334,34 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
   const statusJogo =
     jogadores.length > 0 &&
     totalPendente === 0 &&
-    totalPago > 0
+    totalPagoAgenda > 0
       ? "fechado"
       : "cobranca";
-
-  const formaPagamento =
-    pagos.length === 1
-      ? (pagos[0].forma_pagamento || metodoPagamento)
-      : (
-          [...new Set(pagos.map(j => j.forma_pagamento).filter(Boolean))].length === 1
-            ? pagos.find(j => j.forma_pagamento)?.forma_pagamento
-            : "misto"
-        );
 
   await sb
     .from("agenda")
     .update({
       status_jogo: statusJogo,
       total_jogadores: jogadores.length,
-      total_pago_jogadores: totalPago,
+      total_pago_jogadores: totalPagoAgenda,
       total_pendente_jogadores: totalPendente,
       atualizado_em: new Date().toISOString()
     })
     .eq("id", jogo.id)
     .eq("empresa_id", obterEmpresaId());
+
+  if (!pagosDiretos.length) {
+    return;
+  }
+
+  const formaPagamento =
+    pagosDiretos.length === 1
+      ? (pagosDiretos[0].forma_pagamento || metodoPagamento)
+      : (
+          [...new Set(pagosDiretos.map(j => j.forma_pagamento).filter(Boolean))].length === 1
+            ? pagosDiretos.find(j => j.forma_pagamento)?.forma_pagamento
+            : "misto"
+        );
 
   const { data: vendaExistente, error: erroBuscaVenda } = await sb
     .from("vendas")
@@ -2802,9 +3389,9 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
       .from("vendas")
       .update({
         caixa_id: caixa.id,
-        subtotal: totalPago,
+        subtotal: totalPagoDireto,
         desconto: 0,
-        total: totalPago,
+        total: totalPagoDireto,
         forma_pagamento: formaPagamento || metodoPagamento,
         troco: 0,
         descricao: descricao,
@@ -2821,9 +3408,9 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
         empresa_id: obterEmpresaId(),
         caixa_id: caixa.id,
         cliente_id: null,
-        subtotal: totalPago,
+        subtotal: totalPagoDireto,
         desconto: 0,
-        total: totalPago,
+        total: totalPagoDireto,
         forma_pagamento: formaPagamento || metodoPagamento,
         troco: 0,
         origem: "agenda",
@@ -2839,7 +3426,7 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
     vendaId = vendaNova.id;
   }
 
-  const itensPayload = pagos.map(jogador => ({
+  const itensPayload = pagosDiretos.map(jogador => ({
     empresa_id: obterEmpresaId(),
     venda_id: vendaId,
     produto_id: null,
@@ -2848,7 +3435,10 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
     preco_custo: 0,
     lucro_unitario: Number(jogador.valor || 0),
     lucro_total: Number(jogador.valor || 0),
-    quantidade: 1
+    quantidade: 1,
+    origem: "agenda",
+    origem_id: jogo.id,
+    agenda_jogador_id: jogador.id
   }));
 
   if (itensPayload.length) {
@@ -2908,7 +3498,10 @@ function fecharModalSelecionarComanda() {
 
   if (modal) {
     modal.style.display = "none";
+    modal.style.zIndex = "";
   }
+
+  jogadorComandaPendenteCaixa = null;
 
   const inputBusca = document.getElementById("inputBusca");
 
@@ -3048,6 +3641,20 @@ async function selecionarComandaCaixa(comanda) {
       if (error) throw error;
 
       comandaOperacional = data;
+    }
+
+    if (jogadorComandaPendenteCaixa) {
+      await finalizarEnvioJogadorParaComandaCaixa(comandaOperacional);
+
+      fecharModalSelecionarComanda();
+
+      const modalComanda = document.getElementById("modalSelecionarComanda");
+
+      if (modalComanda) {
+        modalComanda.style.zIndex = "";
+      }
+
+      return;
     }
 
     comandaAtiva = comandaOperacional;
@@ -3438,7 +4045,10 @@ async function adicionarProdutoNaComanda(produto) {
           preco: preco,
           preco_custo: Number(produto.preco_custo || 0),
           quantidade: 1,
-          total: preco
+          total: preco,
+          origem: "pdv",
+          origem_id: null,
+          agenda_jogador_id: null
         }
       ]);
 
@@ -3481,7 +4091,10 @@ async function adicionarItemManualNaComanda({
           preco: Number(preco || 0),
           preco_custo: 0,
           quantidade: Number(quantidade || 1),
-          total: total
+          total: total,
+          origem: "pdv",
+          origem_id: null,
+          agenda_jogador_id: null
         }
       ]);
 
@@ -3524,7 +4137,10 @@ async function carregarItensComanda() {
       preco: Number(item.preco || 0),
       preco_custo: Number(item.preco_custo || 0),
       quantidade: Number(item.quantidade || 0),
-      produto_manual: item.produto_id ? false : true
+      produto_manual: item.produto_id ? false : true,
+      origem: item.origem || "pdv",
+      origem_id: item.origem_id || null,
+      agenda_jogador_id: item.agenda_jogador_id || null
     };
   });
 
@@ -3803,7 +4419,10 @@ const vendaPayload = {
         preco_custo: precoCusto,
         lucro_unitario: lucroUnitario,
         lucro_total: lucroTotal,
-        quantidade: quantidade
+        quantidade: quantidade,
+        origem: item.origem || "pdv",
+        origem_id: item.origem_id || null,
+        agenda_jogador_id: item.agenda_jogador_id || null
       };
     });
 

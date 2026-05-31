@@ -486,9 +486,11 @@ function renderGraficoPagamentos(vendas) {
 // TOP PRODUTOS
 // ======================================================
 function itemEhPagamentoJogo(item) {
+  const origem = String(item.origem || "").toLowerCase().trim();
   const nome = String(item.nome || "").toLowerCase().trim();
 
   return (
+    origem === "agenda" ||
     nome.startsWith("pagamento de jogo") ||
     nome.includes("jogo -") ||
     nome.includes("jogo avulso") ||
@@ -600,27 +602,7 @@ function renderRecebimentosJogos(vendas) {
 
   if (!card || !lista) return;
 
-  const mapaJogos = {};
-
-  vendas.forEach(venda => {
-    if (String(venda.origem || "").toLowerCase() !== "agenda") return;
-
-    const chave = venda.origem_id || venda.id;
-    const descricao = venda.descricao || "Jogo";
-
-    if (!mapaJogos[chave]) {
-      mapaJogos[chave] = {
-        descricao,
-        forma: venda.forma_pagamento || "—",
-        data: venda.data,
-        total: 0
-      };
-    }
-
-    mapaJogos[chave].total += Number(venda.total || 0);
-  });
-
-  const jogos = Object.values(mapaJogos);
+  const jogos = montarRecebimentosJogosAgrupados(vendas);
 
   if (badge) {
     badge.textContent = `${jogos.length} jogo(s)`;
@@ -637,7 +619,7 @@ function renderRecebimentosJogos(vendas) {
   lista.innerHTML = jogos.map(item => `
     <div class="jogo-relatorio-item">
       <div>
-        <strong>${item.descricao}</strong>
+        <strong>${item.responsavel}</strong>
         <small>
           ${new Date(item.data).toLocaleDateString("pt-BR")}
           ·
@@ -732,20 +714,40 @@ function montarRecebimentosJogosAgrupados(vendas) {
   const mapa = {};
 
   vendas.forEach(venda => {
-    if (String(venda.origem || "").toLowerCase() !== "agenda") return;
+    const origemVenda = String(venda.origem || "").toLowerCase();
 
-    const chave = venda.origem_id || venda.id;
+    if (origemVenda === "agenda") {
+      const chave = venda.origem_id || venda.id;
 
-    if (!mapa[chave]) {
-      mapa[chave] = {
-        responsavel: obterResponsavelJogoRelatorio(venda),
-        data: venda.data,
-        forma: venda.forma_pagamento || "—",
-        total: 0
-      };
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          responsavel: obterResponsavelJogoRelatorio(venda),
+          data: venda.data,
+          forma: venda.forma_pagamento || "—",
+          total: 0
+        };
+      }
+
+      mapa[chave].total += Number(venda.total || 0);
+      return;
     }
 
-    mapa[chave].total += Number(venda.total || 0);
+    (venda.itens || []).forEach(item => {
+      if (String(item.origem || "").toLowerCase() !== "agenda") return;
+
+      const chave = item.agenda_jogador_id || item.origem_id || item.id;
+
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          responsavel: String(item.nome || "Jogo").replace(/^Jogo\s*-\s*/i, ""),
+          data: venda.data,
+          forma: venda.forma_pagamento || "comanda",
+          total: 0
+        };
+      }
+
+      mapa[chave].total += Number(item.preco || 0) * Number(item.quantidade || 1);
+    });
   });
 
   return Object.values(mapa);

@@ -97,6 +97,40 @@
   align-items: start;
 }
 
+/* ===== AVISO DE SINCRONIZAÇÃO DE JOGOS ===== */
+
+.aviso-sync-jogos-caixa {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  border-color: rgba(255,193,7,.35);
+  background: rgba(255,193,7,.08);
+}
+
+.aviso-sync-jogos-caixa strong {
+  display: block;
+  color: #ffd56a;
+  font-family: var(--font-display);
+  margin-bottom: 3px;
+}
+
+.aviso-sync-jogos-caixa span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: .82rem;
+}
+
+.aviso-sync-jogos-caixa .btn-secondary {
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 0 18px;
+}
+
 /* ===== MODO VENDA / COMANDA ===== */
 
 .pdv-mode-switch{
@@ -941,14 +975,24 @@
 }
 
 .lista-jogos-caixa {
-  max-height: 430px;
+  max-height: 190px;
   overflow-y: auto;
 
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
 
   padding-right: 4px;
+  overscroll-behavior: contain;
+}
+
+.lista-jogos-caixa::-webkit-scrollbar {
+  width: 5px;
+}
+
+.lista-jogos-caixa::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
 }
 
 .jogo-caixa-item {
@@ -1098,7 +1142,7 @@
 
 .jogo-caixa-jogador-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 110px 130px;
+  grid-template-columns: 34px minmax(0, 1fr) 110px 130px 112px;
   gap: 8px;
   align-items: center;
 
@@ -1161,6 +1205,45 @@
   font-family: var(--font-display);
   color: var(--crv-green);
   font-size: 1.1rem;
+}
+
+#btnConfirmarFinalizarJogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+#btnConfirmarFinalizarJogo span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.jogo-caixa-valor-input {
+  height: 38px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--crv-green);
+  text-align: right;
+}
+
+.jogo-caixa-btn-comanda {
+  height: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  justify-content: center;
+  gap: 6px;
+  font-size: .76rem;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.jogo-caixa-btn-comanda:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* ===== MODAIS ===== */
@@ -1976,13 +2059,17 @@
     gap: 8px;
   }
 
-  .jogo-caixa-jogador-valor,
-  .jogo-caixa-jogador-row select {
+  .jogo-caixa-valor-input,
+  .jogo-caixa-jogador-row select,
+  .jogo-caixa-btn-comanda {
     grid-column: 2;
+    width: 100%;
   }
 
-  .jogo-caixa-jogador-row select {
-    width: 100%;
+  .jogo-caixa-btn-comanda {
+    min-height: 38px;
+    height: 38px;
+    font-size: .74rem;
   }
 
   .jogo-caixa-totalizador {
@@ -2068,6 +2155,17 @@
     justify-content: center;
   }
 }
+
+  .aviso-sync-jogos-caixa {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .aviso-sync-jogos-caixa .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
 
 @media (max-width: 380px) {
   .main-content {
