@@ -172,14 +172,8 @@ function initMascaras() {
     });
   }
 
-  if (uf) {
-    uf.addEventListener("input", e => {
-      e.target.value = e.target.value
-        .replace(/[^a-zA-Z]/g, "")
-        .toUpperCase()
-        .slice(0, 2);
-    });
-  }
+// UF agora é select
+
 }
 
 // ======================================================

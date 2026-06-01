@@ -450,6 +450,10 @@
   flex-wrap: wrap;
 }
 
+.form-group-uf {
+  max-width: 120px;
+}
+
 /* ======================================================
    RESPONSIVE — CONFIGURAÇÕES
 ====================================================== */
@@ -629,14 +633,27 @@
      GRID
   ========================================= */
 
+  .config-section {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .config-section.active {
+    display: block;
+  }
+
   .config-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     align-items: stretch;
   }
 
-  .config-card-wide {
+  .config-card-wide,
+  .config-card {
+    width: 100%;
+    max-width: 100%;
     grid-column: auto;
     grid-row: auto;
   }
@@ -657,6 +674,31 @@
   .config-muted {
     font-size: .8rem;
     line-height: 1.45;
+  }
+
+  .logo-card {
+    order: 2;
+  }
+
+  .config-card-wide {
+    order: 1;
+  }
+
+  .config-save-area {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    order: 3;
+  }
+
+  #btnSalvarConfigBottom {
+    width: fit-content;
+    max-width: min(280px, 100%);
+    min-width: 220px;
+    min-height: 42px;
+    height: 42px;
+    margin: 0 auto;
+    justify-content: center;
   }
 
   /* =========================================
@@ -758,16 +800,22 @@
      CARD CRV
   ========================================= */
 
-  .crv-card {
-    min-height: auto;
-    max-height: none;
-    padding: 14px 12px;
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-start;
-    text-align: left;
-    gap: 12px;
-  }
+.crv-card-sobre {
+  min-height: auto;
+  max-height: none;
+
+  padding: 18px 14px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  gap: 14px;
+}
 
   .crv-card-title {
     width: 100%;
@@ -777,6 +825,11 @@
     justify-content: flex-start;
     gap: 10px;
   }
+
+  .crv-card-sobre .crv-card-title {
+  justify-content: center;
+  text-align: center;
+}
 
   .crv-card-logo {
     width: 46px;
@@ -796,13 +849,13 @@
     line-height: 1.4;
   }
 
-  .crv-links {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
+.crv-links {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
   .crv-links a {
     width: 44px;
@@ -897,6 +950,10 @@
     font-size: .82rem;
     border-radius: 14px;
   }
+}
+
+.form-group-uf {
+  max-width: 120px;
 }
 
 @media (max-width: 520px) {

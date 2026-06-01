@@ -2072,6 +2072,23 @@
   border-radius: 999px;
 }
 
+.pdv-mode-btn {
+  position: relative;
+}
+
+.pdv-mode-btn .modo-alerta-badge {
+  top: -2px;
+  right: 5px;
+
+  min-width: 18px;
+  height: 18px;
+
+  padding: 0 5px;
+
+  font-size: .62rem;
+  border-width: 1px;
+}
+
   .pdv-mode-btn i,
   .pdv-mode-btn svg {
     width: 13px;
