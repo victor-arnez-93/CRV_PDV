@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/landing.css">
@@ -26,7 +27,7 @@
       </a>
 
       <div class="nav-actions">
-        <a href="login.html" class="btn btn-secondary">
+        <a href="#" data-prelogin-open class="btn btn-secondary">
           <i data-lucide="log-in"></i>
           <span>Entrar</span>
         </a>
@@ -56,7 +57,7 @@
           </p>
 
           <div class="hero-actions">
-            <a href="login.html" class="btn btn-primary">
+            <a href="#" data-prelogin-open class="btn btn-primary">
               <i data-lucide="rocket"></i>
               <span>Acessar o Sistema</span>
             </a>
@@ -184,7 +185,7 @@
           <h2>Seu caixa, suas vendas e seus relatórios no mesmo fluxo</h2>
           <p>Entre no sistema e acompanhe a operação em tempo real.</p>
 
-          <a href="login.html" class="btn btn-primary">
+          <a href="#" data-prelogin-open class="btn btn-primary">
             <i data-lucide="log-in"></i>
             <span>Entrar no Sistema</span>
           </a>
@@ -192,6 +193,33 @@
       </div>
     </section>
   </main>
+
+  <div class="prelogin-overlay hidden" id="preloginModal">
+  <div class="prelogin-card">
+    <button class="prelogin-close" id="fecharPrelogin" type="button">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+
+    <div class="prelogin-icon">
+      <i class="fa-solid fa-lock"></i>
+    </div>
+
+    <h2>Acesso restrito</h2>
+    <p>Informe a credencial fornecida pela CRV Soluções em TI.</p>
+
+    <label>E-mail</label>
+    <input type="email" id="preloginEmail" placeholder="admin@sistema.com">
+
+    <label>Senha</label>
+    <input type="password" id="preloginSenha" placeholder="Digite a senha">
+
+    <div id="preloginFeedback"></div>
+
+    <button class="btn btn-primary" id="btnValidarPrelogin" type="button">
+      Entrar
+    </button>
+  </div>
+</div>
 
   <footer class="footer">
     <div class="container footer-inner">
@@ -216,6 +244,8 @@
     </div>
   </footer>
 
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     let temaAtual = "dark";
     const html = document.documentElement;
@@ -246,7 +276,67 @@
 
     document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
 
+const SUPABASE_URL = "https://qpytwbiiqixkitnpksna.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_9Bc3KFSsNOQ3Qc9Q9DEfCQ_GBD-_K-F";
+
+const supabasePrelogin = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const preloginModal = document.getElementById("preloginModal");
+const fecharPrelogin = document.getElementById("fecharPrelogin");
+const btnValidarPrelogin = document.getElementById("btnValidarPrelogin");
+const preloginFeedback = document.getElementById("preloginFeedback");
+
+document.querySelectorAll("[data-prelogin-open]").forEach(botao => {
+  botao.addEventListener("click", event => {
+    event.preventDefault();
+    preloginModal.classList.remove("hidden");
+    document.getElementById("preloginEmail").focus();
+  });
+});
+
+fecharPrelogin.addEventListener("click", () => {
+  preloginModal.classList.add("hidden");
+});
+
+preloginModal.addEventListener("click", event => {
+  if (event.target === preloginModal) {
+    preloginModal.classList.add("hidden");
+  }
+});
+
+btnValidarPrelogin.addEventListener("click", async () => {
+  const email = document.getElementById("preloginEmail").value.trim();
+  const senha = document.getElementById("preloginSenha").value.trim();
+
+  preloginFeedback.textContent = "";
+
+  if (!email || !senha) {
+    preloginFeedback.textContent = "Informe e-mail e senha.";
+    return;
+  }
+
+  btnValidarPrelogin.disabled = true;
+  btnValidarPrelogin.textContent = "Validando...";
+
+  const { data, error } = await supabasePrelogin.rpc("validar_pre_acesso", {
+    p_email: email,
+    p_senha: senha
+  });
+
+  btnValidarPrelogin.disabled = false;
+  btnValidarPrelogin.textContent = "Entrar";
+
+  if (error || data !== true) {
+    preloginFeedback.textContent = "Credencial inválida ou acesso inativo.";
+    return;
+  }
+
+  sessionStorage.setItem("crv-prelogin-ok", "true");
+  window.location.href = "login.html";
+});
+
     lucide.createIcons();
   </script>
+
 </body>
 </html>

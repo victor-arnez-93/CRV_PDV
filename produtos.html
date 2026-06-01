@@ -213,7 +213,7 @@
 
 <div class="input-group">
   <label class="input-label" for="produtoCategoria">Categoria</label>
-  <select class="input" id="produtoCategoria" onchange="toggleCategoriaOutros()">
+  <select class="input" id="produtoCategoria" onchange="toggleCategoriaOutros(); toggleComboProdutos();">
     <option value="">Sem categoria</option>
     <option value="bebidas">Bebidas</option>
     <option value="alimentos">Alimentos</option>
@@ -221,6 +221,22 @@
     <option value="servicos">Serviços</option>
     <option value="outros">Outros</option>
   </select>
+</div>
+
+      <div class="combo-produtos-wrap" id="comboProdutosWrap" style="display:none;">
+  <div class="combo-produtos-header">
+    <div>
+      <strong>Itens do combo</strong>
+      <small>Selecione apenas produtos já cadastrados.</small>
+    </div>
+
+    <button class="btn-ghost" type="button" onclick="adicionarLinhaComboProduto()">
+      <i data-lucide="plus" width="14" height="14"></i>
+      Adicionar item
+    </button>
+  </div>
+
+  <div class="combo-produtos-lista" id="comboProdutosLista"></div>
 </div>
 
 <div class="input-group categoria-outros-wrap" id="categoriaOutrosWrap" style="display:none;">

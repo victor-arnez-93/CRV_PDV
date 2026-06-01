@@ -1,3 +1,11 @@
+/* ===== BLOQUEIO DE ACESSO DIRETO AO LOGIN ===== */
+if (
+  window.location.pathname.includes("login.html") &&
+  sessionStorage.getItem("crv-prelogin-ok") !== "true"
+) {
+  window.location.href = "index.html";
+}
+
 /* ===== CLOCK ===== */
 function tick() {
   const n = new Date();

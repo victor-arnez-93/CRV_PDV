@@ -253,6 +253,7 @@
     </span>
   </div>
 
+  <div class="comanda-meta" id="comandaMeta" style="display:none;"></div>
   <div class="comanda-total">
     Total atual:
     <strong id="comandaTotal">
@@ -261,6 +262,15 @@
   </div>
 
   <div class="comanda-actions">
+
+    <button
+  id="btnOcultarComanda"
+  class="btn-secondary"
+  type="button"
+>
+  <i data-lucide="eye-off"></i>
+  Ocultar
+</button>
 
     <button
       class="btn-secondary"
@@ -578,6 +588,25 @@
     <div class="modal-body">
 
       <div class="jogo-caixa-resumo" id="jogoCaixaResumo"></div>
+
+      <div class="jogo-caixa-rateio">
+  <div class="input-group">
+    <label class="input-label">Valor total do jogo</label>
+    <input
+      class="input input-money"
+      type="text"
+      id="valorTotalJogoCaixa"
+      placeholder="Ex: 100,00"
+      inputmode="decimal"
+      autocomplete="off"
+    />
+  </div>
+
+  <button class="btn-secondary" type="button" id="btnAplicarRateioJogo">
+    <i data-lucide="split" width="15" height="15"></i>
+    <span>Dividir entre jogadores</span>
+  </button>
+</div>
 
       <div class="jogo-caixa-jogadores" id="jogoCaixaJogadores"></div>
 

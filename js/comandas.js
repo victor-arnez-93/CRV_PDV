@@ -7,6 +7,7 @@ let comandas = [];
 let comandasFiltradas = [];
 let comandaEditando = null;
 let comandasInicializado = false;
+let clientesComanda = [];
 
 // ======================================================
 // FORMATADORES
@@ -152,9 +153,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  await carregarClientesComanda();
   await carregarComandas();
 
   comandasInicializado = true;
+
+
 
   logComandas("Tela pronta.", "success");
 });
@@ -292,6 +296,45 @@ function abrirConfirmacaoComanda({
       lucide.createIcons();
     }
   });
+
+  function abrirAvisoComanda({
+  titulo = "Aviso",
+  mensagem = "Ação concluída.",
+  textoConfirmar = "Entendi"
+}) {
+  return abrirConfirmacaoComanda({
+    titulo,
+    mensagem,
+    textoConfirmar
+  });
+}
+
+}
+
+async function carregarClientesComanda() {
+  try {
+
+    const { data, error } = await sb
+      .from("clientes")
+      .select("nome")
+      .eq("empresa_id", obterEmpresaIdComandas())
+      .order("nome");
+
+    if (error) throw error;
+
+    clientesComanda = data || [];
+
+    const lista = document.getElementById("listaClientesComanda");
+
+    if (!lista) return;
+
+    lista.innerHTML = clientesComanda
+      .map(cliente => `<option value="${cliente.nome}">`)
+      .join("");
+
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 // ======================================================
@@ -318,7 +361,11 @@ async function carregarComandas() {
     comandasFiltradas = [];
 
     logComandas("Erro ao carregar comandas: " + err.message, "error");
-    alert("Erro ao carregar comandas: " + err.message);
+    abrirAvisoComanda({
+  titulo: "Erro ao carregar comandas",
+  mensagem: err.message,
+  textoConfirmar: "Fechar"
+});
 
     renderCardsComandas();
     renderTabelaComandas();
@@ -604,7 +651,11 @@ function editarComanda(id) {
   const comanda = comandas.find(c => c.id === id);
 
   if (!comanda) {
-    alert("Comanda não encontrada.");
+    abrirAvisoComanda({
+  titulo: "Comanda não encontrada",
+  mensagem: "Não foi possível localizar essa comanda.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -651,7 +702,11 @@ async function abrirDetalheComanda(id) {
   const comanda = comandas.find(c => c.id === id);
 
   if (!comanda) {
-    alert("Comanda não encontrada.");
+    abrirAvisoComanda({
+  titulo: "Comanda não encontrada",
+  mensagem: "Não foi possível localizar essa comanda.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -791,7 +846,11 @@ if (!sistemaOnlineComandas()) {
   const obs = String(document.getElementById("comandaObservacoesInput")?.value || "").trim();
 
   if (!codigo) {
-    alert("Informe o código da comanda.");
+    abrirAvisoComanda({
+  titulo: "Código obrigatório",
+  mensagem: "Informe o código da comanda para continuar.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -837,7 +896,11 @@ if (!sistemaOnlineComandas()) {
   const obs = String(document.getElementById("comandaObservacoesInput")?.value || "").trim();
 
   if (!codigo) {
-    alert("Informe o código da comanda.");
+    abrirAvisoComanda({
+  titulo: "Código obrigatório",
+  mensagem: "Informe o código da comanda para continuar.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -877,11 +940,19 @@ if (!sistemaOnlineComandas()) {
     await carregarComandas();
 
   } catch (err) {
-    if (String(err.message || "").includes("duplicate")) {
-      alert("Já existe uma comanda com esse código.");
-    } else {
-      alert("Erro ao salvar comanda: " + err.message);
-    }
+if (String(err.message || "").includes("duplicate")) {
+  abrirAvisoComanda({
+    titulo: "Código já cadastrado",
+    mensagem: "Já existe uma comanda com esse código.",
+    textoConfirmar: "Fechar"
+  });
+} else {
+  abrirAvisoComanda({
+    titulo: "Erro ao salvar comanda",
+    mensagem: err.message,
+    textoConfirmar: "Fechar"
+  });
+}
 
     console.error(err);
   }
@@ -949,7 +1020,11 @@ if (!sistemaOnlineComandas()) {
   const digitos = Math.max(1, Number(document.getElementById("loteDigitos")?.value || 3));
 
   if (inicio <= 0 || fim <= 0 || fim < inicio) {
-    alert("Informe um intervalo válido.");
+    abrirAvisoComanda({
+  titulo: "Intervalo inválido",
+  mensagem: "Informe um intervalo válido para gerar as comandas.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -1006,14 +1081,22 @@ if (!confirmar) return;
   const digitos = Math.max(1, Number(document.getElementById("loteDigitos")?.value || 3));
 
   if (inicio <= 0 || fim <= 0 || fim < inicio) {
-    alert("Informe um intervalo válido.");
+    abrirAvisoComanda({
+  titulo: "Intervalo inválido",
+  mensagem: "Informe um intervalo válido para gerar as comandas.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
   const quantidade = fim - inicio + 1;
 
   if (quantidade > 500) {
-    alert("Gere no máximo 500 comandas por vez.");
+    abrirAvisoComanda({
+  titulo: "Limite excedido",
+  mensagem: "Gere no máximo 500 comandas por vez.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -1055,10 +1138,18 @@ if (!confirmar) return;
     fecharModalLote();
     await carregarComandas();
 
-    alert("Lote de comandas gerado com sucesso.");
+    abrirAvisoComanda({
+  titulo: "Lote gerado",
+  mensagem: "Lote de comandas gerado com sucesso.",
+  textoConfirmar: "Fechar"
+});
 
   } catch (err) {
-    alert("Erro ao gerar lote: " + err.message);
+    abrirAvisoComanda({
+  titulo: "Erro ao gerar lote",
+  mensagem: err.message,
+  textoConfirmar: "Fechar"
+});
     console.error(err);
   }
 }
@@ -1115,7 +1206,11 @@ async function liberarComanda(id) {
     await carregarComandas();
 
   } catch (err) {
-    alert("Erro ao liberar comanda: " + err.message);
+    abrirAvisoComanda({
+  titulo: "Erro ao liberar comanda",
+  mensagem: err.message,
+  textoConfirmar: "Fechar"
+});
     console.error(err);
   }
 }
@@ -1126,7 +1221,11 @@ async function cancelarComanda(id) {
   if (!comanda) return;
 
   if (comanda.status === "fechada") {
-    alert("Comanda fechada não deve ser cancelada. Use liberar para novo uso.");
+    abrirAvisoComanda({
+  titulo: "Comanda já fechada",
+  mensagem: "Comanda fechada não deve ser cancelada. Use liberar para novo uso.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -1155,7 +1254,11 @@ if (!confirmar) return;
     await carregarComandas();
 
   } catch (err) {
-    alert("Erro ao cancelar comanda: " + err.message);
+    abrirAvisoComanda({
+  titulo: "Erro ao cancelar comanda",
+  mensagem: err.message,
+  textoConfirmar: "Fechar"
+});
     console.error(err);
   }
 }
@@ -1166,7 +1269,11 @@ async function excluirComanda(id) {
   if (!comanda) return;
 
   if (comanda.status === "aberta") {
-    alert("Não é recomendado excluir uma comanda aberta. Cancele ou libere antes.");
+    abrirAvisoComanda({
+  titulo: "Comanda aberta",
+  mensagem: "Não é recomendado excluir uma comanda aberta. Cancele ou libere antes.",
+  textoConfirmar: "Fechar"
+});
     return;
   }
 
@@ -1195,7 +1302,11 @@ if (!confirmar) return;
     await carregarComandas();
 
   } catch (err) {
-    alert("Erro ao excluir comanda: " + err.message);
+    abrirAvisoComanda({
+  titulo: "Erro ao excluir comanda",
+  mensagem: err.message,
+  textoConfirmar: "Fechar"
+});
     console.error(err);
   }
 }

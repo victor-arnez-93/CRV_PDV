@@ -16,6 +16,7 @@ const fmt = valor => {
 let produtos = [];
 let filtroAtivo = "todos";
 let idExcluir = null;
+let comboItensTemporarios = [];
 const LIMITE_DIGITOS_MOEDA = 9;
 const LIMITE_DIGITOS_ESTOQUE = 6;
 const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
@@ -39,6 +40,85 @@ function logProdutos(mensagem, tipo = "info") {
   } else {
     console.log(`[CRV PDV][PRODUTOS] ${mensagem}`);
   }
+}
+
+function abrirAlertaProduto({
+  titulo = "Aviso",
+  mensagem = "Verifique as informações.",
+  textoConfirmar = "OK",
+  mostrarCancelar = false
+}) {
+  return new Promise(resolve => {
+    let modal = document.getElementById("modalAlertaProduto");
+
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "modalAlertaProduto";
+      modal.className = "modal-overlay";
+
+      modal.innerHTML = `
+        <div class="modal card modal-alerta-produto">
+          <div class="modal-header">
+            <h3 id="alertaProdutoTitulo">Aviso</h3>
+
+            <button class="btn-ghost" id="btnFecharAlertaProduto" type="button" style="padding:6px;">
+              <i data-lucide="x" width="16" height="16"></i>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <p id="alertaProdutoMensagem" class="alerta-produto-texto"></p>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-ghost" id="btnCancelarAlertaProduto" type="button">
+              Cancelar
+            </button>
+
+            <button class="btn-secondary" id="btnOkAlertaProduto" type="button">
+              OK
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+    }
+
+    const tituloEl = document.getElementById("alertaProdutoTitulo");
+    const mensagemEl = document.getElementById("alertaProdutoMensagem");
+    const btnFechar = document.getElementById("btnFecharAlertaProduto");
+    const btnCancelar = document.getElementById("btnCancelarAlertaProduto");
+    const btnOk = document.getElementById("btnOkAlertaProduto");
+
+    if (tituloEl) tituloEl.textContent = titulo;
+    if (mensagemEl) mensagemEl.innerHTML = mensagem;
+    if (btnOk) btnOk.textContent = textoConfirmar;
+
+    if (btnCancelar) {
+      btnCancelar.style.display = mostrarCancelar ? "inline-flex" : "none";
+    }
+
+    modal.style.display = "flex";
+
+    const fechar = resposta => {
+      modal.style.display = "none";
+
+      if (btnOk) btnOk.onclick = null;
+      if (btnCancelar) btnCancelar.onclick = null;
+      if (btnFechar) btnFechar.onclick = null;
+
+      resolve(resposta);
+    };
+
+    if (btnOk) btnOk.onclick = () => fechar(true);
+    if (btnCancelar) btnCancelar.onclick = () => fechar(false);
+    if (btnFechar) btnFechar.onclick = () => fechar(false);
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
 }
 
 function obterEmpresaId() {
@@ -455,15 +535,33 @@ function renderProdutos() {
             ${estoque} em estoque
           </div>
 
-          <div class="produto-actions">
-            <button class="produto-btn" onclick="abrirModalEditar('${produto.id}')">
-              <i data-lucide="pencil" width="13" height="13"></i>
-            </button>
+<div class="produto-actions">
 
-            <button class="produto-btn danger" onclick="confirmarExcluir('${produto.id}')">
-              <i data-lucide="trash-2" width="13" height="13"></i>
-            </button>
-          </div>
+  <button
+    class="produto-btn"
+    onclick="abrirModalEditar('${produto.id}')"
+    title="Editar"
+  >
+    <i data-lucide="pencil" width="13" height="13"></i>
+  </button>
+
+  <button
+    class="produto-btn"
+    onclick="duplicarProduto('${produto.id}')"
+    title="Duplicar"
+  >
+    <i data-lucide="copy" width="13" height="13"></i>
+  </button>
+
+  <button
+    class="produto-btn danger"
+    onclick="confirmarExcluir('${produto.id}')"
+    title="Excluir"
+  >
+    <i data-lucide="trash-2" width="13" height="13"></i>
+  </button>
+
+</div>
         </div>
       </div>
     `;
@@ -502,6 +600,10 @@ function abrirModalNovo() {
     produtoRapido.checked = false;
   }
 
+  comboItensTemporarios = [];
+  renderComboProdutos();
+  toggleComboProdutos();
+
   const modal = document.getElementById("modalProduto");
 
   if (modal) {
@@ -520,7 +622,7 @@ function abrirModalNovo() {
 // ======================================================
 // MODAL EDITAR
 // ======================================================
-function abrirModalEditar(id) {
+async function abrirModalEditar(id) {
   const produto = produtos.find(item => item.id === id);
 
   if (!produto) {
@@ -556,6 +658,9 @@ toggleCategoriaOutros();
     produtoRapido.checked = produto.produto_rapido === true;
   }
 
+  await carregarItensComboProduto(produto.id);
+  toggleComboProdutos();
+
   document.getElementById("modalProduto").style.display = "flex";
 
   if (window.lucide) {
@@ -563,11 +668,277 @@ toggleCategoriaOutros();
   }
 }
 
+async function duplicarProduto(id) {
+  const produto = produtos.find(item => item.id === id);
+
+  if (!produto) {
+    return;
+  }
+
+  document.getElementById("modalProdutoTitulo").textContent =
+    "Duplicar Produto";
+
+  document.getElementById("produtoId").value = "";
+
+  document.getElementById("produtoNome").value =
+    `${produto.nome} (Cópia)`;
+
+  document.getElementById("produtoPreco").value =
+    valorParaInputMoeda(produto.preco);
+
+  document.getElementById("produtoPrecoCusto").value =
+    valorParaInputMoeda(produto.preco_custo || 0);
+
+  document.getElementById("produtoEstoque").value =
+    produto.estoque || 0;
+
+  atualizarPreviewMargemProduto();
+
+  document.getElementById("produtoCodigo").value = "";
+
+  const categoriasFixas = [
+    "",
+    "bebidas",
+    "alimentos",
+    "combos",
+    "servicos",
+    "outros"
+  ];
+
+  if (categoriasFixas.includes(produto.categoria || "")) {
+    document.getElementById("produtoCategoria").value =
+      produto.categoria || "";
+
+    document.getElementById("produtoCategoriaOutros").value = "";
+  } else {
+    document.getElementById("produtoCategoria").value = "outros";
+
+    document.getElementById("produtoCategoriaOutros").value =
+      produto.categoria || "";
+  }
+
+  toggleCategoriaOutros();
+
+  document.getElementById("produtoAtivo").checked =
+    produto.ativo === true;
+
+  document.getElementById("produtoRapido").checked =
+    produto.produto_rapido === true;
+
+  await carregarItensComboProduto(produto.id);
+  toggleComboProdutos();
+
+  document.getElementById("modalProduto").style.display = "flex";
+
+  setTimeout(() => {
+    document.getElementById("produtoNome")?.focus();
+  }, 100);
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function toggleComboProdutos() {
+  const categoria = document.getElementById("produtoCategoria");
+  const wrap = document.getElementById("comboProdutosWrap");
+
+  if (!categoria || !wrap) return;
+
+  if (categoria.value === "combos") {
+    wrap.style.display = "block";
+
+    if (!comboItensTemporarios.length) {
+      adicionarLinhaComboProduto();
+    } else {
+      renderComboProdutos();
+    }
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function obterProdutosDisponiveisParaCombo() {
+  const idAtual = String(document.getElementById("produtoId")?.value || "");
+
+  return produtos.filter(produto => {
+    return (
+      produto.ativo === true &&
+      produto.categoria !== "combos" &&
+      String(produto.id) !== idAtual
+    );
+  });
+}
+
+function adicionarLinhaComboProduto(item = null) {
+  comboItensTemporarios.push({
+    produto_id: item?.produto_id || "",
+    quantidade: Number(item?.quantidade || 1)
+  });
+
+  renderComboProdutos();
+}
+
+function removerLinhaComboProduto(index) {
+  comboItensTemporarios.splice(index, 1);
+  renderComboProdutos();
+}
+
+function atualizarLinhaComboProduto(index, campo, valor) {
+  if (!comboItensTemporarios[index]) return;
+
+  if (campo === "quantidade") {
+    comboItensTemporarios[index][campo] = Math.max(1, Number(valor || 1));
+  } else {
+    comboItensTemporarios[index][campo] = valor;
+  }
+}
+
+function renderComboProdutos() {
+  const lista = document.getElementById("comboProdutosLista");
+
+  if (!lista) return;
+
+  const produtosDisponiveis = obterProdutosDisponiveisParaCombo();
+
+  if (!produtosDisponiveis.length) {
+    lista.innerHTML = `
+      <div class="combo-produtos-empty">
+        Cadastre produtos comuns antes de montar um combo.
+      </div>
+    `;
+    return;
+  }
+
+  lista.innerHTML = comboItensTemporarios.map((item, index) => {
+    return `
+      <div class="combo-produto-row">
+        <select
+          class="input"
+          onchange="atualizarLinhaComboProduto(${index}, 'produto_id', this.value)"
+        >
+          <option value="">Selecione um produto</option>
+
+          ${produtosDisponiveis.map(produto => `
+            <option value="${produto.id}" ${String(item.produto_id) === String(produto.id) ? "selected" : ""}>
+              ${produto.nome} · ${fmt(produto.preco)}
+            </option>
+          `).join("")}
+        </select>
+
+        <input
+          class="input"
+          type="number"
+          min="1"
+          step="1"
+          value="${item.quantidade || 1}"
+          onchange="atualizarLinhaComboProduto(${index}, 'quantidade', this.value)"
+        >
+
+        <button
+          class="produto-btn danger"
+          type="button"
+          onclick="removerLinhaComboProduto(${index})"
+        >
+          <i data-lucide="trash-2" width="13" height="13"></i>
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+async function carregarItensComboProduto(comboId) {
+  comboItensTemporarios = [];
+
+  if (!comboId || !sistemaOnline()) return;
+
+  const { data, error } = await sb
+    .from("produto_combo_itens")
+    .select("*")
+    .eq("empresa_id", obterEmpresaId())
+    .eq("combo_id", comboId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  comboItensTemporarios = (data || []).map(item => ({
+    produto_id: item.produto_id,
+    quantidade: Number(item.quantidade || 1)
+  }));
+}
+
+async function salvarItensComboProduto(comboId) {
+  const categoria = obterCategoriaProduto();
+
+  await sb
+    .from("produto_combo_itens")
+    .delete()
+    .eq("empresa_id", obterEmpresaId())
+    .eq("combo_id", comboId);
+
+  if (categoria !== "combos") return;
+
+  const itensValidos = comboItensTemporarios.filter(item => {
+    return item.produto_id && Number(item.quantidade || 0) > 0;
+  });
+
+  if (!itensValidos.length) {
+    throw new Error("Combo precisa ter pelo menos um produto cadastrado selecionado.");
+  }
+
+  const idsUnicos = new Set();
+
+  for (const item of itensValidos) {
+    if (idsUnicos.has(item.produto_id)) {
+      throw new Error("O mesmo produto não pode aparecer duas vezes no combo.");
+    }
+
+    idsUnicos.add(item.produto_id);
+  }
+
+  const payload = itensValidos.map(item => ({
+    empresa_id: obterEmpresaId(),
+    combo_id: comboId,
+    produto_id: item.produto_id,
+    quantidade: Number(item.quantidade || 1)
+  }));
+
+  const { error } = await sb
+    .from("produto_combo_itens")
+    .insert(payload);
+
+  if (error) throw error;
+}
+
 // ======================================================
 // SALVAR
 // ======================================================
 async function salvarProduto() {
+  const id = String(document.getElementById("produtoId")?.value || "").trim();
   const nome = String(document.getElementById("produtoNome")?.value || "").trim();
+
+  const nomeExistente = produtos.find(produto => {
+    return (
+      String(produto.nome || "").trim().toLowerCase() === nome.trim().toLowerCase() &&
+      String(produto.id) !== String(id)
+    );
+  });
+
+if (nomeExistente) {
+  await abrirAlertaProduto({
+    titulo: "Produto duplicado",
+    mensagem: "Já existe um produto com este nome cadastrado."
+  });
+
+  return;
+}
   const preco = normalizarPreco(document.getElementById("produtoPreco")?.value);
   const precoCusto = normalizarPreco(document.getElementById("produtoPrecoCusto")?.value);
   const estoque = normalizarEstoque(document.getElementById("produtoEstoque")?.value);
@@ -575,20 +946,31 @@ async function salvarProduto() {
   const categoria = obterCategoriaProduto();
   const ativo = document.getElementById("produtoAtivo")?.checked === true;
   const produtoRapido = document.getElementById("produtoRapido")?.checked === true;
-  const id = String(document.getElementById("produtoId")?.value || "").trim();
 
   if (!nome) {
-    alert("Informe o nome do produto.");
+    await abrirAlertaProduto({
+  titulo: "Nome obrigatório",
+  mensagem: "Informe o nome do produto."
+});
+return;
     return;
   }
 
   if (preco <= 0) {
-    alert("Informe um preço maior que zero.");
+    await abrirAlertaProduto({
+  titulo: "Preço inválido",
+  mensagem: "Informe um preço maior que zero."
+});
+return;
     return;
   }
 
   if (!sistemaOnline()) {
-    alert("Sistema sem conexão com Supabase. Aguarde e tente novamente.");
+    await abrirAlertaProduto({
+  titulo: "Sistema offline",
+  mensagem: "Sistema sem conexão com Supabase. Aguarde e tente novamente."
+});
+return;
     return;
   }
 
@@ -618,14 +1000,20 @@ async function salvarProduto() {
 
       if (error) throw error;
 
+      await salvarItensComboProduto(id);
+
       logProdutos("Produto atualizado.", "success");
 
     } else {
-      const { error } = await sb
+      const { data: produtoCriado, error } = await sb
         .from("produtos")
-        .insert([payload]);
+        .insert([payload])
+        .select("id")
+        .single();
 
       if (error) throw error;
+
+      await salvarItensComboProduto(produtoCriado.id);
 
       logProdutos("Produto criado.", "success");
     }
@@ -637,7 +1025,10 @@ async function salvarProduto() {
 
   } catch (err) {
     logProdutos("Erro ao salvar: " + err.message, "error");
-    alert("Erro ao salvar produto: " + err.message);
+      await abrirAlertaProduto({
+      titulo: "Erro ao salvar produto",
+      mensagem: err.message || "Não foi possível salvar o produto."
+    });
   }
 }
 

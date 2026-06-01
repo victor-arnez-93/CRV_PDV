@@ -14,6 +14,7 @@ let produtosRapidos = [];
 let metodoPagamento = "dinheiro";
 let modoPDV = "venda";
 let comandaAtiva = null;
+let comandaOculta = false;
 let caixaInicializado = false;
 let vendaEmProcessamento = false;
 let comandasCaixa = [];
@@ -29,6 +30,10 @@ let avisosJogosCaixaEmitidos = new Set();
 let intervaloAvisosJogosCaixa = null;
 let jogosPendentesSincronizacaoCaixa = [];
 let jogadorComandaPendenteCaixa = null;
+let valoresTemporariosJogoCaixa = {};
+let vinculosComandaJogadorCaixa = {};
+let qtdComandasAbertasCaixa = 0;
+let qtdJogosAbertosCaixa = 0;
 
 
 // ===== FORMATADORES =====
@@ -355,6 +360,7 @@ async function inicializarCaixa() {
   renderProdutosRapidos();
   renderCarrinho();
   aplicarVisibilidadeBotaoJogos();
+  await atualizarBadgesModosCaixa();
   await verificarJogosPendentesSincronizacaoCaixa();
 
   if (window.lucide) {
@@ -576,12 +582,18 @@ async function abrirCaixa() {
   const valor = normalizarNumero(inputValor?.value || 0);
 
   if (!sistemaOnline()) {
-    alert("Sistema ainda não está conectado ao Supabase. Aguarde alguns segundos e tente novamente.");
+    await alertaCaixa(
+  "Sistema conectando",
+  "Sistema ainda não está conectado ao Supabase. Aguarde alguns segundos e tente novamente."
+);
     return;
   }
 
   if (caixa && caixa.status === "aberto") {
-    alert("Já existe um caixa aberto.");
+    await alertaCaixa(
+  "Caixa já aberto",
+  "Já existe um caixa aberto."
+);
     return;
   }
 
@@ -623,7 +635,10 @@ async function abrirCaixa() {
 
   } catch (err) {
     logCaixa("Erro ao abrir: " + err.message, "error");
-    alert("Erro ao abrir caixa: " + err.message);
+    await alertaCaixa(
+  "Erro ao abrir caixa",
+  err.message
+);
   }
 }
 
@@ -1521,7 +1536,10 @@ if (!sistemaOnline()) {
 }
 
   if (!caixa || caixa.status !== "aberto") {
-    alert("Abra o caixa antes de finalizar uma venda.");
+    await alertaCaixa(
+  "Caixa fechado",
+  "Abra o caixa antes de finalizar uma venda."
+);
     return;
   }
 
@@ -1538,12 +1556,18 @@ if (!sistemaOnline()) {
   const total = calcularTotalCarrinho();
 
   if (desconto > subtotal) {
-    alert("O desconto não pode ser maior que o subtotal.");
+    await alertaCaixa(
+  "Desconto inválido",
+  "O desconto não pode ser maior que o subtotal."
+);
     return;
   }
 
   if (total <= 0) {
-    alert("Total da venda inválido.");
+    await alertaCaixa(
+  "Total inválido",
+  "Total da venda inválido."
+);
     return;
   }
 
@@ -1672,7 +1696,10 @@ const vendaPayload = {
     }
 
     logVenda("Erro ao finalizar venda: " + err.message, "error");
-    alert("Erro ao finalizar venda: " + err.message);
+    await alertaCaixa(
+  "Erro ao finalizar venda",
+  err.message
+);
 
   } finally {
     vendaEmProcessamento = false;
@@ -1936,6 +1963,68 @@ function setupAtalhos() {
   });
 }
 
+async function atualizarBadgesModosCaixa() {
+  if (!sistemaOnline()) return;
+
+  try {
+    const empresaId = obterEmpresaId();
+
+    const { data: comandasAbertas, error: erroComandas } = await sb
+      .from("comandas")
+      .select("id")
+      .eq("empresa_id", empresaId)
+      .eq("status", "aberta");
+
+    if (erroComandas) throw erroComandas;
+
+    const hoje = new Date().toISOString().slice(0, 10);
+
+    const { data: jogos, error: erroJogos } = await sb
+      .from("agenda")
+      .select("*")
+      .eq("empresa_id", empresaId)
+      .gte("data_agendamento", hoje)
+      .neq("status_jogo", "cancelado");
+
+    if (erroJogos) throw erroJogos;
+
+    qtdComandasAbertasCaixa = comandasAbertas?.length || 0;
+
+    qtdJogosAbertosCaixa = (jogos || []).filter(jogo => {
+      const status = calcularStatusJogoCaixa(jogo);
+      return status === "andamento" || status === "cobranca";
+    }).length;
+
+    aplicarBadgeModoCaixa("btnModoComanda", qtdComandasAbertasCaixa);
+    aplicarBadgeModoCaixa("btnModoJogos", qtdJogosAbertosCaixa);
+
+  } catch (err) {
+    console.warn("[CAIXA][BADGES]", err);
+  }
+}
+
+function aplicarBadgeModoCaixa(botaoId, quantidade) {
+  const botao = document.getElementById(botaoId);
+
+  if (!botao) return;
+
+  let badge = botao.querySelector(".modo-alerta-badge");
+
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "modo-alerta-badge";
+    botao.appendChild(badge);
+  }
+
+  if (quantidade > 0) {
+    badge.textContent = quantidade;
+    badge.style.display = "flex";
+  } else {
+    badge.textContent = "";
+    badge.style.display = "none";
+  }
+}
+
 // ======================================================
 // MODO PDV
 // ======================================================
@@ -1987,12 +2076,13 @@ async function alterarModoPDV(modo) {
   btnComanda?.classList.remove("active");
   btnJogos?.classList.remove("active");
 
-  if (modo === "venda") {
-    btnVenda?.classList.add("active");
+if (modo === "venda") {
+  btnVenda?.classList.add("active");
 
-    comandaAtiva = null;
-    jogoSelecionadoCaixa = null;
-    carrinho = [];
+  comandaAtiva = null;
+  comandaOculta = false;
+  jogoSelecionadoCaixa = null;
+  carrinho = [];
 
     renderCarrinho();
     atualizarInterfaceModoPDV();
@@ -2004,18 +2094,20 @@ async function alterarModoPDV(modo) {
 
     jogoSelecionadoCaixa = null;
 
+    await carregarComandasCaixa();
+
     atualizarInterfaceModoPDV();
 
-    await abrirModalSelecionarComanda();
     return;
   }
 
-  if (modo === "jogos") {
-    btnJogos?.classList.add("active");
+if (modo === "jogos") {
+  btnJogos?.classList.add("active");
 
-    comandaAtiva = null;
-    jogoSelecionadoCaixa = null;
-    carrinho = [];
+  comandaAtiva = null;
+  comandaOculta = false;
+  jogoSelecionadoCaixa = null;
+  carrinho = [];
 
     renderCarrinho();
     atualizarInterfaceModoPDV();
@@ -2056,6 +2148,8 @@ function atualizarInterfaceModoPDV() {
 
     inputBusca.focus();
 
+    renderComandasAbertasNoCaixa();
+
     return;
   }
 
@@ -2082,6 +2176,8 @@ function atualizarInterfaceModoPDV() {
       "Use o botão Jogos para buscar cobranças da agenda...";
 
     inputBusca.focus();
+
+    renderComandasAbertasNoCaixa();
 
     return;
   }
@@ -2110,20 +2206,32 @@ function atualizarInterfaceModoPDV() {
 
     inputBusca.focus();
 
+    renderComandasAbertasNoCaixa();
+
     return;
   }
 
-  // =========================
-  // COMANDA ATIVA
-  // =========================
+// =========================
+// COMANDA ATIVA
+// =========================
 
+if (comandaOculta) {
   if (comandaCard) {
-    comandaCard.style.display = "flex";
+    comandaCard.style.display = "none";
   }
 
-  const codigo = document.getElementById("comandaCodigo");
-  const total = document.getElementById("comandaTotal");
-  const status = document.getElementById("comandaStatus");
+  renderComandasAbertasNoCaixa();
+  return;
+}
+
+if (comandaCard) {
+  comandaCard.style.display = "flex";
+}
+
+const codigo = document.getElementById("comandaCodigo");
+const total = document.getElementById("comandaTotal");
+const status = document.getElementById("comandaStatus");
+const meta = document.getElementById("comandaMeta");
 
   if (codigo) {
     codigo.textContent = comandaAtiva.codigo || "—";
@@ -2133,9 +2241,23 @@ function atualizarInterfaceModoPDV() {
     status.textContent = comandaAtiva.status || "aberta";
   }
 
-  if (total) {
-    total.textContent = fmt(comandaAtiva.total || 0);
+if (meta) {
+  const nomeCliente = String(comandaAtiva.nome_cliente || "").trim();
+  const observacoes = String(comandaAtiva.observacoes || "").trim();
+
+  if (nomeCliente || observacoes) {
+    meta.style.display = "block";
+
+    meta.innerHTML = `
+      ${nomeCliente ? `<span><strong>Responsável:</strong> ${nomeCliente}</span>` : ""}
+      ${observacoes ? `<span><strong>Origem:</strong> ${observacoes}</span>` : ""}
+      <span><strong>Situação:</strong> comanda aberta para consumo</span>
+    `;
+  } else {
+    meta.style.display = "none";
+    meta.innerHTML = "";
   }
+}
 
     if (btnFinalizar) {
     btnFinalizar.onclick = fecharComanda;
@@ -2151,6 +2273,8 @@ function atualizarInterfaceModoPDV() {
     "Ler produto para adicionar na comanda...";
 
   inputBusca.focus();
+
+  renderComandasAbertasNoCaixa();
 }
 
 // ======================================================
@@ -2323,6 +2447,12 @@ function iniciarAvisosFimDeJogoCaixa() {
 
     await carregarJogosCaixa();
     verificarAvisosFimDeJogoCaixa();
+    await atualizarBadgesModosCaixa();
+
+    if (modoPDV === "comanda") {
+      await carregarComandasCaixa();
+      renderComandasAbertasNoCaixa();
+    }
   }, 15000);
 }
 
@@ -2489,13 +2619,16 @@ function fecharModalSelecionarJogo() {
 async function carregarJogosCaixa() {
   const lista = document.getElementById("listaJogosCaixa");
 
-  if (lista) {
-    lista.innerHTML = `
-      <div class="empty-state">
-        <p>Carregando jogos...</p>
-      </div>
-    `;
-  }
+const modalJogosAberto =
+  document.getElementById("modalSelecionarJogo")?.style.display === "flex";
+
+if (lista && modalJogosAberto) {
+  lista.innerHTML = `
+    <div class="empty-state">
+      <p>Carregando jogos...</p>
+    </div>
+  `;
+}
 
   try {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -2526,8 +2659,50 @@ async function carregarJogosCaixa() {
       jogadores = jogadoresData || [];
     }
 
-    jogosCaixa = Array.isArray(jogos) ? jogos : [];
-    jogadoresCaixaPorAgenda = agruparJogadoresCaixa(jogadores);
+jogosCaixa = Array.isArray(jogos) ? jogos : [];
+jogadoresCaixaPorAgenda = agruparJogadoresCaixa(jogadores);
+vinculosComandaJogadorCaixa = {};
+
+const idsJogadores = jogadores.map(jogador => jogador.id);
+
+if (idsJogadores.length) {
+  const { data: vinculos, error: erroVinculos } = await sb
+    .from("comanda_itens")
+    .select(`
+      agenda_jogador_id,
+      comanda_id,
+      comandas (
+        codigo,
+        status,
+        nome_cliente,
+        total
+      )
+    `)
+    .eq("empresa_id", obterEmpresaId())
+    .in("agenda_jogador_id", idsJogadores);
+
+  if (!erroVinculos) {
+    (vinculos || []).forEach(vinculo => {
+      if (vinculo.agenda_jogador_id) {
+        vinculosComandaJogadorCaixa[vinculo.agenda_jogador_id] = {
+          comanda_id: vinculo.comanda_id,
+          codigo: vinculo.comandas?.codigo || "—",
+          status: vinculo.comandas?.status || "aberta",
+          nome_cliente: vinculo.comandas?.nome_cliente || "",
+          total: Number(vinculo.comandas?.total || 0)
+        };
+      }
+    });
+  }
+}
+
+if (modalJogosAberto) {
+  filtrarJogosCaixa();
+}
+
+    if (modalJogosAberto) {
+  filtrarJogosCaixa();
+}
 
   } catch (err) {
     jogosCaixa = [];
@@ -2728,17 +2903,63 @@ function renderJogosCaixa() {
   }
 }
 
+function capturarValoresJogoAtualCaixa() {
+  if (!jogoSelecionadoCaixa?.id) return;
+
+  if (!valoresTemporariosJogoCaixa[jogoSelecionadoCaixa.id]) {
+    valoresTemporariosJogoCaixa[jogoSelecionadoCaixa.id] = {};
+  }
+
+  document
+    .querySelectorAll(".jogo-caixa-jogador-row")
+    .forEach(row => {
+      const jogadorId = row.dataset.jogadorId;
+      const inputValor = row.querySelector(".jogo-caixa-valor-input");
+
+      if (!jogadorId || !inputValor) return;
+
+      valoresTemporariosJogoCaixa[jogoSelecionadoCaixa.id][jogadorId] =
+        normalizarNumero(inputValor.value);
+    });
+}
+
+function obterValorTemporarioJogadorCaixa(jogador) {
+  const mapaJogo =
+    valoresTemporariosJogoCaixa[jogoSelecionadoCaixa?.id] || {};
+
+  const valorTemporario = mapaJogo[jogador.id];
+
+  if (valorTemporario !== undefined && valorTemporario !== null) {
+    return Number(valorTemporario || 0);
+  }
+
+  return Number(jogador.valor || 0);
+}
+
+function montarDescricaoJogoComandaCaixa(jogo, jogador) {
+  return [
+    `Jogo vinculado`,
+    jogo.local_recurso || "Quadra/Campo",
+    `${formatarDataCaixa(jogo.data_agendamento)} ${formatarHoraCaixa(jogo.hora_inicio)}-${formatarHoraCaixa(jogo.hora_fim)}`,
+    jogador.nome || "Jogador"
+  ].join(" · ");
+}
+
 function abrirFinalizacaoJogoCaixa(jogoId) {
   const jogo = jogosCaixa.find(item => String(item.id) === String(jogoId));
 
-  if (!jogo) {
-    alert("Jogo não encontrado.");
-    return;
-  }
+if (!jogo) {
+  alertaCaixa(
+    "Jogo não encontrado",
+    "Não foi possível localizar este jogo."
+  );
+  return;
+}
 
   jogoSelecionadoCaixa = jogo;
 
   const jogadores = jogadoresCaixaPorAgenda[jogo.id] || [];
+  const jogadoresPendentes = jogadores.filter(jogador => jogador.pago !== true);
 
   const modal = document.getElementById("modalFinalizarJogoCaixa");
   const titulo = document.getElementById("finalizarJogoTitulo");
@@ -2782,6 +3003,24 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
     `;
   }
 
+  const inputRateio = document.getElementById("valorTotalJogoCaixa");
+const btnRateio = document.getElementById("btnAplicarRateioJogo");
+
+if (inputRateio) {
+  const totalPrevisto = Number(jogo.valor_total || jogo.valor_previsto || 0);
+
+  inputRateio.value = totalPrevisto > 0
+    ? totalPrevisto.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    : "";
+}
+
+if (btnRateio) {
+  btnRateio.onclick = aplicarRateioJogoCaixa;
+}
+
   if (lista) {
     if (!jogadores.length) {
       lista.innerHTML = `
@@ -2792,6 +3031,13 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
     } else {
       lista.innerHTML = jogadores.map(jogador => {
         const pago = jogador.pago === true;
+        const valorAtual = obterValorTemporarioJogadorCaixa(jogador);
+const vinculoComanda = vinculosComandaJogadorCaixa[jogador.id] || null;
+
+const textoStatusComanda =
+  pago && String(jogador.forma_pagamento || "").toLowerCase() === "comanda"
+    ? ` · na comanda ${vinculoComanda?.codigo || "—"} · ${vinculoComanda?.status || "aberta"}`
+    : "";
 
         return `
           <div class="jogo-caixa-jogador-row ${pago ? "pago" : ""}" data-jogador-id="${jogador.id}">
@@ -2803,12 +3049,12 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
 
             <div class="jogo-caixa-jogador-nome">
               ${jogador.nome || "Jogador"}
-              ${pago ? ` · pago${jogador.forma_pagamento === "comanda" ? " na comanda" : ""}` : ""}
+              ${pago ? ` · pago${textoStatusComanda}` : ""}
             </div>
 
             <input
               class="input jogo-caixa-valor-input"
-              value="${Number(jogador.valor || 0).toLocaleString("pt-BR", {
+              value="${Number(valorAtual || 0).toLocaleString("pt-BR", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}"
@@ -2880,6 +3126,46 @@ function fecharModalFinalizarJogoCaixa() {
   jogoSelecionadoCaixa = null;
 }
 
+function aplicarRateioJogoCaixa() {
+  const inputRateio = document.getElementById("valorTotalJogoCaixa");
+
+  const totalJogo = normalizarNumero(inputRateio?.value || 0);
+
+  const linhasPendentes = [...document.querySelectorAll(".jogo-caixa-jogador-row")]
+    .filter(row => {
+      const check = row.querySelector(".jogo-caixa-check");
+      return check && !check.disabled;
+    });
+
+  if (totalJogo <= 0 || !linhasPendentes.length) {
+    alertaCaixa(
+      "Rateio inválido",
+      "Informe o valor total do jogo e mantenha pelo menos um jogador pendente."
+    );
+    return;
+  }
+
+  const valorPorJogador = totalJogo / linhasPendentes.length;
+
+  linhasPendentes.forEach(row => {
+    const inputValor = row.querySelector(".jogo-caixa-valor-input");
+    const check = row.querySelector(".jogo-caixa-check");
+
+    if (inputValor) {
+      inputValor.value = valorPorJogador.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    if (check) {
+      check.checked = true;
+    }
+  });
+
+  atualizarTotalSelecionadoJogoCaixa();
+}
+
 function atualizarTotalSelecionadoJogoCaixa() {
   const totalEl = document.getElementById("jogoCaixaTotalSelecionado");
 
@@ -2915,6 +3201,7 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
     return;
   }
 
+  capturarValoresJogoAtualCaixa();
   const row = document.querySelector(`.jogo-caixa-jogador-row[data-jogador-id="${jogadorId}"]`);
 
   if (!row) {
@@ -2982,6 +3269,7 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
   const jogador = jogadorComandaPendenteCaixa.jogador;
   const valorCobrado = Number(jogadorComandaPendenteCaixa.valorCobrado || 0);
 
+  const descricaoJogo = montarDescricaoJogoComandaCaixa(jogo, jogador);
   const itemNome = `Jogo - ${jogador.nome || "Jogador"}`;
 
   const { data: itemDuplicado, error: erroBuscaItem } = await sb
@@ -2995,12 +3283,13 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
   if (erroBuscaItem) throw erroBuscaItem;
 
   if (itemDuplicado?.length) {
+    jogadorComandaPendenteCaixa = null;
+
     await alertaCaixa(
       "Item já enviado",
       "Este jogador já está vinculado a uma comanda."
     );
 
-    jogadorComandaPendenteCaixa = null;
     return;
   }
 
@@ -3052,28 +3341,48 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
     return acc + Number(item.total || 0);
   }, 0);
 
-  await sb
+  const { data: comandaAtualizada, error: erroAtualizarComanda } = await sb
     .from("comandas")
     .update({
-      total: totalComanda
+      status: "aberta",
+      nome_cliente: comanda.nome_cliente || jogador.nome || null,
+      observacoes: descricaoJogo,
+      total: totalComanda,
+      data_abertura: comanda.data_abertura || new Date().toISOString()
     })
     .eq("id", comanda.id)
-    .eq("empresa_id", empresaId);
+    .eq("empresa_id", empresaId)
+    .select("*")
+    .single();
+
+  if (erroAtualizarComanda) throw erroAtualizarComanda;
 
   jogadorComandaPendenteCaixa = null;
 
-  await carregarComandasCaixa();
-  await carregarJogosCaixa();
+  const modalComanda = document.getElementById("modalSelecionarComanda");
 
-  if (jogoSelecionadoCaixa?.id) {
-    abrirFinalizacaoJogoCaixa(jogoSelecionadoCaixa.id);
+  if (modalComanda) {
+    modalComanda.style.display = "none";
+    modalComanda.style.zIndex = "";
   }
 
+  await carregarComandasCaixa();
+  await carregarJogosCaixa();
   await verificarJogosPendentesSincronizacaoCaixa();
+  await atualizarBadgesModosCaixa();
+
+  jogoSelecionadoCaixa =
+    jogosCaixa.find(item => String(item.id) === String(jogo.id)) || jogo;
+
+  abrirFinalizacaoJogoCaixa(jogo.id);
 
   await alertaCaixa(
-    "Jogador enviado para comanda",
-    `<strong>${jogador.nome || "Jogador"}</strong> foi enviado para a comanda <strong>${comanda.codigo || "—"}</strong>.`
+    "Jogador vinculado à comanda",
+    `
+      <strong>${jogador.nome || "Jogador"}</strong> foi vinculado à
+      comanda <strong>${comandaAtualizada.codigo || "—"}</strong>.<br><br>
+      A comanda ficou aberta e você voltou para finalizar o jogo.
+    `
   );
 }
 
@@ -3144,12 +3453,25 @@ async function confirmarPagamentoJogoCaixa() {
     [...document.querySelectorAll(".jogo-caixa-jogador-row")]
       .filter(row => row.querySelector(".jogo-caixa-check")?.checked);
 
-  const jogadoresJaPagos =
+  const jogadoresJaPagosDireto =
     jogadores.filter(jogador => {
-      return jogador.pago === true && Number(jogador.valor || 0) > 0;
+      return (
+        jogador.pago === true &&
+        Number(jogador.valor || 0) > 0 &&
+        String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
+      );
     });
 
-  if (!linhasSelecionadas.length && jogadoresJaPagos.length) {
+  const jogadoresPagosComanda =
+    jogadores.filter(jogador => {
+      return (
+        jogador.pago === true &&
+        Number(jogador.valor || 0) > 0 &&
+        String(jogador.forma_pagamento || "").toLowerCase() === "comanda"
+      );
+    });
+
+    if (!linhasSelecionadas.length && jogadoresJaPagosDireto.length) {
     const confirmarSync = await abrirConfirmacaoCaixa({
       titulo: "Sincronizar venda do jogo",
       mensagem: `
@@ -3199,6 +3521,14 @@ async function confirmarPagamentoJogoCaixa() {
     return;
   }
 
+  if (!linhasSelecionadas.length && jogadoresPagosComanda.length) {
+    await alertaCaixa(
+      "Jogadores na comanda",
+      "Os jogadores selecionados já foram enviados para comanda. Nenhuma venda direta será lançada agora."
+    );
+    return;
+  }
+
   if (!linhasSelecionadas.length) {
     await alertaCaixa(
       "Nenhum pagamento selecionado",
@@ -3232,11 +3562,12 @@ async function confirmarPagamentoJogoCaixa() {
 
   const confirmar = await abrirConfirmacaoCaixa({
     titulo: "Confirmar pagamento do jogo",
-    mensagem: `
-      Confirmar pagamento de
-      <strong>${fmt(atualizarTotalSelecionadoJogoCaixa())}</strong>
-      para este jogo?
-    `,
+mensagem: `
+  Confirmar pagamento direto de
+  <strong>${fmt(atualizarTotalSelecionadoJogoCaixa())}</strong>
+  para este jogo?<br><br>
+  Jogadores enviados para comanda continuam na comanda aberta e não entram como pagamento direto agora.
+`,
     textoConfirmar: "Confirmar pagamento"
   });
 
@@ -3375,8 +3706,22 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
 
   let vendaId = vendaExistente?.id || null;
 
+    const jogadoresEmComanda = jogadores.filter(jogador => {
+    return (
+      jogador.pago === true &&
+      Number(jogador.valor || 0) > 0 &&
+      String(jogador.forma_pagamento || "").toLowerCase() === "comanda"
+    );
+  });
+
+  const textoComanda = jogadoresEmComanda.length
+    ? ` · ${jogadoresEmComanda.map(jogador => {
+        return `${jogador.nome || "Jogador"} em comanda ${fmt(jogador.valor || 0)}`;
+      }).join(", ")}`
+    : "";
+
   const descricao =
-    `${jogo.tipo_jogo === "mensalista" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`;
+    `${jogo.tipo_jogo === "mensalista" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"} | Total ${fmt(totalPagoAgenda)}${textoComanda}`;
 
   if (vendaId) {
     await sb
@@ -3469,6 +3814,105 @@ function setupModalSelecionarComanda() {
   }
 }
 
+function renderComandasAbertasNoCaixa() {
+  let box = document.getElementById("comandasAbertasCaixa");
+
+  const comandaCard = document.getElementById("comandaCard");
+
+  if (!comandaCard) return;
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "comandasAbertasCaixa";
+    box.className = "comandas-abertas-caixa";
+    comandaCard.insertAdjacentElement("beforebegin", box);
+  }
+
+  if (modoPDV !== "comanda") {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const abertas = comandasCaixa.filter(comanda => {
+    return String(comanda.status || "").toLowerCase() === "aberta";
+  });
+
+  if (!abertas.length) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.style.display = "block";
+
+  box.innerHTML = `
+    <div class="comandas-abertas-header">
+      <span>Comandas abertas</span>
+
+      <div class="comandas-abertas-actions">
+        <small>${abertas.length} aberta${abertas.length === 1 ? "" : "s"}</small>
+
+        <button
+          type="button"
+          class="btn-abrir-modal-comandas"
+          id="btnAbrirModalComandasCaixa"
+        >
+          Ver todas
+        </button>
+      </div>
+    </div>
+
+    <div class="comandas-abertas-lista">
+      ${abertas.map(comanda => `
+        <button
+          type="button"
+          class="comanda-aberta-item ${comandaAtiva?.id === comanda.id ? "active" : ""}"
+          data-comanda-id="${comanda.id}"
+        >
+          <strong class="comanda-aberta-codigo">
+            ${comanda.codigo || "—"}
+          </strong>
+
+          <span class="comanda-aberta-cliente">
+            ${comanda.nome_cliente || "Sem identificação"}
+          </span>
+
+          <span class="comanda-aberta-total">
+            ${fmt(comanda.total || 0)}
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+
+  box.querySelectorAll(".comanda-aberta-item").forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.comandaId;
+
+      const comanda = abertas.find(item => {
+        return String(item.id) === String(id);
+      });
+
+      if (!comanda) return;
+
+      comandaAtiva = comanda;
+      comandaOculta = false;
+
+      await carregarItensComanda();
+
+      atualizarInterfaceModoPDV();
+      renderComandasAbertasNoCaixa();
+    };
+  });
+
+    document
+    .getElementById("btnAbrirModalComandasCaixa")
+    ?.addEventListener("click", async () => {
+      await abrirModalSelecionarComanda();
+    });
+}
+
 async function abrirModalSelecionarComanda() {
   const modal = document.getElementById("modalSelecionarComanda");
   const inputBusca = document.getElementById("inputBuscaModalComanda");
@@ -3501,7 +3945,9 @@ function fecharModalSelecionarComanda() {
     modal.style.zIndex = "";
   }
 
+  if (!jogadorComandaPendenteCaixa) {
   jogadorComandaPendenteCaixa = null;
+}
 
   const inputBusca = document.getElementById("inputBusca");
 
@@ -3598,9 +4044,15 @@ function renderComandasCaixa() {
           ${comanda.codigo || "—"}
         </strong>
 
-        <span class="comanda-caixa-cliente">
-          ${comanda.nome_cliente || "Sem identificação"}
-        </span>
+<span class="comanda-caixa-cliente">
+  ${comanda.nome_cliente || "Sem identificação"}
+</span>
+
+${comanda.observacoes ? `
+  <span class="comanda-caixa-origem">
+    ${comanda.observacoes}
+  </span>
+` : ""}
       </div>
 
       <div>
@@ -3643,27 +4095,20 @@ async function selecionarComandaCaixa(comanda) {
       comandaOperacional = data;
     }
 
-    if (jogadorComandaPendenteCaixa) {
-      await finalizarEnvioJogadorParaComandaCaixa(comandaOperacional);
-
-      fecharModalSelecionarComanda();
-
-      const modalComanda = document.getElementById("modalSelecionarComanda");
-
-      if (modalComanda) {
-        modalComanda.style.zIndex = "";
-      }
-
-      return;
-    }
+if (jogadorComandaPendenteCaixa) {
+  await finalizarEnvioJogadorParaComandaCaixa(comandaOperacional);
+  return;
+}
 
     comandaAtiva = comandaOperacional;
+    comandaOculta = false;
 
     await carregarItensComanda();
 
     fecharModalSelecionarComanda();
 
     atualizarInterfaceModoPDV();
+    await atualizarBadgesModosCaixa();
 
   } catch (err) {
     await alertaCaixa(
@@ -3943,6 +4388,7 @@ if (!sistemaOnline()) {
     // =========================================
 
     comandaAtiva = comanda;
+    comandaOculta = false;
 
     await carregarItensComanda();
 
@@ -3966,11 +4412,13 @@ if (!sistemaOnline()) {
 // ======================================================
 // ITENS DA COMANDA
 // ======================================================
-
 async function adicionarProdutoNaComanda(produto) {
 
   if (!comandaAtiva?.id) {
-    alert("Nenhuma comanda ativa.");
+    await alertaCaixa(
+  "Comanda",
+  "Nenhuma comanda ativa."
+);
     return;
   }
 
@@ -4060,6 +4508,8 @@ async function adicionarProdutoNaComanda(produto) {
   }
 
   await carregarItensComanda();
+  await atualizarBadgesModosCaixa();
+  renderComandasAbertasNoCaixa();
 }
 
 async function adicionarItemManualNaComanda({
@@ -4101,6 +4551,8 @@ async function adicionarItemManualNaComanda({
     if (error) throw error;
 
     await carregarItensComanda();
+    await atualizarBadgesModosCaixa();
+    renderComandasAbertasNoCaixa();
 
   } catch (err) {
     await alertaCaixa(
@@ -4160,23 +4612,55 @@ async function carregarItensComanda() {
 
   renderCarrinho();
   atualizarInterfaceModoPDV();
+  renderComandasAbertasNoCaixa();
 }
 
 // ======================================================
 // LIMPAR COMANDA ATIVA
 // ======================================================
 async function limparComandaAtiva() {
-const confirmar = await abrirConfirmacaoCaixa({
-  titulo: "Sair da comanda",
-  mensagem: `
-    Deseja sair da comanda atual?
-  `,
-  textoConfirmar: "Sair"
-});
+  if (!comandaAtiva?.id) {
+    comandaAtiva = null;
+    carrinho = [];
+    renderCarrinho();
+    atualizarInterfaceModoPDV();
+    return;
+  }
 
-if (!confirmar) return;
+  const confirmar = await abrirConfirmacaoCaixa({
+    titulo: "Sair da comanda",
+    mensagem: `
+      Deseja sair da comanda <strong>${comandaAtiva.codigo || "—"}</strong>?
+    `,
+    textoConfirmar: "Sair"
+  });
+
+  if (!confirmar) return;
+
+  try {
+    await carregarItensComanda();
+
+    if (!carrinho.length && sistemaOnline()) {
+      await sb
+        .from("comandas")
+        .update({
+          status: "livre",
+          nome_cliente: null,
+          observacoes: null,
+          data_abertura: null,
+          data_fechamento: null,
+          total: 0
+        })
+        .eq("id", comandaAtiva.id)
+        .eq("empresa_id", obterEmpresaId());
+    }
+
+  } catch (err) {
+    console.warn("[CAIXA][LIMPAR COMANDA]", err);
+  }
 
   comandaAtiva = null;
+  comandaOculta = false;
   carrinho = [];
 
   renderCarrinho();
@@ -4188,6 +4672,9 @@ if (!confirmar) return;
     input.value = "";
     input.focus();
   }
+
+  await atualizarBadgesModosCaixa();
+  renderComandasAbertasNoCaixa();
 }
 
 document.addEventListener("click", event => {
@@ -4195,6 +4682,17 @@ document.addEventListener("click", event => {
 
   if (btnLimpar) {
     limparComandaAtiva();
+  }
+});
+
+document.addEventListener("click", event => {
+  const btnOcultar = event.target.closest("#btnOcultarComanda");
+
+  if (btnOcultar) {
+    comandaOculta = true;
+
+    atualizarInterfaceModoPDV();
+    renderComandasAbertasNoCaixa();
   }
 });
 
@@ -4286,6 +4784,7 @@ if (!sistemaOnline()) {
   exibirModalSucesso(total, troco);
 
   comandaAtiva = null;
+  comandaOculta = false;
   carrinho = [];
 
   renderCarrinho();
@@ -4302,22 +4801,56 @@ if (!sistemaOnline()) {
 }
 
   if (!caixa || caixa.status !== "aberto") {
-    alert("Abra o caixa antes de fechar uma comanda.");
+    await alertaCaixa(
+  "Caixa fechado",
+  "Abra o caixa antes de fechar uma comanda."
+);
     return;
   }
 
   if (!comandaAtiva?.id) {
-    alert("Nenhuma comanda ativa.");
+    await alertaCaixa(
+  "Comanda",
+  "Nenhuma comanda ativa."
+);
     return;
   }
 
   await carregarItensComanda();
 
   if (!carrinho.length) {
-    await alertaCaixa(
-      "Comanda vazia",
-      "Esta comanda não possui itens."
-    );
+    const confirmarVazia = await abrirConfirmacaoCaixa({
+      titulo: "Fechar comanda vazia",
+      mensagem: `
+        Esta comanda não possui itens.<br><br>
+        Deseja liberar a comanda <strong>${comandaAtiva.codigo || "—"}</strong> sem gerar venda?
+      `,
+      textoConfirmar: "Liberar comanda"
+    });
+
+    if (!confirmarVazia) return;
+
+    await sb
+      .from("comandas")
+      .update({
+        status: "livre",
+        nome_cliente: null,
+        observacoes: null,
+        data_abertura: null,
+        data_fechamento: null,
+        total: 0
+      })
+      .eq("id", comandaAtiva.id)
+      .eq("empresa_id", obterEmpresaId());
+
+    comandaAtiva = null;
+    carrinho = [];
+
+    renderCarrinho();
+    atualizarInterfaceModoPDV();
+    await atualizarBadgesModosCaixa();
+    renderComandasAbertasNoCaixa();
+
     return;
   }
 
@@ -4335,13 +4868,19 @@ if (!confirmar) return;
   const desconto = calcularDesconto();
   const total = calcularTotalCarrinho();
 
-  if (desconto > subtotal) {
-    alert("O desconto não pode ser maior que o subtotal.");
-    return;
-  }
+if (desconto > subtotal) {
+  await alertaCaixa(
+    "Desconto inválido",
+    "O desconto não pode ser maior que o subtotal."
+  );
+  return;
+}
 
   if (total <= 0) {
-    alert("Total da comanda inválido.");
+    await alertaCaixa(
+  "Total inválido",
+  "Total da comanda inválido."
+);
     return;
   }
 
@@ -4354,7 +4893,10 @@ if (!confirmar) return;
     valorRecebido > 0 &&
     valorRecebido < total
   ) {
-    alert("Valor recebido menor que o total da comanda.");
+    await alertaCaixa(
+  "Pagamento insuficiente",
+  "Valor recebido menor que o total da comanda."
+);
     return;
   }
 
@@ -4384,7 +4926,7 @@ const vendaPayload = {
   troco: troco,
   origem: "comanda",
   origem_id: comandaAtiva.id,
-  descricao: `Comanda ${comandaAtiva.codigo || ""}`,
+  descricao: `Comanda ${comandaAtiva.codigo || ""} fechada`,
   data: new Date().toISOString()
 };
 
@@ -4434,15 +4976,24 @@ const vendaPayload = {
 
     await baixarEstoqueProdutos();
 
-    const { error: erroComanda } = await sb
-      .from("comandas")
-      .update({
-        status: "fechada",
-        data_fechamento: new Date().toISOString(),
-        total: total
-      })
-      .eq("id", comandaAtiva.id)
-      .eq("empresa_id", empresaId);
+await sb
+  .from("comanda_itens")
+  .delete()
+  .eq("empresa_id", empresaId)
+  .eq("comanda_id", comandaAtiva.id);
+
+const { error: erroComanda } = await sb
+  .from("comandas")
+  .update({
+    status: "livre",
+    nome_cliente: null,
+    observacoes: null,
+    data_abertura: null,
+    data_fechamento: null,
+    total: 0
+  })
+  .eq("id", comandaAtiva.id)
+  .eq("empresa_id", empresaId);
 
     if (erroComanda) throw erroComanda;
 
@@ -4451,6 +5002,7 @@ const vendaPayload = {
     exibirModalSucesso(total, troco);
 
     comandaAtiva = null;
+    comandaOculta = false;
     carrinho = [];
 
     const descontoInput = document.getElementById("inputDesconto");
@@ -4466,6 +5018,8 @@ const vendaPayload = {
     atualizarInfobar();
     renderHistorico();
     atualizarInterfaceModoPDV();
+    await atualizarBadgesModosCaixa();
+    renderComandasAbertasNoCaixa();
 
     logVenda("Comanda fechada e venda salva no Supabase.", "success");
 
@@ -4490,7 +5044,10 @@ const vendaPayload = {
     }
 
     logVenda("Erro ao fechar comanda: " + err.message, "error");
-    alert("Erro ao fechar comanda: " + err.message);
+    await alertaCaixa(
+  "Erro ao fechar comanda",
+  err.message
+);
 
   } finally {
     vendaEmProcessamento = false;

@@ -426,6 +426,105 @@
 }
 
 /* ======================================================
+   COMBOS — PRODUTOS
+====================================================== */
+
+.combo-produtos-wrap {
+  margin-top: 6px;
+  padding: 12px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(249, 137, 72, .22);
+  background: rgba(249, 137, 72, .06);
+}
+
+.combo-produtos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 10px;
+}
+
+.combo-produtos-header strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: .86rem;
+}
+
+.combo-produtos-header small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: .72rem;
+}
+
+.combo-produtos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.combo-produto-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px 34px;
+  gap: 8px;
+  align-items: center;
+}
+
+.combo-produto-row input {
+  text-align: center;
+}
+
+.combo-produtos-empty {
+  padding: 12px;
+
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  background: var(--bg-elevated);
+
+  color: var(--text-muted);
+  font-size: .82rem;
+  text-align: center;
+}
+
+.modal-alerta-produto {
+  max-width: 420px;
+}
+
+.alerta-produto-texto {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .combo-produtos-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .combo-produtos-header button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .combo-produto-row {
+    grid-template-columns: 1fr;
+  }
+
+  .combo-produto-row .produto-btn {
+    justify-self: flex-end;
+  }
+}
+
+/* ======================================================
    RESPONSIVE — PRODUTOS
 ====================================================== */
 

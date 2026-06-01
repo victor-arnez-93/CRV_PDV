@@ -832,6 +832,120 @@ html[data-theme="dark"] body::before {
   background-image: url("../assets/fundo2.png") !important;
 }
 
+.prelogin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.prelogin-overlay.hidden {
+  display: none;
+}
+
+.prelogin-card {
+  width: min(420px, 100%);
+  position: relative;
+  padding: 30px 26px;
+  border-radius: 24px;
+  border: 1px solid var(--landing-border);
+  background: var(--landing-card);
+  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+  text-align: center;
+}
+
+.prelogin-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  background: var(--landing-elevated);
+  color: var(--landing-text);
+  cursor: pointer;
+}
+
+.prelogin-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
+  background: rgba(212,168,67,.12);
+  color: var(--landing-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.prelogin-card h2 {
+  font-family: var(--font-display);
+  margin-bottom: 8px;
+}
+
+.prelogin-card p {
+  color: var(--landing-muted);
+  margin-bottom: 20px;
+}
+
+.prelogin-card label {
+  display: block;
+  text-align: left;
+  margin: 12px 0 6px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--landing-muted);
+}
+
+.prelogin-card input {
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--landing-border);
+  background: var(--landing-elevated);
+  color: var(--landing-text);
+  padding: 0 14px;
+  outline: none;
+}
+
+#preloginFeedback {
+  min-height: 22px;
+  margin: 12px 0;
+  color: #ff7070;
+  font-size: .88rem;
+}
+
+.prelogin-card .btn-primary {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  height: 40px;
+  min-height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+.prelogin-card #btnValidarPrelogin {
+  width: 100%;
+  max-width: 280px;
+  min-width: 0;
+  margin: 14px auto 0;
+  display: flex;
+}
+
 /* ======================================================
    MOBILE — LANDING PAGE
 ====================================================== */
