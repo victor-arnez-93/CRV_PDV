@@ -272,8 +272,8 @@ function abrirConfirmacaoComanda({
       return;
     }
 
-    tituloEl.textContent = titulo;
-    mensagemEl.innerHTML = mensagem;
+    if (tituloEl) tituloEl.textContent = titulo;
+    if (mensagemEl) mensagemEl.innerHTML = mensagem;
     btnOk.textContent = textoConfirmar;
 
     modal.style.display = "flex";
@@ -290,14 +290,18 @@ function abrirConfirmacaoComanda({
 
     btnOk.onclick = () => fechar(true);
     btnCancelar.onclick = () => fechar(false);
-    if (btnFechar) btnFechar.onclick = () => fechar(false);
+
+    if (btnFechar) {
+      btnFechar.onclick = () => fechar(false);
+    }
 
     if (window.lucide) {
       lucide.createIcons();
     }
   });
+}
 
-  function abrirAvisoComanda({
+function abrirAvisoComanda({
   titulo = "Aviso",
   mensagem = "Ação concluída.",
   textoConfirmar = "Entendi"
@@ -307,8 +311,6 @@ function abrirConfirmacaoComanda({
     mensagem,
     textoConfirmar
   });
-}
-
 }
 
 async function carregarClientesComanda() {

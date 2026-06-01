@@ -587,6 +587,38 @@ function aplicarBloqueioConfiguracao() {
 }
 
 // ======================================================
+// ABAS CONFIGURAÇÕES / SOBRE
+// ======================================================
+
+function initConfigTabs() {
+  const tabConfiguracoes = document.getElementById("tabConfiguracoes");
+  const tabSobreSistema = document.getElementById("tabSobreSistema");
+
+  const secConfiguracoes = document.getElementById("secConfiguracoes");
+  const secSobreSistema = document.getElementById("secSobreSistema");
+
+  if (!tabConfiguracoes || !tabSobreSistema || !secConfiguracoes || !secSobreSistema) {
+    return;
+  }
+
+  tabConfiguracoes.addEventListener("click", () => {
+    tabConfiguracoes.classList.add("active");
+    tabSobreSistema.classList.remove("active");
+
+    secConfiguracoes.classList.add("active");
+    secSobreSistema.classList.remove("active");
+  });
+
+  tabSobreSistema.addEventListener("click", () => {
+    tabSobreSistema.classList.add("active");
+    tabConfiguracoes.classList.remove("active");
+
+    secSobreSistema.classList.add("active");
+    secConfiguracoes.classList.remove("active");
+  });
+}
+
+// ======================================================
 // INIT
 // ======================================================
 
@@ -597,6 +629,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initMascaras();
   initFeedbackLink();
+  initConfigTabs();
 
   if (btnSalvar) {
     btnSalvar.addEventListener("click", salvarConfiguracoes);

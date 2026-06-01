@@ -52,6 +52,7 @@
   --text-muted:     #FFFFFF;
   --text-accent:    #D4A843; /* golden */
   --text-accent-2:  #003887; /* azul CRV */
+  --menu-section-color: #D4A843;
 
   /* Estrutura */
   --sidebar-bg: #080808;
@@ -115,6 +116,7 @@
   --text-muted:     #000000;
   --text-accent:    #003887; /* azul CRV */
   --text-accent-2:  #7C6354; /* terroso */
+  --menu-section-color: #F28C28;
 
   /* Estrutura */
   --sidebar-bg: #FFFFFF;

@@ -17,6 +17,7 @@ let produtos = [];
 let filtroAtivo = "todos";
 let idExcluir = null;
 let comboItensTemporarios = [];
+let tipoNegocioProdutos = "";
 const LIMITE_DIGITOS_MOEDA = 9;
 const LIMITE_DIGITOS_ESTOQUE = 6;
 const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
@@ -24,11 +25,71 @@ const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
 const categoriaLabel = {
   bebidas: "Bebidas",
   alimentos: "Alimentos",
+  refrigerantes: "Refrigerantes",
+  aguas: "Águas",
+  sucos: "Sucos",
+  energeticos: "Energéticos",
+  cervejas: "Cervejas",
+  vinhos: "Vinhos",
+  destilados: "Destilados",
+  lanches: "Lanches",
+  salgados: "Salgados",
+  doces: "Doces",
+  bolos: "Bolos",
+  paes: "Pães",
+  frios: "Frios",
+  laticinios: "Laticínios",
+  pratos: "Pratos",
+  porcoes: "Porções",
+  petiscos: "Petiscos",
+  sobremesas: "Sobremesas",
+  cafes: "Cafés",
+  bebidas_quentes: "Bebidas quentes",
+  bebidas_geladas: "Bebidas geladas",
+  higiene: "Higiene",
+  limpeza: "Limpeza",
+  congelados: "Congelados",
+  mercearia: "Mercearia",
+  tabacaria: "Tabacaria",
+  utilidades: "Utilidades",
+  jogos: "Jogos",
+  mensalistas: "Mensalistas",
+  pacotes: "Pacotes",
+  mensalidades: "Mensalidades",
+  produtos: "Produtos",
   combos: "Combos",
   servicos: "Serviços",
   outros: "Outros",
   "": "—",
   null: "—"
+};
+
+const categoriasInteligentesProdutos = {
+  aguas: ["agua", "água", "mineral", "com gas", "com gás", "sem gas", "sem gás"],
+  refrigerantes: ["refrigerante", "coca", "coca-cola", "pepsi", "guarana", "guaraná", "fanta", "sprite"],
+  energeticos: ["energetico", "energético", "red bull", "monster", "gatorade"],
+  sucos: ["suco", "del valle", "natural", "polpa"],
+  cervejas: ["cerveja", "skol", "brahma", "antarctica", "heineken", "amstel", "original"],
+  salgados: ["salgado", "coxinha", "pastel", "risoles", "kibe", "esfiha", "enroladinho"],
+  doces: ["doce", "brigadeiro", "beijinho", "chocolate", "trufa", "bombom"],
+  lanches: ["lanche", "hamburguer", "hambúrguer", "x-burger", "x-salada", "x-tudo"],
+  porcoes: ["porcao", "porção", "batata", "frango", "calabresa", "mandioca"],
+  petiscos: ["petisco", "amendoim", "torresmo", "batata", "isca"]
+};
+
+const categoriasPorSegmento = {
+  comercio_geral: ["bebidas", "alimentos", "produtos", "servicos", "combos", "outros"],
+  padaria: ["paes", "salgados", "doces", "bolos", "bebidas", "refrigerantes", "frios", "laticinios", "combos", "outros"],
+  restaurante: ["pratos", "porcoes", "sobremesas", "bebidas", "refrigerantes", "sucos", "cervejas", "combos", "outros"],
+  bar_adega: ["cervejas", "destilados", "vinhos", "refrigerantes", "aguas", "energeticos", "petiscos", "combos", "outros"],
+  lanchonete: ["lanches", "salgados", "porcoes", "refrigerantes", "sucos", "sobremesas", "combos", "outros"],
+  cafeteria_doceria: ["cafes", "bebidas_quentes", "bebidas_geladas", "doces", "bolos", "salgados", "combos", "outros"],
+  mercado_mercearia: ["bebidas", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "combos", "outros"],
+  loja_conveniencia: ["bebidas", "refrigerantes", "energeticos", "salgados", "doces", "tabacaria", "utilidades", "combos", "outros"],
+  arena_esportiva: ["jogos", "mensalistas", "bebidas", "refrigerantes", "energeticos", "aguas", "lanches", "salgados", "combos", "outros"],
+  arena_beach: ["jogos", "mensalistas", "bebidas", "refrigerantes", "energeticos", "aguas", "lanches", "salgados", "combos", "outros"],
+  quadras_esportivas: ["jogos", "mensalistas", "bebidas", "refrigerantes", "energeticos", "aguas", "lanches", "salgados", "combos", "outros"],
+  servicos: ["servicos", "pacotes", "mensalidades", "produtos", "outros"]
 };
 
 // ======================================================
@@ -313,6 +374,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   return;
 }
 
+  await carregarTipoNegocioProdutos();
+  preencherFiltrosCategoriaProduto();
   await carregarProdutos();
 
   renderProdutos();
@@ -323,6 +386,69 @@ document.addEventListener("DOMContentLoaded", async () => {
     lucide.createIcons();
   }
 });
+
+// ======================================================
+// CARREGAR TIPO NEGÓCIO PRODUTO
+// ======================================================
+async function carregarTipoNegocioProdutos() {
+  try {
+    if (!sistemaOnline()) return;
+
+    const { data, error } = await sb
+      .from("empresas")
+      .select("tipo_negocio")
+      .eq("id", obterEmpresaId())
+      .maybeSingle();
+
+    if (error) throw error;
+
+    tipoNegocioProdutos = String(data?.tipo_negocio || "comercio_geral");
+
+  } catch (err) {
+    tipoNegocioProdutos = "comercio_geral";
+    logProdutos("Erro ao carregar segmento: " + err.message, "warn");
+  }
+}
+
+function obterCategoriasDoSegmento() {
+  return categoriasPorSegmento[tipoNegocioProdutos] ||
+    categoriasPorSegmento.comercio_geral;
+}
+
+function preencherFiltrosCategoriaProduto() {
+  const filtroCategoria = document.getElementById("filtroCategoriaProduto");
+  const selectCategoria = document.getElementById("produtoCategoria");
+
+  const categorias = obterCategoriasDoSegmento();
+
+  if (filtroCategoria) {
+    filtroCategoria.innerHTML = `
+      <option value="todas">Todas as categorias</option>
+      ${categorias.map(categoria => `
+        <option value="${categoria}">
+          ${categoriaLabel[categoria] || categoria}
+        </option>
+      `).join("")}
+    `;
+  }
+
+  if (selectCategoria) {
+    const valorAtual = selectCategoria.value;
+
+    selectCategoria.innerHTML = `
+      <option value="">Sem categoria</option>
+      ${categorias.map(categoria => `
+        <option value="${categoria}">
+          ${categoriaLabel[categoria] || categoria}
+        </option>
+      `).join("")}
+    `;
+
+    if ([...selectCategoria.options].some(option => option.value === valorAtual)) {
+      selectCategoria.value = valorAtual;
+    }
+  }
+}
 
 // ======================================================
 // CARREGAR PRODUTOS
@@ -406,6 +532,30 @@ function setFiltro(btn, filtro) {
   renderProdutos();
 }
 
+function produtoCombinaComCategoria(produto, categoriaFiltro) {
+  if (categoriaFiltro === "todas") return true;
+
+  const categoria = String(produto.categoria || "").toLowerCase();
+
+  if (categoria === categoriaFiltro) return true;
+
+  const nome = String(produto.nome || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const termos = categoriasInteligentesProdutos[categoriaFiltro] || [];
+
+  return termos.some(termo => {
+    const termoNormalizado = String(termo || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    return nome.includes(termoNormalizado);
+  });
+}
+
 function getProdutosFiltrados() {
   const texto = String(
     document.getElementById("filtroTexto")?.value || ""
@@ -413,11 +563,24 @@ function getProdutosFiltrados() {
     .toLowerCase()
     .trim();
 
-  return produtos.filter(produto => {
+  const categoriaFiltro = String(
+    document.getElementById("filtroCategoriaProduto")?.value || "todas"
+  );
+
+  const ordenacao = String(
+    document.getElementById("ordenarProdutos")?.value || "az"
+  );
+
+  let lista = produtos.filter(produto => {
     const passaFiltro =
       filtroAtivo === "todos" ||
       (filtroAtivo === "ativos" && produto.ativo) ||
       (filtroAtivo === "inativos" && !produto.ativo);
+
+    const categoria = String(produto.categoria || "");
+
+    const passaCategoria =
+      produtoCombinaComCategoria(produto, categoriaFiltro);
 
     const nome = String(produto.nome || "").toLowerCase();
     const codigo = String(produto.codigo || "").toLowerCase();
@@ -427,10 +590,47 @@ function getProdutosFiltrados() {
       !texto ||
       nome.includes(texto) ||
       codigo.includes(texto) ||
-      codigoBarras.includes(texto);
+      codigoBarras.includes(texto) ||
+      String(categoriaLabel[categoria] || categoria).toLowerCase().includes(texto);
 
-    return passaFiltro && passaTexto;
+    return passaFiltro && passaCategoria && passaTexto;
   });
+
+  lista.sort((a, b) => {
+    const nomeA = String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    const nomeB = String(b.nome || "").localeCompare(String(a.nome || ""), "pt-BR");
+
+    if (ordenacao === "az") return nomeA;
+    if (ordenacao === "za") return nomeB;
+
+    if (ordenacao === "menor_preco") {
+      return Number(a.preco || 0) - Number(b.preco || 0);
+    }
+
+    if (ordenacao === "maior_preco") {
+      return Number(b.preco || 0) - Number(a.preco || 0);
+    }
+
+    if (ordenacao === "menor_estoque") {
+      return Number(a.estoque || 0) - Number(b.estoque || 0);
+    }
+
+    if (ordenacao === "maior_estoque") {
+      return Number(b.estoque || 0) - Number(a.estoque || 0);
+    }
+
+    if (ordenacao === "recentes") {
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    }
+
+    if (ordenacao === "antigos") {
+      return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    }
+
+    return nomeA;
+  });
+
+  return lista;
 }
 
 // ======================================================
@@ -626,7 +826,11 @@ async function abrirModalEditar(id) {
   const produto = produtos.find(item => item.id === id);
 
   if (!produto) {
-    alert("Produto não encontrado.");
+    abrirAlertaProduto({
+      titulo: "Produto não encontrado",
+      mensagem: "Não foi possível localizar este produto.",
+      textoConfirmar: "Fechar"
+    });
     return;
   }
 
@@ -1035,11 +1239,16 @@ return;
 // ======================================================
 // EXCLUIR
 // ======================================================
-function confirmarExcluir(id) {
+async function confirmarExcluir(id) {
   const produto = produtos.find(item => item.id === id);
 
   if (!produto) {
-    alert("Produto não encontrado.");
+    await abrirAlertaProduto({
+      titulo: "Produto não encontrado",
+      mensagem: "Não foi possível localizar este produto.",
+      textoConfirmar: "Fechar"
+    });
+
     return;
   }
 
@@ -1070,7 +1279,12 @@ function confirmarExcluir(id) {
 
 async function excluirProduto(id) {
   if (!sistemaOnline()) {
-    alert("Sistema sem conexão com Supabase.");
+    await abrirAlertaProduto({
+      titulo: "Sistema offline",
+      mensagem: "Sistema sem conexão com Supabase. Aguarde e tente novamente.",
+      textoConfirmar: "Fechar"
+    });
+
     return;
   }
 
@@ -1096,7 +1310,12 @@ async function excluirProduto(id) {
 
   } catch (err) {
     logProdutos("Erro ao excluir: " + err.message, "error");
-    alert("Erro ao excluir produto: " + err.message);
+
+    await abrirAlertaProduto({
+      titulo: "Erro ao excluir produto",
+      mensagem: err.message || "Não foi possível excluir o produto.",
+      textoConfirmar: "Fechar"
+    });
   }
 }
 

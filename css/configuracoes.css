@@ -22,6 +22,68 @@
 }
 
 /* ======================================================
+   ABAS CONFIGURAÇÕES
+====================================================== */
+
+.config-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.config-tab {
+  all: unset;
+  position: relative;
+  padding: 12px 4px 13px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: .9rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+
+.config-tab:hover,
+.config-tab.active {
+  color: var(--crv-orange);
+}
+
+.config-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--crv-orange);
+  box-shadow: var(--glow-accent);
+}
+
+.config-section {
+  display: none;
+}
+
+.config-section.active {
+  display: block;
+}
+
+.config-save-bottom {
+  grid-column: 2;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.config-save-bottom .btn-primary {
+  min-width: 230px;
+}
+
+/* ======================================================
    GRID
 ====================================================== */
 
@@ -176,7 +238,6 @@
 /* ======================================================
    CARD CRV
 ====================================================== */
-
 .crv-card {
   min-height: 236px;
   max-height: 236px;
@@ -185,6 +246,14 @@
   text-align: center;
   gap: 12px;
   padding: 18px;
+}
+
+.crv-card-sobre {
+  width: min(520px, 100%);
+  min-height: 360px;
+  max-height: none;
+  margin: 40px auto 0;
+  padding: 34px 28px;
 }
 
 .crv-card-title {
@@ -196,8 +265,8 @@
 }
 
 .crv-card-logo {
-  width: 54px;
-  height: 54px;
+  width: 150px;
+  height: 150px;
   object-fit: contain;
 }
 

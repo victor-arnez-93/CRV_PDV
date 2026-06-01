@@ -7,6 +7,42 @@ let filtroOrigem = 'todos';
 let empresaAtualVendas = null;
 
 let dataSelecionada = new Date();
+const CATEGORIAS_INTELIGENTES = {
+  bebidas: [
+    "coca","coca-cola","pepsi","guarana","guaraná",
+    "fanta","sprite","agua","água","suco",
+    "energetico","energético","cerveja","refrigerante"
+  ],
+
+  refrigerantes: [
+    "coca","coca-cola","pepsi","guarana","guaraná",
+    "fanta","sprite","refrigerante"
+  ],
+
+  alimentos: [
+    "lanche","hamburguer","hambúrguer",
+    "pastel","coxinha","risoles",
+    "salgado","porcao","porção",
+    "espetinho","pizza","batata"
+  ],
+
+  lanches: [
+    "lanche","hamburguer","hambúrguer",
+    "x-burger","x-salada","x-tudo"
+  ],
+
+  salgados: [
+    "pastel","coxinha","risoles",
+    "enroladinho","kibe","esfiha","hambúrguer",
+    "salgado"
+  ],
+
+  doces: [
+    "brigadeiro","bolo","trufa",
+    "chocolate","doce","sorvete"
+  ]
+};
+
 
 function isoDataLocal(data) {
   const ano = data.getFullYear();
@@ -125,7 +161,7 @@ function criarNavegacaoDataVendas() {
   nav.innerHTML = `
     <button class="filtro-btn" type="button" id="btnDiaAnterior">← Dia anterior</button>
     <button class="filtro-btn active" type="button" id="btnHojeVendas">Hoje</button>
-    <button class="filtro-btn" type="button" id="btnProximoDia">Próximo dia →</button>
+    <button class="filtro-btn" type="button" id="btnProximoDia">Dia seguinte →</button>
     <span id="dataSelecionadaVendas" style="color:var(--text-muted);font-weight:700;margin-left:6px;"></span>
   `;
 
@@ -136,22 +172,51 @@ function criarNavegacaoDataVendas() {
     await recarregarVendasPorData();
   };
 
-  document.getElementById("btnProximoDia").onclick = async () => {
-    dataSelecionada.setDate(dataSelecionada.getDate() + 1);
-    await recarregarVendasPorData();
-  };
-
   document.getElementById("btnHojeVendas").onclick = async () => {
     dataSelecionada = new Date();
     await recarregarVendasPorData();
   };
+
+  document.getElementById("btnProximoDia").onclick = async () => {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const proximaData = new Date(dataSelecionada);
+  proximaData.setDate(proximaData.getDate() + 1);
+  proximaData.setHours(0, 0, 0, 0);
+
+  if (proximaData > hoje) return;
+
+  dataSelecionada = proximaData;
+  await recarregarVendasPorData();
+};
 
   atualizarTextoDataSelecionada();
 }
 
 function atualizarTextoDataSelecionada() {
   const el = document.getElementById("dataSelecionadaVendas");
-  if (el) el.textContent = `Data selecionada: ${formatarDataTitulo(dataSelecionada)}`;
+  const btnProximo = document.getElementById("btnProximoDia");
+
+  if (el) {
+    el.textContent = `Data selecionada: ${formatarDataTitulo(dataSelecionada)}`;
+  }
+
+  if (btnProximo) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const dataAtual = new Date(dataSelecionada);
+    dataAtual.setHours(0, 0, 0, 0);
+
+    if (dataAtual >= hoje) {
+      btnProximo.disabled = true;
+      btnProximo.classList.add("disabled");
+    } else {
+      btnProximo.disabled = false;
+      btnProximo.classList.remove("disabled");
+    }
+  }
 }
 
 async function recarregarVendasPorData() {
@@ -474,11 +539,33 @@ const passaOrigem =
   filtroOrigem === 'todos' ||
   v.origem === filtroOrigem;
 
-    const passaTexto  = !texto ||
-      v.itens.some(i => i.nome.toLowerCase().includes(texto)) ||
-String(v.descricao || "").toLowerCase().includes(texto) ||
-String(v.origem || "").toLowerCase().includes(texto) ||
-fmt(v.total).includes(texto);
+let passaTexto = !texto;
+
+if (!passaTexto) {
+
+  const itensTexto = v.itens
+    .map(i => String(i.nome || "").toLowerCase())
+    .join(" ");
+
+  const categoriaEncontrada =
+    CATEGORIAS_INTELIGENTES[texto];
+
+  if (categoriaEncontrada) {
+
+    passaTexto =
+      categoriaEncontrada.some(termo =>
+        itensTexto.includes(termo)
+      );
+
+  } else {
+
+    passaTexto =
+      itensTexto.includes(texto) ||
+      String(v.descricao || "").toLowerCase().includes(texto) ||
+      String(v.origem || "").toLowerCase().includes(texto) ||
+      fmt(v.total).includes(texto);
+  }
+}
 
     return passaFiltro && passaOrigem && passaTexto;
   });

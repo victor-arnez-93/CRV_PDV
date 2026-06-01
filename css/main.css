@@ -73,10 +73,10 @@ p { line-height: 1.6; color: var(--text-secondary); }
 
 .nav-section-label {
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--menu-section-color);
   padding: 12px 8px 4px;
 }
 

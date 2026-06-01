@@ -96,6 +96,13 @@
   color: var(--crv-orange);
 }
 
+.filtro-btn.disabled,
+.filtro-btn:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ===== TABELA ===== */
 .vendas-table-card { padding: 0; overflow: hidden; }
 

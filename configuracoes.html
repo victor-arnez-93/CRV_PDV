@@ -135,16 +135,22 @@
     <i class="fa-solid fa-pen"></i>
     <span>Editar dados</span>
   </button>
-
-  <button class="btn-primary" id="btnSalvarConfiguracoes">
-    <i class="fa-solid fa-floppy-disk"></i>
-    <span>Salvar alterações</span>
-  </button>
 </div>
 
 </div>
 
-      <section class="config-grid">
+      <div class="config-tabs">
+        <button class="config-tab active" id="tabConfiguracoes" type="button">
+          Configurações
+        </button>
+
+        <button class="config-tab" id="tabSobreSistema" type="button">
+          Sobre o sistema
+        </button>
+      </div>
+
+      <section class="config-section active" id="secConfiguracoes">
+        <section class="config-grid">
 
         <div class="card config-card segment-preview-card">
   <div class="segment-preview-header">
@@ -316,33 +322,43 @@
     </small>
   </div>
 
-  <div class="card config-card crv-card">
-    <div class="crv-card-title">
-      <img src="assets/logo3.png" alt="CRV" class="crv-card-logo" />
-      <h2>CRV Soluções em TI</h2>
-    </div>
-
-    <p>Envie sugestões, melhorias ou dúvidas sobre o sistema.</p>
-
-    <div class="crv-links">
-      <a href="https://www.instagram.com/crvsolucoesemti" target="_blank" rel="noopener">
-        <i class="fa-brands fa-instagram"></i>
-        @crvsolucoesemti
-      </a>
-
-      <a href="https://crvsolucoesti.com" target="_blank" rel="noopener">
-        <i class="fa-solid fa-globe"></i>
-        crvsolucoesti.com
-      </a>
-
-      <a id="cfgFeedbackLink" href="https://wa.me/5515997021387" target="_blank" rel="noopener">
-        <i class="fa-brands fa-whatsapp"></i>
-        Enviar feedback
-      </a>
-    </div>
+  <div class="config-save-bottom">
+    <button class="btn-primary" id="btnSalvarConfiguracoes" type="button" style="display:none;">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span>Salvar alterações</span>
+    </button>
   </div>
 
-</section>
+        </section>
+      </section>
+
+      <section class="config-section" id="secSobreSistema">
+        <div class="card config-card crv-card crv-card-sobre">
+          <div class="crv-card-title">
+            <img src="assets/logo2.png" alt="CRV" class="crv-card-logo" />
+            <h2>CRV Soluções em TI</h2>
+          </div>
+
+          <p>Envie sugestões, melhorias ou dúvidas sobre o sistema.</p>
+
+          <div class="crv-links">
+            <a href="https://www.instagram.com/crvsolucoesemti" target="_blank" rel="noopener">
+              <i class="fa-brands fa-instagram"></i>
+              @crvsolucoesemti
+            </a>
+
+            <a href="https://crvsolucoesti.com" target="_blank" rel="noopener">
+              <i class="fa-solid fa-globe"></i>
+              crvsolucoesti.com
+            </a>
+
+            <a id="cfgFeedbackLink" href="https://wa.me/5515997021387" target="_blank" rel="noopener">
+              <i class="fa-brands fa-whatsapp"></i>
+              Enviar feedback
+            </a>
+          </div>
+        </div>
+      </section>
 
       <div id="cfgFeedback" class="cfg-feedback"></div>
 

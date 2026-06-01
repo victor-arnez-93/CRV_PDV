@@ -136,22 +136,40 @@
 
       <!-- FILTROS -->
       <div class="produtos-filtros card">
-        <div class="filtro-search-wrap" style="flex:1;">
-          <i data-lucide="search" width="15" height="15"></i>
-          <input
-            class="input filtro-search"
-            type="text"
-            id="filtroTexto"
-            placeholder="Buscar produto ou código..."
-            oninput="renderProdutos()"
-          />
-        </div>
-        <div class="filtros-right">
-          <button class="filtro-btn active" data-filter="todos" onclick="setFiltro(this,'todos')">Todos</button>
-          <button class="filtro-btn" data-filter="ativos" onclick="setFiltro(this,'ativos')">Ativos</button>
-          <button class="filtro-btn" data-filter="inativos" onclick="setFiltro(this,'inativos')">Inativos</button>
-        </div>
-      </div>
+  <div class="filtro-search-wrap" style="flex:1;">
+    <i data-lucide="search" width="15" height="15"></i>
+    <input
+      class="input filtro-search"
+      type="text"
+      id="filtroTexto"
+      placeholder="Buscar produto ou código..."
+      oninput="renderProdutos()"
+    />
+  </div>
+
+  <div class="filtros-right">
+    <button class="filtro-btn active" data-filter="todos" onclick="setFiltro(this,'todos')">Todos</button>
+    <button class="filtro-btn" data-filter="ativos" onclick="setFiltro(this,'ativos')">Ativos</button>
+    <button class="filtro-btn" data-filter="inativos" onclick="setFiltro(this,'inativos')">Inativos</button>
+  </div>
+
+  <div class="produtos-filtros-extra">
+    <select class="input filtro-select" id="filtroCategoriaProduto" onchange="renderProdutos()">
+      <option value="todas">Todas as categorias</option>
+    </select>
+
+    <select class="input filtro-select" id="ordenarProdutos" onchange="renderProdutos()">
+      <option value="az">Organizar: A → Z</option>
+      <option value="za">Organizar: Z → A</option>
+      <option value="menor_preco">Menor preço</option>
+      <option value="maior_preco">Maior preço</option>
+      <option value="menor_estoque">Menor estoque</option>
+      <option value="maior_estoque">Maior estoque</option>
+      <option value="recentes">Mais recentes</option>
+      <option value="antigos">Mais antigos</option>
+    </select>
+  </div>
+</div>
 
       <!-- GRID DE PRODUTOS -->
       <div class="produtos-grid" id="produtosGrid"></div>
