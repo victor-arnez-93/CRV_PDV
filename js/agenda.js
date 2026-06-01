@@ -104,8 +104,24 @@ function aplicarMascaraTelefoneAgenda(input) {
   });
 }
 
+function formatarNomeProprioAgenda(valor) {
+  return String(valor || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trimStart()
+    .replace(/(^|\s)([a-záàâãéèêíïóôõöúçñ])/g, (match, espaco, letra) => {
+      return espaco + letra.toUpperCase();
+    });
+}
+
 function hojeISOAgenda() {
-  return new Date().toISOString().slice(0, 10);
+  const agora = new Date();
+
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
 }
 
 function horaParaMinutos(hora) {
@@ -220,11 +236,10 @@ function inicializarEventosAgenda() {
   document
     .getElementById("modalReserva")
     ?.addEventListener("click", e => {
-
       if (e.target.id === "modalReserva") {
-        fecharModalJogo();
+        e.preventDefault();
+        e.stopPropagation();
       }
-
     });
 
   document
@@ -250,6 +265,14 @@ function setupMascarasAgenda() {
   aplicarMascaraMoedaAgenda(
     document.getElementById("valorMensal")
   );
+
+  const clienteNome = document.getElementById("clienteNome");
+
+  if (clienteNome) {
+    clienteNome.addEventListener("blur", () => {
+      clienteNome.value = formatarNomeProprioAgenda(clienteNome.value);
+    });
+  }
 
 }
 
@@ -1295,6 +1318,14 @@ function adicionarLinhaJogador(jogador = {}) {
     row.querySelector(".jogador-valor")
   );
 
+  const inputNomeJogador = row.querySelector(".jogador-nome");
+
+  if (inputNomeJogador) {
+    inputNomeJogador.addEventListener("blur", () => {
+      inputNomeJogador.value = formatarNomeProprioAgenda(inputNomeJogador.value);
+    });
+  }
+
   row
     .querySelector(".agenda-remover-jogador")
     .addEventListener("click", () => {
@@ -1572,7 +1603,7 @@ const jogadores =
   const jogadoresNormalizados = [];
 
 jogadores.forEach(jogador => {
-  const nomeLimpo = String(jogador.nome || "").trim();
+  const nomeLimpo = formatarNomeProprioAgenda(jogador.nome);
 
   if (!nomeLimpo) return;
 

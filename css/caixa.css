@@ -1432,6 +1432,23 @@
   pointer-events: none;
 }
 
+
+.jogo-caixa-btn-comanda.vinculado {
+  width: 110px;
+  max-width: 110px;
+
+  color: #111;
+  background: #D4A843;
+  border-color: #D4A843;
+
+  opacity: 1 !important;
+}
+
+.jogo-caixa-btn-comanda.vinculado span {
+  color: #111;
+  font-weight: 900;
+}
+
 /* ===== MODAIS ===== */
 .modal-overlay {
   position: fixed;
@@ -1658,7 +1675,6 @@
 /* ======================================================
    COMANDAS ABERTAS NO CAIXA — FAIXA HORIZONTAL
 ====================================================== */
-
 .comandas-abertas-caixa {
   display: none;
   width: 100%;
@@ -1808,6 +1824,42 @@
   font-size: .88rem;
   font-weight: 900;
   color: var(--crv-green);
+}
+
+.comandas-abertas-empty {
+  width: 100%;
+  min-height: 62px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+
+  color: var(--text-muted);
+  font-size: .82rem;
+  font-weight: 700;
+
+  background: var(--bg-card);
+}
+
+/* ======================================================
+   MODAL JOGOS MAIOR NO DESKTOP
+====================================================== */
+@media (min-width: 769px) {
+  .modal-finalizar-jogo-caixa {
+    max-width: 1120px;
+  }
+
+  .jogo-caixa-jogadores {
+    max-height: 360px;
+  }
+
+  .jogo-caixa-jogador-row {
+    grid-template-columns: 30px minmax(220px, 1fr) 130px 150px 120px;
+    min-width: 760px;
+  }
 }
 
 /* ======================================================

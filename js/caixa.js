@@ -31,6 +31,7 @@ let intervaloAvisosJogosCaixa = null;
 let jogosPendentesSincronizacaoCaixa = [];
 let jogadorComandaPendenteCaixa = null;
 let valoresTemporariosJogoCaixa = {};
+let pagamentosTemporariosJogoCaixa = {};
 let vinculosComandaJogadorCaixa = {};
 let qtdComandasAbertasCaixa = 0;
 let qtdJogosAbertosCaixa = 0;
@@ -645,9 +646,12 @@ async function abrirCaixa() {
 // ======================================================
 // FECHAR CAIXA
 // ======================================================
-function confirmarFechamento() {
+async function confirmarFechamento() {
   if (!caixa || caixa.status !== "aberto") {
-    alert("Nenhum caixa aberto para fechar.");
+    await alertaCaixa(
+      "Caixa fechado",
+      "Nenhum caixa aberto para fechar."
+    );
     return;
   }
 
@@ -722,12 +726,18 @@ function calcularDiferenca() {
 
 async function fecharCaixa() {
   if (!sistemaOnline()) {
-    alert("Sistema sem conexão com Supabase.");
+    await alertaCaixa(
+      "Sistema offline",
+      "Sistema sem conexão com Supabase."
+    );
     return;
   }
 
   if (!caixa?.id) {
-    alert("Nenhum caixa aberto.");
+    await alertaCaixa(
+      "Caixa fechado",
+      "Nenhum caixa aberto."
+    );
     return;
   }
 
@@ -764,7 +774,10 @@ async function fecharCaixa() {
 
   } catch (err) {
     logCaixa("Erro ao fechar: " + err.message, "error");
-    alert("Erro ao fechar caixa: " + err.message);
+    await alertaCaixa(
+      "Erro ao fechar caixa",
+      err.message
+    );
   }
 }
 
@@ -2910,16 +2923,28 @@ function capturarValoresJogoAtualCaixa() {
     valoresTemporariosJogoCaixa[jogoSelecionadoCaixa.id] = {};
   }
 
+  if (!pagamentosTemporariosJogoCaixa[jogoSelecionadoCaixa.id]) {
+    pagamentosTemporariosJogoCaixa[jogoSelecionadoCaixa.id] = {};
+  }
+
   document
     .querySelectorAll(".jogo-caixa-jogador-row")
     .forEach(row => {
       const jogadorId = row.dataset.jogadorId;
       const inputValor = row.querySelector(".jogo-caixa-valor-input");
+      const selectPagamento = row.querySelector(".jogo-caixa-pagamento");
 
-      if (!jogadorId || !inputValor) return;
+      if (!jogadorId) return;
 
-      valoresTemporariosJogoCaixa[jogoSelecionadoCaixa.id][jogadorId] =
-        normalizarNumero(inputValor.value);
+      if (inputValor) {
+        valoresTemporariosJogoCaixa[jogoSelecionadoCaixa.id][jogadorId] =
+          normalizarNumero(inputValor.value);
+      }
+
+      if (selectPagamento) {
+        pagamentosTemporariosJogoCaixa[jogoSelecionadoCaixa.id][jogadorId] =
+          selectPagamento.value || "dinheiro";
+      }
     });
 }
 
@@ -2934,6 +2959,19 @@ function obterValorTemporarioJogadorCaixa(jogador) {
   }
 
   return Number(jogador.valor || 0);
+}
+
+function obterPagamentoTemporarioJogadorCaixa(jogador) {
+  const mapaJogo =
+    pagamentosTemporariosJogoCaixa[jogoSelecionadoCaixa?.id] || {};
+
+  const pagamentoTemporario = mapaJogo[jogador.id];
+
+  if (pagamentoTemporario) {
+    return pagamentoTemporario;
+  }
+
+  return jogador.forma_pagamento || metodoPagamento || "dinheiro";
 }
 
 function montarDescricaoJogoComandaCaixa(jogo, jogador) {
@@ -3032,7 +3070,10 @@ if (btnRateio) {
       lista.innerHTML = jogadores.map(jogador => {
         const pago = jogador.pago === true;
         const valorAtual = obterValorTemporarioJogadorCaixa(jogador);
-const vinculoComanda = vinculosComandaJogadorCaixa[jogador.id] || null;
+        const formaAtual = obterPagamentoTemporarioJogadorCaixa(jogador);
+        const vinculoComanda = vinculosComandaJogadorCaixa[jogador.id] || null;
+        const vinculadoComanda =
+          pago && String(jogador.forma_pagamento || "").toLowerCase() === "comanda";
 
 const textoStatusComanda =
   pago && String(jogador.forma_pagamento || "").toLowerCase() === "comanda"
@@ -3062,19 +3103,19 @@ const textoStatusComanda =
             >
 
             <select class="input jogo-caixa-pagamento" ${pago ? "disabled" : ""}>
-              <option value="dinheiro" ${metodoPagamento === "dinheiro" ? "selected" : ""}>Dinheiro</option>
-              <option value="cartao" ${metodoPagamento === "cartao" ? "selected" : ""}>Cartão</option>
-              <option value="pix" ${metodoPagamento === "pix" ? "selected" : ""}>PIX</option>
+              <option value="dinheiro" ${formaAtual === "dinheiro" ? "selected" : ""}>Dinheiro</option>
+              <option value="cartao" ${formaAtual === "cartao" ? "selected" : ""}>Cartão</option>
+              <option value="pix" ${formaAtual === "pix" ? "selected" : ""}>PIX</option>
             </select>
 
             <button
-              class="btn-ghost jogo-caixa-btn-comanda"
+              class="btn-ghost jogo-caixa-btn-comanda ${vinculadoComanda ? "vinculado" : ""}"
               type="button"
               data-jogador-id="${jogador.id}"
               ${pago ? "disabled" : ""}
             >
               <i data-lucide="ticket" width="14" height="14"></i>
-              <span>Comanda</span>
+              <span>${vinculadoComanda ? "Vinculado" : "Comanda"}</span>
             </button>
           </div>
         `;
@@ -3145,14 +3186,27 @@ function aplicarRateioJogoCaixa() {
     return;
   }
 
-  const valorPorJogador = totalJogo / linhasPendentes.length;
+  const totalCentavos = Math.round(totalJogo * 100);
+  const qtd = linhasPendentes.length;
+
+  const baseCentavos = Math.floor(totalCentavos / qtd);
+  let restoCentavos = totalCentavos - (baseCentavos * qtd);
 
   linhasPendentes.forEach(row => {
     const inputValor = row.querySelector(".jogo-caixa-valor-input");
     const check = row.querySelector(".jogo-caixa-check");
 
+    let valorCentavos = baseCentavos;
+
+    if (restoCentavos > 0) {
+      valorCentavos += 1;
+      restoCentavos -= 1;
+    }
+
+    const valorFinal = valorCentavos / 100;
+
     if (inputValor) {
-      inputValor.value = valorPorJogador.toLocaleString("pt-BR", {
+      inputValor.value = valorFinal.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
@@ -3202,7 +3256,10 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
   }
 
   capturarValoresJogoAtualCaixa();
-  const row = document.querySelector(`.jogo-caixa-jogador-row[data-jogador-id="${jogadorId}"]`);
+
+  const row = document.querySelector(
+    `.jogo-caixa-jogador-row[data-jogador-id="${jogadorId}"]`
+  );
 
   if (!row) {
     await alertaCaixa(
@@ -3213,12 +3270,28 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
   }
 
   const jogadores = jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [];
-  const jogador = jogadores.find(item => String(item.id) === String(jogadorId));
+
+  const jogador = jogadores.find(item => {
+    return String(item.id) === String(jogadorId);
+  });
 
   if (!jogador) {
     await alertaCaixa(
       "Jogador não encontrado",
       "Não foi possível localizar este jogador na agenda."
+    );
+    return;
+  }
+
+  const vinculoExistente = vinculosComandaJogadorCaixa[jogador.id];
+
+  if (vinculoExistente) {
+    await alertaCaixa(
+      "Jogador já vinculado",
+      `
+        <strong>${jogador.nome || "Jogador"}</strong> já está vinculado à
+        comanda <strong>${vinculoExistente.codigo || "—"}</strong>.
+      `
     );
     return;
   }
@@ -3249,6 +3322,12 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
     valorCobrado
   };
 
+  const modalFinalizarJogo = document.getElementById("modalFinalizarJogoCaixa");
+
+  if (modalFinalizarJogo) {
+    modalFinalizarJogo.style.display = "none";
+  }
+
   const modalComanda = document.getElementById("modalSelecionarComanda");
 
   if (modalComanda) {
@@ -3276,7 +3355,6 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
     .from("comanda_itens")
     .select("id")
     .eq("empresa_id", empresaId)
-    .eq("comanda_id", comanda.id)
     .eq("agenda_jogador_id", jogador.id)
     .limit(1);
 
@@ -3284,6 +3362,8 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
 
   if (itemDuplicado?.length) {
     jogadorComandaPendenteCaixa = null;
+
+    await carregarJogosCaixa();
 
     await alertaCaixa(
       "Item já enviado",
@@ -3357,6 +3437,14 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
 
   if (erroAtualizarComanda) throw erroAtualizarComanda;
 
+  vinculosComandaJogadorCaixa[jogador.id] = {
+    comanda_id: comandaAtualizada.id,
+    codigo: comandaAtualizada.codigo || "—",
+    status: comandaAtualizada.status || "aberta",
+    nome_cliente: comandaAtualizada.nome_cliente || "",
+    total: Number(comandaAtualizada.total || 0)
+  };
+
   jogadorComandaPendenteCaixa = null;
 
   const modalComanda = document.getElementById("modalSelecionarComanda");
@@ -3374,6 +3462,12 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
   jogoSelecionadoCaixa =
     jogosCaixa.find(item => String(item.id) === String(jogo.id)) || jogo;
 
+  const modalFinalizarJogo = document.getElementById("modalFinalizarJogoCaixa");
+
+  if (modalFinalizarJogo) {
+    modalFinalizarJogo.style.display = "flex";
+  }
+
   abrirFinalizacaoJogoCaixa(jogo.id);
 
   await alertaCaixa(
@@ -3381,7 +3475,7 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
     `
       <strong>${jogador.nome || "Jogador"}</strong> foi vinculado à
       comanda <strong>${comandaAtualizada.codigo || "—"}</strong>.<br><br>
-      A comanda ficou aberta e você voltou para finalizar o jogo.
+      A comanda ficou aberta para consumo.
     `
   );
 }
@@ -3839,8 +3933,38 @@ function renderComandasAbertasNoCaixa() {
   });
 
   if (!abertas.length) {
-    box.style.display = "none";
-    box.innerHTML = "";
+    box.style.display = "block";
+
+    box.innerHTML = `
+      <div class="comandas-abertas-header">
+        <span>Comandas abertas</span>
+
+        <div class="comandas-abertas-actions">
+          <small>0 abertas</small>
+
+          <button
+            type="button"
+            class="btn-abrir-modal-comandas"
+            id="btnAbrirModalComandasCaixa"
+          >
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <div class="comandas-abertas-lista">
+        <div class="comandas-abertas-empty">
+          Nenhuma comanda aberta no momento.
+        </div>
+      </div>
+    `;
+
+    document
+      .getElementById("btnAbrirModalComandasCaixa")
+      ?.addEventListener("click", async () => {
+        await abrirModalSelecionarComanda();
+      });
+
     return;
   }
 
@@ -3945,9 +4069,15 @@ function fecharModalSelecionarComanda() {
     modal.style.zIndex = "";
   }
 
-  if (!jogadorComandaPendenteCaixa) {
-  jogadorComandaPendenteCaixa = null;
-}
+  if (jogadorComandaPendenteCaixa) {
+    const modalFinalizarJogo = document.getElementById("modalFinalizarJogoCaixa");
+
+    if (modalFinalizarJogo) {
+      modalFinalizarJogo.style.display = "flex";
+    }
+
+    jogadorComandaPendenteCaixa = null;
+  }
 
   const inputBusca = document.getElementById("inputBusca");
 
@@ -4162,8 +4292,8 @@ async function processarLeituraProduto(codigoLido) {
     });
 
     if (!produto) {
-
-      alert(
+      await alertaCaixa(
+        "Produto não encontrado",
         "Produto não encontrado."
       );
 
@@ -4176,9 +4306,9 @@ async function processarLeituraProduto(codigoLido) {
     }
 
     if (produto.ativo !== true) {
-
-      alert(
-        `Produto inativo: ${produto.nome}`
+      await alertaCaixa(
+        "Produto inativo",
+        `Produto inativo: <strong>${produto.nome}</strong>`
       );
 
       return;
@@ -4188,9 +4318,9 @@ async function processarLeituraProduto(codigoLido) {
       Number(produto.estoque || 0);
 
     if (estoque <= 0) {
-
-      alert(
-        `Produto sem estoque: ${produto.nome}`
+      await alertaCaixa(
+        "Sem estoque",
+        `Produto sem estoque: <strong>${produto.nome}</strong>`
       );
 
       return;
@@ -4200,9 +4330,9 @@ async function processarLeituraProduto(codigoLido) {
       Number(produto.preco || 0);
 
     if (preco <= 0) {
-
-      alert(
-        `Produto sem preço válido: ${produto.nome}`
+      await alertaCaixa(
+        "Preço inválido",
+        `Produto sem preço válido: <strong>${produto.nome}</strong>`
       );
 
       return;
@@ -4228,7 +4358,8 @@ async function processarLeituraProduto(codigoLido) {
 
     console.error(err);
 
-    alert(
+    await alertaCaixa(
+      "Erro na leitura",
       "Erro ao processar leitura."
     );
   }
@@ -4300,9 +4431,14 @@ if (!sistemaOnline()) {
     if (!comanda) {
 
       const criar =
-        confirm(
-          `Comanda ${codigo} não existe.\n\nDeseja criar agora?`
-        );
+        await abrirConfirmacaoCaixa({
+          titulo: "Criar comanda",
+          mensagem: `
+            Comanda <strong>${codigo}</strong> não existe.<br><br>
+            Deseja criar agora?
+          `,
+          textoConfirmar: "Criar comanda"
+        });
 
       if (!criar) {
 
@@ -4371,8 +4507,9 @@ if (!sistemaOnline()) {
       comanda.status === "fechada"
     ) {
 
-      alert(
-        `Comanda ${codigo} já está fechada.`
+      await alertaCaixa(
+        "Comanda fechada",
+        `Comanda <strong>${codigo}</strong> já está fechada.`
       );
 
       if (input) {
@@ -4403,7 +4540,8 @@ if (!sistemaOnline()) {
 
     console.error(err);
 
-    alert(
+    await alertaCaixa(
+      "Erro ao carregar comanda",
       "Erro ao carregar comanda."
     );
   }
@@ -4426,7 +4564,10 @@ async function adicionarProdutoNaComanda(produto) {
   const estoque = Number(produto.estoque || 0);
 
   if (preco <= 0) {
-    alert(`Produto sem preço válido: ${produto.nome}`);
+    await alertaCaixa(
+      "Preço inválido",
+      `Produto sem preço válido: <strong>${produto.nome}</strong>`
+    );
     return;
   }
 
@@ -4449,7 +4590,10 @@ async function adicionarProdutoNaComanda(produto) {
     .limit(1);
 
   if (erroBusca) {
-    alert("Erro ao verificar item da comanda.");
+    await alertaCaixa(
+      "Erro na comanda",
+      "Erro ao verificar item da comanda."
+    );
     console.error(erroBusca);
     return;
   }
@@ -4460,7 +4604,10 @@ async function adicionarProdutoNaComanda(produto) {
     const novaQtd = Number(existente.quantidade || 0) + 1;
 
     if (novaQtd > estoque) {
-      alert(`Estoque insuficiente para ${produto.nome}. Disponível: ${estoque}`);
+      await alertaCaixa(
+        "Estoque insuficiente",
+        `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>Disponível: ${estoque}`
+      );
       return;
     }
 
@@ -4477,7 +4624,10 @@ async function adicionarProdutoNaComanda(produto) {
       .eq("empresa_id", empresaId);
 
     if (erroUpdate) {
-      alert("Erro ao atualizar item da comanda.");
+      await alertaCaixa(
+        "Erro na comanda",
+        "Erro ao atualizar item da comanda."
+      );
       console.error(erroUpdate);
       return;
     }
@@ -4501,7 +4651,10 @@ async function adicionarProdutoNaComanda(produto) {
       ]);
 
     if (erroInsert) {
-      alert("Erro ao adicionar item na comanda.");
+      await alertaCaixa(
+        "Erro na comanda",
+        "Erro ao adicionar item na comanda."
+      );
       console.error(erroInsert);
       return;
     }
@@ -4576,7 +4729,10 @@ async function carregarItensComanda() {
     .order("created_at", { ascending: true });
 
   if (error) {
-    alert("Erro ao carregar itens da comanda.");
+    await alertaCaixa(
+      "Erro na comanda",
+      "Erro ao carregar itens da comanda."
+    );
     console.error(error);
     return;
   }
@@ -5011,15 +5167,17 @@ const { error: erroComanda } = await sb
     if (descontoInput) descontoInput.value = "";
     if (valorRecebidoInput) valorRecebidoInput.value = "";
 
-    await carregarProdutos();
+    await carregarComandasCaixa();
+    await atualizarBadgesModosCaixa();
 
-    renderProdutosRapidos();
     renderCarrinho();
     atualizarInfobar();
     renderHistorico();
     atualizarInterfaceModoPDV();
-    await atualizarBadgesModosCaixa();
     renderComandasAbertasNoCaixa();
+
+    await carregarProdutos();
+    renderProdutosRapidos();
 
     logVenda("Comanda fechada e venda salva no Supabase.", "success");
 
@@ -5068,7 +5226,10 @@ async function removerItemCarrinho(index) {
   if (modoPDV === "comanda" && comandaAtiva) {
 
     if (!item.comanda_item_id) {
-      alert("Item da comanda sem identificação.");
+      await alertaCaixa(
+        "Item inválido",
+        "Item da comanda sem identificação."
+      );
       return;
     }
 
@@ -5091,7 +5252,10 @@ async function removerItemCarrinho(index) {
       .eq("empresa_id", obterEmpresaId());
 
     if (error) {
-      alert("Erro ao remover item da comanda.");
+      await alertaCaixa(
+        "Erro na comanda",
+        "Erro ao remover item da comanda."
+      );
       console.error(error);
       return;
     }
@@ -5132,7 +5296,10 @@ async function alterarQuantidadeCarrinho(index, delta) {
     const estoqueDisponivel = Number(produto?.estoque || 0);
 
     if (novaQuantidade > estoqueDisponivel) {
-      alert(`Estoque insuficiente para ${item.nome}. Disponível: ${estoqueDisponivel}`);
+      await alertaCaixa(
+        "Estoque insuficiente",
+        `Estoque insuficiente para <strong>${item.nome}</strong>.<br><br>Disponível: ${estoqueDisponivel}`
+      );
       return;
     }
   }
@@ -5140,7 +5307,10 @@ async function alterarQuantidadeCarrinho(index, delta) {
   if (modoPDV === "comanda" && comandaAtiva) {
 
     if (!item.comanda_item_id) {
-      alert("Item da comanda sem identificação.");
+      await alertaCaixa(
+        "Item inválido",
+        "Item da comanda sem identificação."
+      );
       return;
     }
 
@@ -5157,7 +5327,10 @@ async function alterarQuantidadeCarrinho(index, delta) {
       .eq("empresa_id", obterEmpresaId());
 
     if (error) {
-      alert("Erro ao atualizar quantidade da comanda.");
+      await alertaCaixa(
+        "Erro na comanda",
+        "Erro ao atualizar quantidade da comanda."
+      );
       console.error(error);
       return;
     }

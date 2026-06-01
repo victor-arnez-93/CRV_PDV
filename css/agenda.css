@@ -900,6 +900,27 @@
   height: 40px;
 }
 
+/* Correção botão excluir — próximos jogos e em andamento */
+#agendaFuturos .agenda-card,
+#agendaAndamento .agenda-card {
+  position: relative;
+  padding-right: 56px;
+}
+
+#agendaFuturos .agenda-card-actions,
+#agendaAndamento .agenda-card-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin: 0;
+}
+
+#agendaFuturos .btn-remover-jogo,
+#agendaAndamento .btn-remover-jogo {
+  width: 34px;
+  height: 34px;
+}
+
 /* ======================================================
    RESPONSIVE — AGENDA
 ====================================================== */

@@ -90,7 +90,7 @@ async function obterDadosOfflineRelatorios() {
 // ======================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = obterHojeLocalRelatorio();
 
   document.getElementById("dataInicio").value = hoje;
   document.getElementById("dataFim").value = hoje;
@@ -127,6 +127,16 @@ async function aguardarContextoRelatorios() {
   }
 
   return false;
+}
+
+function obterHojeLocalRelatorio() {
+  const agora = new Date();
+
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
 }
 
 function obterEmpresaId() {
@@ -699,15 +709,32 @@ function limparNomeArquivo(texto) {
     .toLowerCase();
 }
 
-function obterResponsavelJogoRelatorio(venda) {
-  const descricao = String(venda.descricao || "").trim();
+function limparResponsavelJogoRelatorio(texto) {
+  let valor = String(texto || "Responsável").trim();
 
-  if (descricao.includes(" - ")) {
-    const partes = descricao.split(" - ");
-    return partes[partes.length - 1] || "Responsável";
+  if (valor.includes("|")) {
+    valor = valor.split("|")[0].trim();
   }
 
-  return descricao || "Responsável";
+  if (valor.includes(" - ")) {
+    const partes = valor.split(" - ");
+    valor = partes[partes.length - 1].trim();
+  }
+
+  return valor || "Responsável";
+}
+
+function obterResponsavelJogoRelatorio(venda) {
+  return limparResponsavelJogoRelatorio(venda.descricao || "Responsável");
+}
+
+function limparDescricaoJogoRelatorio(descricao) {
+  let texto = String(descricao || "Jogo").trim();
+
+  texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*-\s*[^-]+ em comanda R\$\s*[\d.,]+/gi, "");
+
+  return texto.trim() || "Jogo";
 }
 
 function montarRecebimentosJogosAgrupados(vendas) {
@@ -716,41 +743,54 @@ function montarRecebimentosJogosAgrupados(vendas) {
   vendas.forEach(venda => {
     const origemVenda = String(venda.origem || "").toLowerCase();
 
-    if (origemVenda === "agenda") {
-      const chave = venda.origem_id || venda.id;
-
-      if (!mapa[chave]) {
-        mapa[chave] = {
-          responsavel: obterResponsavelJogoRelatorio(venda),
-          data: venda.data,
-          forma: venda.forma_pagamento || "—",
-          total: 0
-        };
-      }
-
-      mapa[chave].total += Number(venda.total || 0);
+    if (origemVenda !== "agenda") {
       return;
     }
 
-    (venda.itens || []).forEach(item => {
-      if (String(item.origem || "").toLowerCase() !== "agenda") return;
+    const chave = venda.origem_id || venda.id;
+    const descricaoLimpa = limparDescricaoJogoRelatorio(venda.descricao);
 
-      const chave = item.agenda_jogador_id || item.origem_id || item.id;
+    if (!mapa[chave]) {
+      mapa[chave] = {
+        responsavel: obterResponsavelJogoRelatorio(venda),
+        descricao: descricaoLimpa,
+        data: venda.data,
+        forma: venda.forma_pagamento || "—",
+        total: 0,
+        qtdComanda: 0,
+        totalComanda: 0
+      };
+    }
 
-      if (!mapa[chave]) {
-        mapa[chave] = {
-          responsavel: String(item.nome || "Jogo").replace(/^Jogo\s*-\s*/i, ""),
-          data: venda.data,
-          forma: venda.forma_pagamento || "comanda",
-          total: 0
-        };
-      }
+    mapa[chave].total += Number(venda.total || 0);
 
-      mapa[chave].total += Number(item.preco || 0) * Number(item.quantidade || 1);
+    const descricao = String(venda.descricao || "");
+    const matchesComanda = descricao.match(/em comanda R\$\s*[\d.,]+/gi) || [];
+
+    matchesComanda.forEach(match => {
+      const valorTexto = match
+        .replace(/em comanda/gi, "")
+        .replace("R$", "")
+        .trim();
+
+      const valor = Number(
+        valorTexto
+          .replace(/\./g, "")
+          .replace(",", ".")
+      );
+
+      mapa[chave].qtdComanda += 1;
+      mapa[chave].totalComanda += Number.isNaN(valor) ? 0 : valor;
     });
   });
 
-  return Object.values(mapa);
+  return Object.values(mapa).map(item => {
+    if (item.qtdComanda > 0) {
+      item.descricao += ` · ${item.qtdComanda} em comanda - ${fmt(item.totalComanda)}`;
+    }
+
+    return item;
+  });
 }
 
 // ======================================================
@@ -878,7 +918,7 @@ function exportarPDF() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Relatório Financeiro - CRV PDV</title>
+      <title>relatorio_financeiro_${nomeFantasiaRelatorio}_crv_pdv</title>
 
       <style>
         @page {
@@ -1132,6 +1172,7 @@ function exportarPDF() {
               <thead>
                 <tr>
                   <th>Responsável</th>
+                  <th>Jogo</th>
                   <th>Data</th>
                   <th>Pagamento</th>
                   <th class="right">Total</th>
@@ -1141,6 +1182,7 @@ function exportarPDF() {
                 ${recebimentosJogos.map(item => `
                   <tr>
                     <td>${item.responsavel}</td>
+                    <td>${item.descricao}</td>
                     <td>${new Date(item.data).toLocaleDateString("pt-BR")}</td>
                     <td>${item.forma}</td>
                     <td class="right">${fmt(item.total)}</td>
