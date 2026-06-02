@@ -11,7 +11,6 @@
   --crv-warm:       #816C61; /* acento quente dark */
   --crv-warm-light: #7C6354; /* acento quente light */
   --crv-silver:     #CFCFCF;
-  --crv-online: #54CD16;
 
   /* Gradiente animado — btn-secondary */
   --grad-primary: linear-gradient(135deg, #003887 0%, #1a4f9e 40%, #7C6354 100%);
