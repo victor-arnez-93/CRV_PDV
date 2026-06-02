@@ -131,6 +131,40 @@ function dataVendaEhHoje(venda) {
   );
 }
 
+async function aplicarNomeFantasiaDashboard() {
+  try {
+    const greetingText = document.getElementById("greetingText");
+
+    if (!greetingText || !window.APP_EMPRESA_ID || !window.sb) return;
+
+    const { data, error } = await sb
+      .from("empresas")
+      .select("nome_fantasia")
+      .eq("id", window.APP_EMPRESA_ID)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const nomeFantasia = String(data?.nome_fantasia || "").trim();
+
+    if (!nomeFantasia) return;
+
+    const hora = new Date().getHours();
+
+    const saudacao =
+      hora < 12
+        ? "Bom dia"
+        : hora < 18
+          ? "Boa tarde"
+          : "Boa noite";
+
+    greetingText.textContent = `${saudacao}, ${nomeFantasia} 👋`;
+
+  } catch (err) {
+    console.warn("[DASHBOARD][NOME FANTASIA]", err);
+  }
+}
+
 // ===== INIT =====
 async function initDashboard() {
   if (!window.APP_EMPRESA_ID) {
@@ -139,6 +173,8 @@ async function initDashboard() {
   }
 
   logSistema("DASHBOARD", "Inicializando dashboard...");
+
+  await aplicarNomeFantasiaDashboard();
 
   try {
     let vendas = [];
@@ -412,11 +448,20 @@ function initChart(vendas) {
       plugins: {
         legend: { display: false }
       },
-      scales: {
-        y: {
-          beginAtZero: true
-        }
+scales: {
+  y: {
+    beginAtZero: true,
+    ticks: {
+      callback: value => {
+        return Number(value || 0).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+          maximumFractionDigits: 0
+        });
       }
+    }
+  }
+}
     }
   });
 }
