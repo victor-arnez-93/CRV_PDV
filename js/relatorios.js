@@ -645,7 +645,6 @@ function renderRecebimentosJogos(vendas) {
 // ======================================================
 // HISTÓRICO DE CAIXAS
 // ======================================================
-
 function renderHistoricoCaixas() {
   const container = document.getElementById("historicoCaixas");
 
@@ -662,19 +661,15 @@ function renderHistoricoCaixas() {
 
   container.innerHTML = fechados.map(caixa => `
     <div class="caixa-historico-item">
-      <div class="caixa-hist-data">
-        ${new Date(caixa.data_abertura).toLocaleDateString("pt-BR")}
-      </div>
-
       <div class="caixa-hist-info">
         <div class="caixa-hist-col">
           <span class="caixa-hist-label">Abertura</span>
-          <strong class="caixa-hist-val">${formatarHora(caixa.data_abertura)}</strong>
+          <strong class="caixa-hist-val">${formatarDataHoraCaixa(caixa.data_abertura)}</strong>
         </div>
 
         <div class="caixa-hist-col">
           <span class="caixa-hist-label">Fechamento</span>
-          <strong class="caixa-hist-val">${formatarHora(caixa.data_fechamento)}</strong>
+          <strong class="caixa-hist-val">${formatarDataHoraCaixa(caixa.data_fechamento)}</strong>
         </div>
 
         <div class="caixa-hist-col">
@@ -689,6 +684,18 @@ function renderHistoricoCaixas() {
       </div>
     </div>
   `).join("");
+}
+
+function formatarDataHoraCaixa(data) {
+  if (!data) return "—";
+
+  return new Date(data).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function formatarHora(data) {

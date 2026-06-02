@@ -102,9 +102,13 @@ function formatarDataHoraBrasil(data) {
 function normalizarNumero(valor) {
   let texto = String(valor || "")
     .trim()
-    .replace(/[^\d,.-]/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
+    .replace(/[^\d,.-]/g, "");
+
+  if (!texto) return 0;
+
+  if (texto.includes(",")) {
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  }
 
   const numero = Number(texto);
 

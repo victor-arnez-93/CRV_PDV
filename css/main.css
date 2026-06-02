@@ -532,7 +532,7 @@ p { line-height: 1.6; color: var(--text-secondary); }
 }
 
 .status-dot.open {
-  background: #54CD16 !important;
+  background: var(--crv-online) !important;
   box-shadow: 0 0 8px rgba(84, 205, 22, 0.9) !important;
 }
 
@@ -549,7 +549,7 @@ p { line-height: 1.6; color: var(--text-secondary); }
 }
 
 .caixa-status.open #statusText {
-  color: #54CD16 !important;
+  color: var(--crv-online) !important;
 }
 
 .caixa-status.closed #statusText {

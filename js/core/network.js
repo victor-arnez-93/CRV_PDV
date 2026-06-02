@@ -35,10 +35,10 @@
 
     if (online) {
       badge.textContent = "ONLINE";
-      badge.style.color = "#00E08A";
-      badge.style.border = "1px solid rgba(0,224,138,.45)";
-      badge.style.background = "rgba(0,224,138,.08)";
-      badge.style.boxShadow = "0 0 18px rgba(0,224,138,.18)";
+      badge.style.color = "#54CD16";
+      badge.style.border = "1px solid rgba(84,205,22,.55)";
+      badge.style.background = "rgba(84,205,22,.10)";
+      badge.style.boxShadow = "0 0 18px rgba(84,205,22,.25)";
       return;
     }
 
