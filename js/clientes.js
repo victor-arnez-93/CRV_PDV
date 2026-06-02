@@ -65,6 +65,32 @@ function normalizarTelefone(valor) {
   return String(valor || "").trim();
 }
 
+function formatarNomeCliente(nome, finalizar = false) {
+  const excecoes = ["da", "das", "de", "do", "dos", "e"];
+
+  let texto = String(nome || "").toLowerCase();
+
+  if (finalizar) {
+    texto = texto.trim().replace(/\s+/g, " ");
+  }
+
+  return texto
+    .split(" ")
+    .map((parte, indice) => {
+      if (!parte) return parte;
+
+      if (
+        indice > 0 &&
+        excecoes.includes(parte)
+      ) {
+        return parte;
+      }
+
+      return parte.charAt(0).toUpperCase() + parte.slice(1);
+    })
+    .join(" ");
+}
+
 // ======================================================
 // INIT
 // ======================================================
@@ -345,9 +371,30 @@ function abrirModalNovo() {
     lucide.createIcons();
   }
 
-  setTimeout(() => {
-    document.getElementById("clienteNome")?.focus();
-  }, 100);
+setTimeout(() => {
+
+  const campoNome =
+    document.getElementById("clienteNome");
+
+  if (campoNome) {
+
+    campoNome.addEventListener("input", () => {
+
+      const cursor = campoNome.selectionStart;
+
+    campoNome.value =
+      formatarNomeCliente(campoNome.value, false);
+
+      campoNome.setSelectionRange(
+        cursor,
+        cursor
+      );
+    });
+
+    campoNome.focus();
+  }
+
+}, 100);
 }
 
 // ======================================================
@@ -384,9 +431,10 @@ function abrirModalEditar(id) {
 // ======================================================
 
 async function salvarCliente() {
-  const nome = String(
-    document.getElementById("clienteNome")?.value || ""
-  ).trim();
+  const nome = formatarNomeCliente(
+    document.getElementById("clienteNome")?.value,
+    true
+  );
 
   const telefone = normalizarTelefone(
     document.getElementById("clienteTelefone")?.value

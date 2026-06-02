@@ -1814,6 +1814,43 @@ function novaVenda() {
   }
 }
 
+function limparTituloJogoHistoricoCaixa(descricao) {
+  let texto = String(descricao || "Jogo pago").trim();
+
+  texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
+
+  const matchesComanda =
+    texto.match(/[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi) || [];
+
+  let qtdComanda = 0;
+  let totalComanda = 0;
+
+  matchesComanda.forEach(match => {
+    const valorTexto = match
+      .replace(/.*em comanda/i, "")
+      .replace("R$", "")
+      .trim();
+
+    const valor = Number(
+      valorTexto
+        .replace(/\./g, "")
+        .replace(",", ".")
+    );
+
+    qtdComanda += 1;
+    totalComanda += Number.isNaN(valor) ? 0 : valor;
+  });
+
+  texto = texto.replace(/\s*[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*,\s*[^,]+ em comanda R\$\s*[\d.,]+/gi, "");
+
+  if (qtdComanda > 0) {
+    texto += ` · ${qtdComanda} em comanda - ${fmt(totalComanda)}`;
+  }
+
+  return texto.trim() || "Jogo pago";
+}
+
 // ======================================================
 // HISTÓRICO
 // ======================================================
@@ -1859,7 +1896,7 @@ function renderHistorico() {
       origem === "comanda"
         ? (venda.descricao || "Comanda fechada")
         : origem === "agenda"
-          ? (venda.descricao || "Jogo pago")
+          ? limparTituloJogoHistoricoCaixa(venda.descricao)
           : (venda.descricao || "Venda finalizada");
 
     const detalhe =

@@ -71,6 +71,32 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
+
+  max-height: 570px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.produtos-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.produtos-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, .06);
+  border-radius: 999px;
+}
+
+.produtos-grid::-webkit-scrollbar-thumb {
+  background: var(--crv-orange);
+  border-radius: 999px;
+}
+
+[data-theme="light"] .produtos-grid::-webkit-scrollbar-track {
+  background: rgba(0, 56, 135, .10);
+}
+
+[data-theme="light"] .produtos-grid::-webkit-scrollbar-thumb {
+  background: var(--crv-blue);
 }
 
 /* ===== CARD PRODUTO ===== */
@@ -797,11 +823,14 @@
   /* =========================================
      GRID PRODUTOS
   ========================================= */
-
   .produtos-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
   }
 
   /* =========================================

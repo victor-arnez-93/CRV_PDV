@@ -196,6 +196,14 @@ function sistemaOnline() {
   );
 }
 
+function formatarNomeProduto(valor) {
+  const texto = String(valor || "").replace(/\s+/g, " ");
+
+  if (!texto.trim()) return "";
+
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 function normalizarPreco(valor) {
   let texto = String(valor || "")
     .trim()
@@ -1126,7 +1134,9 @@ async function salvarItensComboProduto(comboId) {
 // ======================================================
 async function salvarProduto() {
   const id = String(document.getElementById("produtoId")?.value || "").trim();
-  const nome = String(document.getElementById("produtoNome")?.value || "").trim();
+  const nome = formatarNomeProduto(
+  document.getElementById("produtoNome")?.value
+);
 
   const nomeExistente = produtos.find(produto => {
     return (
@@ -1431,6 +1441,22 @@ function setupMascarasProdutos() {
   aplicarMascaraMoedaInput(document.getElementById("produtoPrecoCusto"));
   aplicarMascaraEstoqueInput(document.getElementById("produtoEstoque"));
   aplicarMascaraCodigoBarrasInput(document.getElementById("produtoCodigo"));
+
+const produtoNome = document.getElementById("produtoNome");
+
+if (produtoNome) {
+  produtoNome.addEventListener("input", () => {
+    const cursor = produtoNome.selectionStart;
+
+    produtoNome.value = formatarNomeProduto(produtoNome.value);
+
+    produtoNome.setSelectionRange(cursor, cursor);
+  });
+
+  produtoNome.addEventListener("blur", () => {
+    produtoNome.value = formatarNomeProduto(produtoNome.value).trim();
+  });
+}
 }
 
 setTimeout(() => {

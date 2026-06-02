@@ -80,6 +80,43 @@ function normalizarPagamento(valor) {
   return "outros";
 }
 
+function limparDescricaoJogoVendas(descricao) {
+  let texto = String(descricao || "Pagamento de jogo").trim();
+
+  texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
+
+  const matchesComanda =
+    texto.match(/[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi) || [];
+
+  let qtdComanda = 0;
+  let totalComanda = 0;
+
+  matchesComanda.forEach(match => {
+    const valorTexto = match
+      .replace(/.*em comanda/i, "")
+      .replace("R$", "")
+      .trim();
+
+    const valor = Number(
+      valorTexto
+        .replace(/\./g, "")
+        .replace(",", ".")
+    );
+
+    qtdComanda += 1;
+    totalComanda += Number.isNaN(valor) ? 0 : valor;
+  });
+
+  texto = texto.replace(/\s*[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*,\s*[^,]+ em comanda R\$\s*[\d.,]+/gi, "");
+
+  if (qtdComanda > 0) {
+    texto += ` · ${qtdComanda} em comanda - ${fmt(totalComanda)}`;
+  }
+
+  return texto.trim() || "Pagamento de jogo";
+}
+
 function obterDataVenda(venda) {
   return venda.data || venda.created_at || venda.criado_em || new Date().toISOString();
 }
@@ -596,11 +633,11 @@ function renderTabela() {
 
     const num = reversed.length - idx;
     const primeiro = {
-  nome:
-    v.origem === "agenda"
-      ? (v.descricao || "Pagamento de jogo")
-      : v.itens[0]?.nome || (v.offline ? "Venda offline" : "Venda")
-};
+      nome:
+        v.origem === "agenda"
+          ? limparDescricaoJogoVendas(v.descricao)
+          : v.itens[0]?.nome || (v.offline ? "Venda offline" : "Venda")
+    };
     const maisItens = v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '';
 
     return `
@@ -655,7 +692,7 @@ function verDetalhe(id) {
 
 <div class="detalhe-row">
   <span>Descrição</span>
-  <span>${venda.descricao || "Pagamento de jogo"}</span>
+  <span>${limparDescricaoJogoVendas(venda.descricao)}</span>
 </div>
 ` : ""}
 
