@@ -2100,14 +2100,12 @@ async function atualizarBadgesModosCaixa() {
 
     if (erroComandas) throw erroComandas;
 
-    const hoje = new Date().toISOString().slice(0, 10);
-
-    const { data: jogos, error: erroJogos } = await sb
-      .from("agenda")
-      .select("*")
-      .eq("empresa_id", empresaId)
-      .gte("data_agendamento", hoje)
-      .neq("status_jogo", "cancelado");
+const { data: jogos, error: erroJogos } = await sb
+  .from("agenda")
+  .select("*")
+  .eq("empresa_id", empresaId)
+  .neq("status_jogo", "cancelado")
+  .neq("status_jogo", "fechado");
 
     if (erroJogos) throw erroJogos;
 
@@ -2751,15 +2749,14 @@ if (lista && modalJogosAberto) {
 }
 
   try {
-    const hoje = new Date().toISOString().slice(0, 10);
-
     const { data: jogos, error: erroJogos } = await sb
-      .from("agenda")
-      .select("*")
-      .eq("empresa_id", obterEmpresaId())
-      .gte("data_agendamento", hoje)
-      .order("data_agendamento", { ascending: true })
-      .order("hora_inicio", { ascending: true });
+  .from("agenda")
+  .select("*")
+  .eq("empresa_id", obterEmpresaId())
+  .neq("status_jogo", "cancelado")
+  .neq("status_jogo", "fechado")
+  .order("data_agendamento", { ascending: true })
+  .order("hora_inicio", { ascending: true });
 
     if (erroJogos) throw erroJogos;
 

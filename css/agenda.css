@@ -722,11 +722,18 @@
 
 /* cobrança pendente: amarelo com brilho leve */
 .status-cobranca {
-  background: rgba(255, 193, 7, .13);
-  border: 1px solid rgba(255, 193, 7, .45);
-  color: #ffd56a;
-  box-shadow: 0 0 12px rgba(255, 193, 7, .16);
+  background: rgba(212, 168, 67, .14);
+  border: 1px solid rgba(212, 168, 67, .55);
+  color: #d4a843;
+  box-shadow: 0 0 12px rgba(212, 168, 67, .18);
   animation: agendaCobrancaGlow 2.2s ease-in-out infinite;
+}
+
+body.light .status-cobranca {
+  background: rgba(212, 168, 67, .22);
+  border: 1px solid rgba(212, 168, 67, .75);
+  color: #9b6b00;
+  box-shadow: 0 0 10px rgba(212, 168, 67, .12);
 }
 
 @keyframes agendaCobrancaGlow {
@@ -919,6 +926,71 @@
 #agendaAndamento .btn-remover-jogo {
   width: 34px;
   height: 34px;
+}
+
+/* ======================================================
+   COBRANÇA - MARCAR TODOS
+====================================================== */
+
+.agenda-marcar-todos-jogadores {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+.agenda-marcar-todos-jogadores #valorTodosJogadores {
+  flex: 1;
+}
+
+.agenda-marcar-todos-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 42px;
+  padding: 0 16px;
+
+  border-radius: 999px;
+
+  font-family: var(--font-display);
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+
+  border: 1px solid rgba(212,168,67,.35);
+  background: rgba(212,168,67,.08);
+  color: #d4a843;
+
+  transition: .2s;
+}
+
+.agenda-marcar-todos-check:hover {
+  border-color: rgba(212,168,67,.7);
+  background: rgba(212,168,67,.14);
+}
+
+.agenda-marcar-todos-check input {
+  width: 16px;
+  height: 16px;
+
+  accent-color: #d4a843;
+}
+
+/* tema claro */
+
+body.light .agenda-marcar-todos-check {
+  border-color: rgba(0,56,135,.25);
+  background: rgba(0,56,135,.06);
+  color: #003887;
+}
+
+body.light .agenda-marcar-todos-check input {
+  accent-color: #003887;
 }
 
 /* ======================================================

@@ -380,7 +380,8 @@ if (idsVendas.length) {
         id: v.id,
         hora: new Date(obterDataVenda(v)).toLocaleTimeString("pt-BR", {
           hour: "2-digit",
-          minute: "2-digit"
+          minute: "2-digit",
+          timeZone: "America/Sao_Paulo"
         }),
         data: obterDataVenda(v),
         total: Number(v.total || 0),
@@ -424,7 +425,8 @@ vendasData = vendas.map(v => {
     id: v.id,
     hora: new Date(obterDataVenda(v)).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
+      timeZone: "America/Sao_Paulo"
     }),
     data: obterDataVenda(v),
     total: Number(v.total || 0),

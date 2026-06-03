@@ -808,7 +808,11 @@ function montarRecebimentosJogosAgrupados(vendas) {
         responsavel: obterResponsavelJogoRelatorio(venda),
         descricao: descricaoLimpa,
         data: venda.data,
-        forma: venda.forma_pagamento || "—",
+        formas: new Set(
+  venda.forma_pagamento
+    ? [String(venda.forma_pagamento).toUpperCase()]
+    : []
+),
         total: 0,
         qtdComanda: 0,
         totalComanda: 0
@@ -816,6 +820,12 @@ function montarRecebimentosJogosAgrupados(vendas) {
     }
 
     mapa[chave].total += Number(venda.total || 0);
+
+    if (venda.forma_pagamento) {
+  mapa[chave].formas.add(
+    String(venda.forma_pagamento).toUpperCase()
+  );
+}
 
     const descricao = String(venda.descricao || "");
     const matchesComanda = descricao.match(/em comanda R\$\s*[\d.,]+/gi) || [];
@@ -841,7 +851,10 @@ function montarRecebimentosJogosAgrupados(vendas) {
     if (item.qtdComanda > 0) {
       item.descricao += ` · ${item.qtdComanda} em comanda - ${fmt(item.totalComanda)}`;
     }
-
+    item.forma =
+  item.formas.size > 1
+    ? "MISTO"
+    : [...item.formas][0] || "—";
     return item;
   });
 }

@@ -1113,6 +1113,8 @@ function aplicarModoModal() {
     if (pago) pago.disabled = !modoCobranca;
     if (remover) remover.style.display = (modoNovo || modoAgendado) ? "flex" : "none";
   });
+
+  renderizarControleMarcarTodosJogadores();
 }
 
 // ======================================================
@@ -1221,10 +1223,74 @@ function esconderFeedback() {
 
 }
 
+function renderizarControleMarcarTodosJogadores() {
+  const lista = document.getElementById("listaJogadores");
+  if (!lista) return;
+
+  document.getElementById("controleMarcarTodosJogadores")?.remove();
+
+  if (modoModalAgenda !== "cobranca") {
+    return;
+  }
+
+  const controle = document.createElement("div");
+  controle.id = "controleMarcarTodosJogadores";
+  controle.className = "agenda-marcar-todos-jogadores";
+
+  controle.innerHTML = `
+    <input
+      class="input"
+      id="valorTodosJogadores"
+      placeholder="Valor para todos"
+    >
+
+    <button
+      type="button"
+      class="btn btn-primary"
+      id="btnMarcarTodosJogadores"
+    >
+      Aplicar a todos
+    </button>
+  `;
+
+  lista.parentElement.insertBefore(controle, lista);
+
+  const inputValorTodos = document.getElementById("valorTodosJogadores");
+
+  aplicarMascaraMoedaAgenda(inputValorTodos);
+
+  document
+    .getElementById("btnMarcarTodosJogadores")
+    .addEventListener("click", () => {
+      const valor = inputValorTodos.value;
+
+      if (!valor) {
+        mostrarErro("Informe o valor para aplicar em todos os jogadores.");
+        return;
+      }
+
+      document.querySelectorAll(".agenda-jogador-row").forEach(row => {
+        const inputValor = row.querySelector(".jogador-valor");
+        const checkPago = row.querySelector(".jogador-pago");
+
+        if (inputValor) {
+          inputValor.value = valor;
+        }
+
+        if (checkPago) {
+          checkPago.checked = true;
+        }
+      });
+
+      atualizarTotalizadorModal();
+
+      mostrarSucesso("Valor aplicado e jogadores marcados como pagos.");
+    });
+}
+
 // ======================================================
 // JOGADORES
 // ======================================================
-
 function adicionarLinhaJogador(jogador = {}) {
 
   const lista =
@@ -2004,10 +2070,14 @@ async function sincronizarAgendaComCaixa(agendaId, jogo, jogadores) {
     .map(j => j.forma_pagamento)
     .filter(Boolean);
 
-  const formaPagamento =
-    formas.length > 0
-      ? formas[0]
-      : "pix";
+const formasUnicas = [...new Set(
+  formas.map(forma => String(forma).toLowerCase())
+)];
+
+const formaPagamento =
+  formasUnicas.length > 1
+    ? "misto"
+    : formasUnicas[0] || "pix";
 
 // ======================================================
 // OFFLINE
