@@ -355,21 +355,67 @@ function getIntervaloPeriodo() {
   return { inicio, fim };
 }
 
+function dataVendaRelatorio(data) {
+  if (!data) return null;
+
+  return new Date(
+    String(data).endsWith("Z")
+      ? data
+      : `${data}Z`
+  );
+}
+
+function formatarDataVendaRelatorio(data) {
+  const d = dataVendaRelatorio(data);
+  if (!d) return "—";
+
+  return d.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo"
+  });
+}
+
+function formatarHoraVendaRelatorio(data) {
+  const d = dataVendaRelatorio(data);
+  if (!d) return "—";
+
+  return d.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
+  });
+}
+
 function getVendasFiltradas() {
   const { inicio, fim } = getIntervaloPeriodo();
 
   return vendasData
     .filter(venda => {
-      const dataVenda = new Date(venda.data);
+      if (!venda.data) return false;
+
+      const dataVenda = new Date(
+        String(venda.data).endsWith("Z")
+          ? venda.data
+          : `${venda.data}Z`
+      );
+
       return dataVenda >= inicio && dataVenda <= fim;
     })
-    .sort((a, b) => new Date(b.data) - new Date(a.data));
+    .sort((a, b) => {
+      const dataA = new Date(
+        String(a.data).endsWith("Z") ? a.data : `${a.data}Z`
+      );
+
+      const dataB = new Date(
+        String(b.data).endsWith("Z") ? b.data : `${b.data}Z`
+      );
+
+      return dataB - dataA;
+    });
 }
 
 // ======================================================
 // RENDER GERAL
 // ======================================================
-
 function renderRelatorio() {
   const vendas = getVendasFiltradas();
 
@@ -825,8 +871,8 @@ function exportarCSV() {
     const margem = total > 0 ? (lucro / total) * 100 : 0;
 
     linhas.push([
-      new Date(v.data).toLocaleDateString("pt-BR"),
-      new Date(v.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      formatarDataVendaRelatorio(v.data),
+      formatarHoraVendaRelatorio(v.data),
       v.forma_pagamento || "—",
       numeroExcel(v.subtotal),
       numeroExcel(v.desconto),
@@ -866,7 +912,7 @@ function exportarCSV() {
 
     jogosAgrupados.forEach(jogo => {
       linhas.push([
-        new Date(jogo.data).toLocaleDateString("pt-BR"),
+        formatarDataVendaRelatorio(jogo.data),
         jogo.responsavel,
         jogo.forma,
         numeroExcel(jogo.total)
@@ -895,7 +941,6 @@ function numeroExcel(valor) {
 // ======================================================
 // EXPORTAR PDF / IMPRESSÃO PROFISSIONAL
 // ======================================================
-
 function exportarPDF() {
   const vendas = getVendasFiltradas();
 
@@ -1114,8 +1159,8 @@ function exportarPDF() {
 
             return `
               <tr>
-                <td>${new Date(v.data).toLocaleDateString("pt-BR")}</td>
-                <td>${new Date(v.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
+                <td>${formatarDataVendaRelatorio(v.data)}</td>
+                <td>${formatarHoraVendaRelatorio(v.data)}</td>
                 <td>${v.forma_pagamento || "—"}</td>
                 <td class="right">${fmt(total)}</td>
                 <td class="right">${fmt(lucroVenda)}</td>
@@ -1190,7 +1235,7 @@ function exportarPDF() {
                   <tr>
                     <td>${item.responsavel}</td>
                     <td>${item.descricao}</td>
-                    <td>${new Date(item.data).toLocaleDateString("pt-BR")}</td>
+                    <td>${formatarDataVendaRelatorio(item.data)}</td>
                     <td>${item.forma}</td>
                     <td class="right">${fmt(item.total)}</td>
                   </tr>

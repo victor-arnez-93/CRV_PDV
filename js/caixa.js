@@ -19,6 +19,12 @@ let caixaInicializado = false;
 let vendaEmProcessamento = false;
 let comandasCaixa = [];
 let comandasCaixaFiltradas = [];
+let carregandoComandasCaixa = false;
+let ultimaCargaComandasCaixa = 0;
+function invalidarCacheComandasCaixa() {
+  ultimaCargaComandasCaixa = 0;
+}
+
 
 let tipoNegocioCaixa = "";
 let jogosCaixa = [];
@@ -333,6 +339,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!pronto) {
     logCaixa("Supabase/Auth não ficou pronto a tempo.", "error");
+
+    caixa =
+      await crvOfflineDB.obterCache("caixa_status") || null;
+
+    vendas =
+      await crvOfflineDB.obterCache("caixa_vendas") || [];
+
+    if (caixa && caixa.status === "aberto") {
+      crvToast({
+        titulo: "Caixa mantido aberto",
+        mensagem:
+          "A conexão demorou, mas o caixa aberto foi recuperado do cache local.",
+        tipo: "warn",
+        tempo: 7000
+      });
+    } else {
+      crvToast({
+        titulo: "Status do caixa não confirmado",
+        mensagem:
+          "Aguarde a conexão finalizar antes de abrir um novo caixa.",
+        tipo: "warn",
+        tempo: 8000
+      });
+    }
+
     renderEstado();
     renderProdutosRapidos();
     renderCarrinho();
@@ -426,19 +457,47 @@ await crvOfflineDB.salvarCache(
     logCaixa("Dados carregados do Supabase.", "success");
 
   } catch (err) {
-caixa =
-  await crvOfflineDB.obterCache(
-    "caixa_status"
-  ) || null;
 
-vendas =
-  await crvOfflineDB.obterCache(
-    "caixa_vendas"
-  ) || [];
+    const cacheCaixa =
+      await crvOfflineDB.obterCache("caixa_status") || null;
+
+    const cacheVendas =
+      await crvOfflineDB.obterCache("caixa_vendas") || [];
+
+    if (cacheCaixa && cacheCaixa.status === "aberto") {
+      caixa = cacheCaixa;
+      vendas = cacheVendas;
+
+      logCaixa(
+        "Falha temporária no Supabase/Auth. Caixa aberto recuperado do cache local.",
+        "warn"
+      );
+
+      crvToast({
+        titulo: "Caixa recuperado",
+        mensagem:
+          "O sistema ainda está conectando, mas o caixa aberto foi mantido pela cópia local.",
+        tipo: "warn",
+        tempo: 7000
+      });
+
+      return;
+    }
+
+    caixa = null;
+    vendas = [];
 
     logCaixa("Erro ao carregar dados: " + err.message, "error");
+
+    crvToast({
+      titulo: "Não foi possível confirmar o caixa",
+      mensagem:
+        "A conexão com o Supabase ainda não confirmou o status do caixa. Aguarde alguns segundos antes de abrir um novo caixa.",
+      tipo: "warn",
+      tempo: 8000
+    });
   }
-}
+  }
 
 async function carregarProdutos() {
   try {
@@ -1021,19 +1080,23 @@ function renderSugestoes(lista) {
       </span>
     `;
 
-    item.onclick = () => {
-      adicionarCarrinho(produto);
+item.onclick = async () => {
+  if (modoPDV === "comanda" && comandaAtiva) {
+    await adicionarProdutoNaComanda(produto);
+  } else {
+    await adicionarCarrinho(produto);
+  }
 
-      box.innerHTML = "";
-      box.classList.remove("open");
+  box.innerHTML = "";
+  box.classList.remove("open");
 
-      const inputBusca = document.getElementById("inputBusca");
+  const inputBusca = document.getElementById("inputBusca");
 
-      if (inputBusca) {
-        inputBusca.value = "";
-        inputBusca.focus();
-      }
-    };
+  if (inputBusca) {
+    inputBusca.value = "";
+    inputBusca.focus();
+  }
+};
 
     box.appendChild(item);
   });
@@ -1997,10 +2060,16 @@ function setupAtalhos() {
       if (inputBusca) inputBusca.focus();
     }
 
-    if (event.key === "F4") {
-      event.preventDefault();
-      finalizarVenda();
-    }
+if (event.key === "F4") {
+  event.preventDefault();
+
+  if (modoPDV === "comanda" && comandaAtiva) {
+    fecharComanda();
+    return;
+  }
+
+  finalizarVenda();
+}
 
     if (event.key === "Escape") {
       const modalSucesso = document.getElementById("modalSucesso");
@@ -2148,7 +2217,9 @@ if (modo === "venda") {
 
     jogoSelecionadoCaixa = null;
 
-    await carregarComandasCaixa();
+    await carregarComandasCaixa({
+  forcar: true
+});
 
     atualizarInterfaceModoPDV();
 
@@ -2484,7 +2555,6 @@ async function sincronizarJogosPendentesCaixa() {
 // ======================================================
 // AVISO DE FIM DE JOGO NO CAIXA
 // ======================================================
-
 function iniciarAvisosFimDeJogoCaixa() {
   if (!caixaPermiteJogos()) {
     return;
@@ -2503,10 +2573,6 @@ function iniciarAvisosFimDeJogoCaixa() {
     verificarAvisosFimDeJogoCaixa();
     await atualizarBadgesModosCaixa();
 
-    if (modoPDV === "comanda") {
-      await carregarComandasCaixa();
-      renderComandasAbertasNoCaixa();
-    }
   }, 15000);
 }
 
@@ -2875,13 +2941,13 @@ function renderJogosCaixa() {
 
   if (!lista) return;
 
-  if (!jogosCaixaFiltrados.length) {
-    lista.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1;">
-        <i data-lucide="calendar-x" width="28" height="28"></i>
-        <p>Nenhum jogo encontrado.</p>
-      </div>
-    `;
+if (!jogosCaixaFiltrados.length) {
+  lista.innerHTML = `
+    <div class="empty-state jogo-caixa-empty">
+      <i data-lucide="calendar-x" width="28" height="28"></i>
+      <p>Nenhum jogo encontrado.</p>
+    </div>
+  `;
 
     if (window.lucide) {
       lucide.createIcons();
@@ -4090,8 +4156,12 @@ async function abrirModalSelecionarComanda() {
     inputBusca.value = "";
   }
 
-  await carregarComandasCaixa();
-  filtrarComandasCaixa("");
+await carregarComandasCaixa({
+  forcar: true,
+  mostrarLoading: true
+});
+
+filtrarComandasCaixa("");
 
   setTimeout(() => {
     inputBusca?.focus();
@@ -4127,10 +4197,29 @@ function fecharModalSelecionarComanda() {
   }
 }
 
-async function carregarComandasCaixa() {
+async function carregarComandasCaixa(opcoes = {}) {
+  const forcar = opcoes.forcar === true;
+  const mostrarLoading = opcoes.mostrarLoading === true;
+
+  const agora = Date.now();
+
+  if (
+    !forcar &&
+    comandasCaixa.length &&
+    agora - ultimaCargaComandasCaixa < 2500
+  ) {
+    return;
+  }
+
+  if (carregandoComandasCaixa) {
+    return;
+  }
+
+  carregandoComandasCaixa = true;
+
   const lista = document.getElementById("listaComandasCaixa");
 
-  if (lista) {
+  if (lista && mostrarLoading) {
     lista.innerHTML = `
       <div class="empty-state">
         <p>Carregando comandas...</p>
@@ -4149,6 +4238,7 @@ async function carregarComandasCaixa() {
     if (error) throw error;
 
     comandasCaixa = Array.isArray(data) ? data : [];
+    ultimaCargaComandasCaixa = Date.now();
 
   } catch (err) {
     comandasCaixa = [];
@@ -4159,6 +4249,9 @@ async function carregarComandasCaixa() {
     );
 
     console.error(err);
+
+  } finally {
+    carregandoComandasCaixa = false;
   }
 }
 
@@ -4243,19 +4336,155 @@ ${comanda.observacoes ? `
   });
 }
 
+function formatarNomeComandaCaixa(valor) {
+  const manterMinusculo = ["da", "de", "do", "das", "dos", "e"];
+
+  return String(valor || "")
+    .toLowerCase()
+    .split(" ")
+    .map((parte, index) => {
+      if (!parte) return "";
+
+      if (index > 0 && manterMinusculo.includes(parte)) {
+        return parte;
+      }
+
+      return parte.charAt(0).toUpperCase() + parte.slice(1);
+    })
+    .join(" ");
+}
+
+function abrirModalIdentificacaoComandaCaixa(comanda) {
+  return new Promise(resolve => {
+    let modal = document.getElementById("modalIdentificarComandaCaixa");
+
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "modalIdentificarComandaCaixa";
+      modal.className = "modal-overlay";
+      modal.style.display = "none";
+
+      modal.innerHTML = `
+        <div class="modal modal-identificar-comanda">
+          <div class="modal-header">
+            <div>
+              <h2 id="tituloIdentificarComanda">Identificar Comanda</h2>
+              <p class="modal-subtitle">
+                Informe um nome, apelido ou referência para localizar rápido depois.
+              </p>
+            </div>
+
+            <button class="modal-close" type="button" id="btnFecharIdentificarComanda">
+              <i data-lucide="x" width="20" height="20"></i>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div class="input-group">
+              <label class="input-label">Identificação</label>
+              <input
+                type="text"
+                class="input"
+                id="inputIdentificacaoComanda"
+                placeholder="Ex: André, Mesa 3, Camisa azul..."
+                autocomplete="off"
+              >
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" type="button" id="btnAbrirSemIdentificacao">
+              Abrir sem identificação
+            </button>
+
+            <button class="btn-primary" type="button" id="btnConfirmarIdentificacaoComanda">
+              Abrir Comanda
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+    }
+
+    const titulo = document.getElementById("tituloIdentificarComanda");
+    const input = document.getElementById("inputIdentificacaoComanda");
+    const btnFechar = document.getElementById("btnFecharIdentificarComanda");
+    const btnSemIdentificacao = document.getElementById("btnAbrirSemIdentificacao");
+    const btnConfirmar = document.getElementById("btnConfirmarIdentificacaoComanda");
+
+    if (titulo) {
+      titulo.textContent = `Abrir Comanda ${comanda?.codigo || "—"}`;
+    }
+
+if (input) {
+  input.value = "";
+
+  input.oninput = () => {
+    const posicao = input.selectionStart;
+    input.value = formatarNomeComandaCaixa(input.value);
+    input.setSelectionRange(posicao, posicao);
+  };
+}
+
+    modal.style.display = "flex";
+
+    const fechar = valor => {
+      modal.style.display = "none";
+
+      btnFechar.onclick = null;
+      btnSemIdentificacao.onclick = null;
+      btnConfirmar.onclick = null;
+      input.oninput = null;
+
+      resolve(valor);
+    };
+
+    btnFechar.onclick = () => fechar(null);
+    btnSemIdentificacao.onclick = () => fechar("");
+    btnConfirmar.onclick = () => fechar(String(input?.value || "").trim());
+
+    input.onkeydown = event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        fechar(String(input.value || "").trim());
+      }
+    };
+
+    setTimeout(() => {
+      input?.focus();
+    }, 80);
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
+}
+
 async function selecionarComandaCaixa(comanda) {
   if (!comanda?.id) return;
 
   try {
     let comandaOperacional = comanda;
 
-    if (comanda.status === "livre") {
-      const { data, error } = await sb
-        .from("comandas")
-        .update({
-          status: "aberta",
-          data_abertura: new Date().toISOString()
-        })
+if (comanda.status === "livre") {
+  let identificacao = "";
+
+  if (!jogadorComandaPendenteCaixa) {
+    identificacao = await abrirModalIdentificacaoComandaCaixa(comanda);
+
+    if (identificacao === null) {
+      return;
+    }
+  }
+
+  const { data, error } = await sb
+    .from("comandas")
+    .update({
+      status: "aberta",
+      nome_cliente: identificacao || null,
+      data_abertura: new Date().toISOString()
+    })
         .eq("id", comanda.id)
         .eq("empresa_id", obterEmpresaId())
         .select("*")
@@ -4521,13 +4750,25 @@ if (!sistemaOnline()) {
       comanda.status === "livre"
     ) {
 
-      const { data: aberta, error: erroAbrir } =
-        await sb
-          .from("comandas")
-          .update({
-            status: "aberta",
-            data_abertura: new Date().toISOString()
-          })
+const identificacao = await abrirModalIdentificacaoComandaCaixa(comanda);
+
+if (identificacao === null) {
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
+
+  return;
+}
+
+const { data: aberta, error: erroAbrir } =
+  await sb
+    .from("comandas")
+    .update({
+      status: "aberta",
+      nome_cliente: identificacao || null,
+      data_abertura: new Date().toISOString()
+    })
           .eq("id", comanda.id)
           .eq("empresa_id", obterEmpresaId())
           .select("*")
@@ -4701,12 +4942,14 @@ async function adicionarProdutoNaComanda(produto) {
     }
   }
 
-  await carregarItensComanda();
-  await atualizarBadgesModosCaixa();
-  renderComandasAbertasNoCaixa();
+await carregarItensComanda({
+  atualizarTotalBanco: true
+});
+
+renderComandasAbertasNoCaixa();
 }
 
-async function adicionarItemManualNaComanda({
+async function adicionarItemManualNaComanda( {
   nome,
   preco,
   quantidade
@@ -4744,9 +4987,11 @@ async function adicionarItemManualNaComanda({
 
     if (error) throw error;
 
-    await carregarItensComanda();
-    await atualizarBadgesModosCaixa();
-    renderComandasAbertasNoCaixa();
+await carregarItensComanda({
+  atualizarTotalBanco: true
+});
+
+renderComandasAbertasNoCaixa();
 
   } catch (err) {
     await alertaCaixa(
@@ -4758,9 +5003,11 @@ async function adicionarItemManualNaComanda({
   }
 }
 
-async function carregarItensComanda() {
+async function carregarItensComanda(opcoes = {}) {
 
   if (!comandaAtiva?.id) return;
+
+  const atualizarTotalBanco = opcoes.atualizarTotalBanco === true;
 
   const { data, error } = await sb
     .from("comanda_itens")
@@ -4799,17 +5046,32 @@ async function carregarItensComanda() {
 
   comandaAtiva.total = total;
 
-  await sb
-    .from("comandas")
-    .update({
-      total: total
-    })
-    .eq("id", comandaAtiva.id)
-    .eq("empresa_id", obterEmpresaId());
+  const indexComanda = comandasCaixa.findIndex(item => {
+    return String(item.id) === String(comandaAtiva.id);
+  });
+
+  if (indexComanda >= 0) {
+    comandasCaixa[indexComanda] = {
+      ...comandasCaixa[indexComanda],
+      ...comandaAtiva,
+      total: total,
+      status: "aberta"
+    };
+  }
+
+  if (atualizarTotalBanco) {
+    await sb
+      .from("comandas")
+      .update({
+        total: total,
+        status: "aberta"
+      })
+      .eq("id", comandaAtiva.id)
+      .eq("empresa_id", obterEmpresaId());
+  }
 
   renderCarrinho();
   atualizarInterfaceModoPDV();
-  renderComandasAbertasNoCaixa();
 }
 
 // ======================================================
@@ -4870,8 +5132,15 @@ async function limparComandaAtiva() {
     input.focus();
   }
 
-  await atualizarBadgesModosCaixa();
-  renderComandasAbertasNoCaixa();
+await carregarComandasCaixa({
+  forcar: true
+});
+
+filtrarComandasCaixa("");
+
+await atualizarBadgesModosCaixa();
+
+renderComandasAbertasNoCaixa();
 }
 
 document.addEventListener("click", event => {
@@ -5040,15 +5309,23 @@ if (!sistemaOnline()) {
       .eq("id", comandaAtiva.id)
       .eq("empresa_id", obterEmpresaId());
 
-    comandaAtiva = null;
-    carrinho = [];
+comandaAtiva = null;
+carrinho = [];
 
-    renderCarrinho();
-    atualizarInterfaceModoPDV();
-    await atualizarBadgesModosCaixa();
-    renderComandasAbertasNoCaixa();
+await carregarComandasCaixa({
+  forcar: true
+});
 
-    return;
+filtrarComandasCaixa("");
+
+renderCarrinho();
+atualizarInterfaceModoPDV();
+
+await atualizarBadgesModosCaixa();
+
+renderComandasAbertasNoCaixa();
+
+return;
   }
 
 const confirmar = await abrirConfirmacaoCaixa({
@@ -5257,7 +5534,6 @@ const { error: erroComanda } = await sb
 // ======================================================
 // REMOVER ITEM DO CARRINHO / COMANDA
 // ======================================================
-
 async function removerItemCarrinho(index) {
 
   const item = carrinho[index];
@@ -5301,7 +5577,9 @@ async function removerItemCarrinho(index) {
       return;
     }
 
-    await carregarItensComanda();
+    await carregarItensComanda({
+  atualizarTotalBanco: true
+});
 
     return;
   }
@@ -5313,7 +5591,6 @@ async function removerItemCarrinho(index) {
 // ======================================================
 // ALTERAR QUANTIDADE DO CARRINHO / COMANDA
 // ======================================================
-
 async function alterarQuantidadeCarrinho(index, delta) {
 
   const item = carrinho[index];
@@ -5376,7 +5653,9 @@ async function alterarQuantidadeCarrinho(index, delta) {
       return;
     }
 
-    await carregarItensComanda();
+    await carregarItensComanda({
+  atualizarTotalBanco: true
+});
 
     return;
   }
