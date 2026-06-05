@@ -67,52 +67,68 @@ function fimDiaISO(data) {
   return d.toISOString();
 }
 
-const labelPagto = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX' };
-const iconPagto  = { dinheiro: 'banknote', cartao: 'credit-card', pix: 'zap' };
+const labelPagto = {
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  debito: "Débito",
+  credito: "Crédito",
+  pix: "PIX",
+  misto: "Misto",
+  outros: "Outro"
+};
+
+const iconPagto = {
+  dinheiro: "banknote",
+  cartao: "credit-card",
+  debito: "credit-card",
+  credito: "credit-card",
+  pix: "zap",
+  misto: "split",
+  outros: "receipt"
+};
 
 function normalizarPagamento(valor) {
-  const texto = String(valor || "").toLowerCase();
+  const texto = String(valor || "").toLowerCase().trim();
 
   if (texto.includes("dinheiro")) return "dinheiro";
+  if (texto === "debito" || texto.includes("débito")) return "debito";
+  if (texto === "credito" || texto.includes("crédito")) return "credito";
   if (texto.includes("cart")) return "cartao";
   if (texto.includes("pix")) return "pix";
+  if (texto.includes("misto")) return "misto";
 
   return "outros";
+}
+
+function itemEhJogoVendas(item) {
+  const origem = String(item.origem || "").toLowerCase();
+  const nome = String(item.nome || "").toLowerCase();
+
+  return (
+    origem === "agenda" ||
+    Boolean(item.agenda_id) ||
+    Boolean(item.agenda_jogador_id) ||
+    nome.includes("jogo -") ||
+    nome.includes("pagamento direto jogo") ||
+    nome.includes("jogo avulso") ||
+    nome.includes("jogo mensal")
+  );
+}
+
+function vendaTemJogoVendas(venda) {
+  return (
+    String(venda.origem || "").toLowerCase() === "agenda" ||
+    (venda.itens || []).some(item => itemEhJogoVendas(item))
+  );
 }
 
 function limparDescricaoJogoVendas(descricao) {
   let texto = String(descricao || "Pagamento de jogo").trim();
 
   texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
-
-  const matchesComanda =
-    texto.match(/[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi) || [];
-
-  let qtdComanda = 0;
-  let totalComanda = 0;
-
-  matchesComanda.forEach(match => {
-    const valorTexto = match
-      .replace(/.*em comanda/i, "")
-      .replace("R$", "")
-      .trim();
-
-    const valor = Number(
-      valorTexto
-        .replace(/\./g, "")
-        .replace(",", ".")
-    );
-
-    qtdComanda += 1;
-    totalComanda += Number.isNaN(valor) ? 0 : valor;
-  });
-
-  texto = texto.replace(/\s*[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi, "");
-  texto = texto.replace(/\s*,\s*[^,]+ em comanda R\$\s*[\d.,]+/gi, "");
-
-  if (qtdComanda > 0) {
-    texto += ` · ${qtdComanda} em comanda - ${fmt(totalComanda)}`;
-  }
+  texto = texto.replace(/\s*\|\s*Direto\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*\|\s*Comanda\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*·\s*Comanda:\s*.*/gi, "");
 
   return texto.trim() || "Pagamento de jogo";
 }
@@ -426,7 +442,11 @@ if (idsVendas.length) {
         itens: itensVenda.map(i => ({
           nome: i.nome || "Produto",
           quantidade: Number(i.quantidade || 0),
-          preco: Number(i.preco || 0)
+          preco: Number(i.preco || 0),
+          origem: i.origem || null,
+          origem_id: i.origem_id || null,
+          agenda_id: i.agenda_id || null,
+          agenda_jogador_id: i.agenda_jogador_id || null
         }))
       };
     });
@@ -460,11 +480,15 @@ vendasData = vendas.map(v => {
     origem_id: v.origem_id || null,
     descricao: v.descricao || (v.origem === "agenda" ? "Pagamento de jogo" : null),
     offline: v.offline === true,
-    itens: itensVenda.map(i => ({
-      nome: i.nome || "Produto",
-      quantidade: Number(i.quantidade || 0),
-      preco: Number(i.preco || 0)
-    }))
+itens: itensVenda.map(i => ({
+  nome: i.nome || "Produto",
+  quantidade: Number(i.quantidade || 0),
+  preco: Number(i.preco || 0),
+  origem: i.origem || null,
+  origem_id: i.origem_id || null,
+  agenda_id: i.agenda_id || null,
+  agenda_jogador_id: i.agenda_jogador_id || null
+}))
   };
 });
   }
@@ -479,9 +503,9 @@ function renderResumo() {
   const qtd = base.length;
   const ticket   = qtd > 0 ? total / qtd : 0;
 
-  const dinheiro = base.filter(v => v.formaPagamento === "dinheiro").reduce((a, v) => a + v.total, 0);
-  const cartao = base.filter(v => v.formaPagamento === "cartao").reduce((a, v) => a + v.total, 0);
-  const pix = base.filter(v => v.formaPagamento === "pix").reduce((a, v) => a + v.total, 0);
+const dinheiro = base.filter(v => v.formaPagamento === "dinheiro").reduce((a, v) => a + v.total, 0);
+const cartao = base.filter(v => ["cartao", "debito", "credito"].includes(v.formaPagamento)).reduce((a, v) => a + v.total, 0);
+const pix = base.filter(v => v.formaPagamento === "pix").reduce((a, v) => a + v.total, 0);
 
   document.getElementById('resumoTotal').textContent    = fmt(total);
   document.getElementById('resumoQtd').textContent      = qtd;
@@ -659,8 +683,8 @@ function renderTabela() {
     const num = reversed.length - idx;
     const primeiro = {
       nome:
-        v.origem === "agenda"
-          ? limparDescricaoJogoVendas(v.descricao)
+        vendaTemJogoVendas(v)
+          ? limparDescricaoJogoVendas(v.descricao || v.itens.find(itemEhJogoVendas)?.nome)
           : v.itens[0]?.nome || (v.offline ? "Venda offline" : "Venda")
     };
     const maisItens = v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '';
@@ -709,15 +733,15 @@ function verDetalhe(id) {
       <span style="font-family:'Courier New',monospace;">${venda.hora}</span>
     </div>
 
-    ${venda.origem === "agenda" ? `
+        ${vendaTemJogoVendas(venda) ? `
 <div class="detalhe-row">
   <span>Origem</span>
-  <span>Agenda / Jogo</span>
+  <span>${venda.origem === "comanda" ? "Comanda / Jogo" : "Agenda / Jogo"}</span>
 </div>
 
 <div class="detalhe-row">
   <span>Descrição</span>
-  <span>${limparDescricaoJogoVendas(venda.descricao)}</span>
+    <span>${limparDescricaoJogoVendas(venda.descricao || venda.itens.find(itemEhJogoVendas)?.nome)}</span>
 </div>
 ` : ""}
 

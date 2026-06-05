@@ -30,6 +30,32 @@ const TIPOS_COM_AGENDA_ESPORTIVA = [
   "quadras"
 ];
 
+function normalizarFormaPagamentoRelatorio(forma) {
+  const valor = String(forma || "").toLowerCase().trim();
+
+  if (valor === "cartao") return "debito";
+  if (valor === "débito") return "debito";
+  if (valor === "crédito") return "credito";
+
+  return valor || "—";
+}
+
+function labelFormaPagamentoRelatorio(forma) {
+  const valor = normalizarFormaPagamentoRelatorio(forma);
+
+  const labels = {
+    dinheiro: "Dinheiro",
+    debito: "Débito",
+    credito: "Crédito",
+    pix: "PIX",
+    misto: "Misto",
+    comanda: "Comanda",
+    "—": "—"
+  };
+
+  return labels[valor] || valor.toUpperCase();
+}
+
 function empresaUsaAgendaEsportiva() {
   const tipo = String(window.CRV_CONFIG?.empresa?.tipo_negocio || "")
     .toLowerCase()
@@ -491,16 +517,17 @@ function renderGraficoHoras(vendas) {
 // ======================================================
 // GRÁFICO PAGAMENTOS
 // ======================================================
-
 function renderGraficoPagamentos(vendas) {
   const totais = {
     dinheiro: 0,
-    cartao: 0,
-    pix: 0
+    debito: 0,
+    credito: 0,
+    pix: 0,
+    misto: 0
   };
 
   vendas.forEach(venda => {
-    const forma = String(venda.forma_pagamento || "").toLowerCase();
+    const forma = normalizarFormaPagamentoRelatorio(venda.forma_pagamento);
 
     if (totais[forma] !== undefined) {
       totais[forma] += Number(venda.total || 0);
@@ -515,10 +542,16 @@ function renderGraficoPagamentos(vendas) {
   chartPagtos = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: ["Dinheiro", "Cartão", "PIX"],
+      labels: ["Dinheiro", "Débito", "Crédito", "PIX", "Misto"],
       datasets: [{
-        data: [totais.dinheiro, totais.cartao, totais.pix],
-        backgroundColor: ["#54CD16", "#F98948", "#00D4FF"]
+        data: [
+          totais.dinheiro,
+          totais.debito,
+          totais.credito,
+          totais.pix,
+          totais.misto
+        ],
+        backgroundColor: ["#54CD16", "#F98948", "#D4A843", "#00D4FF", "#7C6354"]
       }]
     },
     options: {
@@ -532,8 +565,10 @@ function renderGraficoPagamentos(vendas) {
   if (legenda) {
     legenda.innerHTML = `
       <div class="legenda-item"><span>Dinheiro</span><strong>${fmt(totais.dinheiro)}</strong></div>
-      <div class="legenda-item"><span>Cartão</span><strong>${fmt(totais.cartao)}</strong></div>
+      <div class="legenda-item"><span>Débito</span><strong>${fmt(totais.debito)}</strong></div>
+      <div class="legenda-item"><span>Crédito</span><strong>${fmt(totais.credito)}</strong></div>
       <div class="legenda-item"><span>PIX</span><strong>${fmt(totais.pix)}</strong></div>
+      <div class="legenda-item"><span>Misto</span><strong>${fmt(totais.misto)}</strong></div>
     `;
   }
 }
@@ -547,7 +582,10 @@ function itemEhPagamentoJogo(item) {
 
   return (
     origem === "agenda" ||
+    Boolean(item.agenda_id) ||
+    Boolean(item.agenda_jogador_id) ||
     nome.startsWith("pagamento de jogo") ||
+    nome.startsWith("pagamento direto jogo") ||
     nome.includes("jogo -") ||
     nome.includes("jogo avulso") ||
     nome.includes("jogo mensal")
@@ -675,11 +713,15 @@ function renderRecebimentosJogos(vendas) {
   lista.innerHTML = jogos.map(item => `
     <div class="jogo-relatorio-item">
       <div>
-        <strong>${item.responsavel}</strong>
+        <strong>${item.descricao}</strong>
         <small>
-          ${new Date(item.data).toLocaleDateString("pt-BR")}
+          ${formatarDataVendaRelatorio(item.data)}
           ·
-          ${String(item.forma).toUpperCase()}
+          ${item.forma}
+          ·
+          Direto: ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}
+          ·
+          Comanda: ${item.qtdComanda} jogador${item.qtdComanda !== 1 ? "es" : ""}
         </small>
       </div>
 
@@ -785,7 +827,9 @@ function limparDescricaoJogoRelatorio(descricao) {
   let texto = String(descricao || "Jogo").trim();
 
   texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
-  texto = texto.replace(/\s*-\s*[^-]+ em comanda R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*\|\s*Direto\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*\|\s*Comanda\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*·\s*Comanda:\s*.*/gi, "");
 
   return texto.trim() || "Jogo";
 }
@@ -796,65 +840,89 @@ function montarRecebimentosJogosAgrupados(vendas) {
   vendas.forEach(venda => {
     const origemVenda = String(venda.origem || "").toLowerCase();
 
-    if (origemVenda !== "agenda") {
+    const itensJogo =
+      (venda.itens || []).filter(item => itemEhPagamentoJogo(item));
+
+    const vendaDiretaJogo =
+      origemVenda === "agenda";
+
+    const vendaComandaComJogo =
+      origemVenda === "comanda" &&
+      itensJogo.length > 0;
+
+    if (!vendaDiretaJogo && !vendaComandaComJogo) {
       return;
     }
 
-    const chave = venda.origem_id || venda.id;
-    const descricaoLimpa = limparDescricaoJogoRelatorio(venda.descricao);
+    const chave =
+      vendaDiretaJogo
+        ? venda.origem_id || venda.id
+        : itensJogo[0]?.origem_id || itensJogo[0]?.agenda_id || venda.id;
+
+    const descricaoLimpa =
+      vendaDiretaJogo
+        ? limparDescricaoJogoRelatorio(venda.descricao)
+        : limparDescricaoJogoRelatorio(
+            itensJogo[0]?.nome || venda.descricao || "Jogo via comanda"
+          );
 
     if (!mapa[chave]) {
       mapa[chave] = {
         responsavel: obterResponsavelJogoRelatorio(venda),
         descricao: descricaoLimpa,
         data: venda.data,
-        formas: new Set(
-  venda.forma_pagamento
-    ? [String(venda.forma_pagamento).toUpperCase()]
-    : []
-),
+        formas: new Set(),
         total: 0,
-        qtdComanda: 0,
-        totalComanda: 0
+        totalDireto: 0,
+        totalComanda: 0,
+        qtdDireto: 0,
+        qtdComanda: 0
       };
     }
 
-    mapa[chave].total += Number(venda.total || 0);
+    if (new Date(venda.data) > new Date(mapa[chave].data)) {
+      mapa[chave].data = venda.data;
+    }
 
     if (venda.forma_pagamento) {
-  mapa[chave].formas.add(
-    String(venda.forma_pagamento).toUpperCase()
-  );
-}
-
-    const descricao = String(venda.descricao || "");
-    const matchesComanda = descricao.match(/em comanda R\$\s*[\d.,]+/gi) || [];
-
-    matchesComanda.forEach(match => {
-      const valorTexto = match
-        .replace(/em comanda/gi, "")
-        .replace("R$", "")
-        .trim();
-
-      const valor = Number(
-        valorTexto
-          .replace(/\./g, "")
-          .replace(",", ".")
+      mapa[chave].formas.add(
+        labelFormaPagamentoRelatorio(venda.forma_pagamento)
       );
+    }
 
-      mapa[chave].qtdComanda += 1;
-      mapa[chave].totalComanda += Number.isNaN(valor) ? 0 : valor;
-    });
+    if (vendaDiretaJogo) {
+      const qtdDireto =
+        itensJogo.length ||
+        (Number(venda.total || 0) > 0 ? 1 : 0);
+
+      mapa[chave].totalDireto += Number(venda.total || 0);
+      mapa[chave].qtdDireto += qtdDireto;
+    }
+
+    if (vendaComandaComJogo) {
+      const totalItensComanda =
+        itensJogo.reduce((acc, item) => {
+          return acc + (
+            Number(item.preco || 0) *
+            Number(item.quantidade || 1)
+          );
+        }, 0);
+
+      mapa[chave].totalComanda += totalItensComanda;
+      mapa[chave].qtdComanda += itensJogo.length;
+    }
   });
 
   return Object.values(mapa).map(item => {
-    if (item.qtdComanda > 0) {
-      item.descricao += ` · ${item.qtdComanda} em comanda - ${fmt(item.totalComanda)}`;
-    }
+    item.total =
+      Number(item.totalDireto || 0) +
+      Number(item.totalComanda || 0);
+
     item.forma =
-  item.formas.size > 1
-    ? "MISTO"
-    : [...item.formas][0] || "—";
+      item.formas.size > 1
+        ? "MISTO"
+        : [...item.formas][0] || "—";
+
     return item;
   });
 }
@@ -921,13 +989,15 @@ function exportarCSV() {
   if (jogosAgrupados.length) {
     linhas.push([]);
     linhas.push(["RECEBIMENTOS DE JOGOS"]);
-    linhas.push(["Data", "Responsável", "Pagamento", "Total"]);
+    linhas.push(["Data", "Jogo", "Pagamento", "Direto", "Comanda", "Total"]);
 
     jogosAgrupados.forEach(jogo => {
       linhas.push([
         formatarDataVendaRelatorio(jogo.data),
-        jogo.responsavel,
+        jogo.descricao,
         jogo.forma,
+        `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalDireto)}`,
+        `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalComanda)}`,
         numeroExcel(jogo.total)
       ]);
     });
@@ -1236,20 +1306,30 @@ function exportarPDF() {
             <table>
               <thead>
                 <tr>
-                  <th>Responsável</th>
                   <th>Jogo</th>
                   <th>Data</th>
                   <th>Pagamento</th>
+                  <th>Direto</th>
+                  <th>Comanda</th>
                   <th class="right">Total</th>
                 </tr>
               </thead>
               <tbody>
                 ${recebimentosJogos.map(item => `
                   <tr>
-                    <td>${item.responsavel}</td>
                     <td>${item.descricao}</td>
                     <td>${formatarDataVendaRelatorio(item.data)}</td>
                     <td>${item.forma}</td>
+                    <td>
+                      ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}
+                      <br>
+                      ${fmt(item.totalDireto)}
+                    </td>
+                    <td>
+                      ${item.qtdComanda} jogador${item.qtdComanda !== 1 ? "es" : ""}
+                      <br>
+                      ${fmt(item.totalComanda)}
+                    </td>
                     <td class="right">${fmt(item.total)}</td>
                   </tr>
                 `).join("")}

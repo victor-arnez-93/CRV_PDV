@@ -109,6 +109,10 @@
 
   window.addEventListener("online", () => {
     atualizarEstadoRede(true);
+
+    window.dispatchEvent(
+      new CustomEvent("crv:forcar-sync")
+    );
   });
 
   window.addEventListener("offline", () => {

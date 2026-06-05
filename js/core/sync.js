@@ -20,34 +20,36 @@
       const operacao =
         item.operacao;
 
+      const payload =
+        item.payload;
+
 const limparIdsOffline = dados => {
 
   if (Array.isArray(dados)) {
     return dados.map(limparIdsOffline);
   }
 
+  if (!dados || typeof dados !== "object") {
+    return dados;
+  }
+
   const copia = { ...dados };
 
-  if (
-    copia.id &&
-    String(copia.id).startsWith("offline-")
-  ) {
-    delete copia.id;
-  }
+  [
+    "id",
+    "venda_id",
+    "agenda_id",
+    "comanda_id"
+  ].forEach(campo => {
 
-  if (
-    copia.venda_id &&
-    String(copia.venda_id).startsWith("offline-")
-  ) {
-    delete copia.venda_id;
-  }
+    if (
+      copia[campo] &&
+      String(copia[campo]).startsWith("offline-")
+    ) {
+      delete copia[campo];
+    }
 
-  if (
-    copia.agenda_id &&
-    String(copia.agenda_id).startsWith("offline-")
-  ) {
-    delete copia.agenda_id;
-  }
+  });
 
   return copia;
 };
@@ -176,7 +178,14 @@ const dadosInsert =
 
       let sincronizados = 0;
 
-      for (const item of fila) {
+      for (const item of fila.sort((a, b) => {
+
+  const ta = new Date(a.created_at || 0).getTime();
+  const tb = new Date(b.created_at || 0).getTime();
+
+  return ta - tb;
+
+})) {
 
         const ok =
           await sincronizarItem(item);
@@ -257,9 +266,13 @@ const dadosInsert =
   // ======================================================
   // GLOBAL
   // ======================================================
-
   window.crvSync = {
     sincronizarPendencias
   };
+
+  window.addEventListener(
+    "crv:forcar-sync",
+    () => sincronizarPendencias()
+  );
 
 })();
