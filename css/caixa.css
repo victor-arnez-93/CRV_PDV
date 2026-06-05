@@ -2076,6 +2076,242 @@ body.light .jogo-caixa-status.cobranca {
   color: var(--text-muted);
 }
 
+.pay-card-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pay-card-wrap .pay-btn {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cartao-subopcoes {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.cartao-subopcoes.open {
+  display: grid;
+}
+
+.cartao-subopcoes button {
+  all: unset;
+  cursor: pointer;
+  text-align: center;
+
+  padding: 6px 4px;
+  border-radius: 999px;
+
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+
+  color: var(--text-muted);
+  font-size: .64rem;
+  font-weight: 800;
+
+  transition: all var(--transition);
+}
+
+.cartao-subopcoes button:hover,
+.cartao-subopcoes button.active {
+  border-color: var(--crv-orange);
+  color: var(--crv-orange);
+  background: rgba(249,137,72,.08);
+}
+
+/* ======================================================
+   JOGOS ATIVOS NO CAIXA — FAIXA HORIZONTAL
+====================================================== */
+
+.jogos-ativos-caixa {
+  display: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 14px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.jogos-ativos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.jogos-ativos-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jogos-ativos-lista {
+  width: 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 0 8px;
+}
+
+.jogos-ativos-lista::-webkit-scrollbar {
+  height: 9px;
+}
+
+.jogos-ativos-lista::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.08);
+  border-radius: 999px;
+}
+
+.jogos-ativos-lista::-webkit-scrollbar-thumb {
+  background: var(--crv-orange);
+  border-radius: 999px;
+}
+
+.jogo-ativo-item {
+  all: unset;
+  box-sizing: border-box;
+  flex: 0 0 220px;
+  min-width: 220px;
+  max-width: 220px;
+  min-height: 104px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  transition: all var(--transition);
+}
+
+.jogo-ativo-item:hover {
+  border-color: var(--crv-orange);
+  background: rgba(249,137,72,.08);
+  box-shadow: var(--glow-orange);
+}
+
+.jogo-ativo-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jogo-ativo-top strong {
+  font-family: var(--font-display);
+  font-size: .95rem;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jogo-ativo-status {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: .58rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.jogo-ativo-status.andamento {
+  color: var(--crv-green);
+  background: rgba(84,205,22,.12);
+  border: 1px solid rgba(84,205,22,.25);
+}
+
+.jogo-ativo-status.cobranca {
+  color: #D4A843;
+  background: rgba(212,168,67,.14);
+  border: 1px solid rgba(212,168,67,.55);
+}
+
+.jogo-ativo-status.parcial {
+  color: #ffb020;
+  background: rgba(255,176,32,.14);
+  border: 1px solid rgba(255,176,32,.55);
+}
+
+.jogo-ativo-middle {
+  font-size: .78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jogo-ativo-bottom {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 8px;
+  font-size: .68rem;
+  color: var(--text-muted);
+}
+
+.jogo-ativo-bottom strong {
+  grid-column: 1 / -1;
+  font-family: var(--font-display);
+  font-size: .9rem;
+  color: var(--crv-orange);
+}
+
+.jogos-ativos-empty {
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: .82rem;
+  font-weight: 700;
+  background: var(--bg-card);
+}
+
+.jogos-ativos-lista {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 10px;
+  scroll-behavior: smooth;
+}
+
+.jogos-ativos-lista::-webkit-scrollbar {
+  height: 10px;
+}
+
+.jogos-ativos-lista::-webkit-scrollbar-track {
+  background: rgba(0, 56, 135, 0.12);
+  border-radius: 999px;
+}
+
+.jogos-ativos-lista::-webkit-scrollbar-thumb {
+  background: #003887;
+  border-radius: 999px;
+}
+
+.jogo-ativo-item {
+  flex: 0 0 275px;
+}
+
 /* ======================================================
    RESPONSIVE — CAIXA / PDV
 ====================================================== */

@@ -396,7 +396,8 @@ async function carregarAgenda() {
     } = await sb
       .from("agenda_jogadores")
       .select("*")
-      .eq("empresa_id", APP_EMPRESA_ID);
+      .eq("empresa_id", APP_EMPRESA_ID)
+      .neq("removido", true);
 
     if (jogadoresError) {
       throw jogadoresError;
@@ -660,7 +661,8 @@ function atualizarResumo(lista) {
     }
 
     const jogadores =
-      jogadoresPorAgenda[jogo.id] || [];
+      (jogadoresPorAgenda[jogo.id] || [])
+        .filter(j => j.removido !== true);
 
     jogadores.forEach(j => {
 
@@ -810,7 +812,8 @@ function criarCardJogo(jogo) {
     calcularStatusVisual(jogo);
 
   const jogadores =
-    jogadoresPorAgenda[jogo.id] || [];
+    (jogadoresPorAgenda[jogo.id] || [])
+      .filter(j => j.removido !== true);
 
   const recebido =
     jogadores
@@ -933,6 +936,11 @@ function abrirJogo(id) {
   const status =
     calcularStatusVisual(jogo);
 
+    if (status === "cobranca") {
+    abrirAvisoIrParaCaixa(jogo);
+    return;
+  }
+
   modoModalAgenda = status;
 
   document.getElementById(
@@ -1010,6 +1018,19 @@ function abrirJogo(id) {
 
 }
 
+function abrirAvisoIrParaCaixa(jogo) {
+  abrirModalAviso({
+    titulo: "Jogo em cobrança",
+    texto:
+      "Este jogo já terminou. A cobrança dos jogadores deve ser feita no Caixa.",
+    confirmarTexto: "Ir para o Caixa",
+    mostrarCancelar: true,
+    onConfirm: () => {
+      window.location.href = "caixa.html";
+    }
+  });
+}
+
 function abrirModalJogo() {
 
   document.getElementById(
@@ -1031,11 +1052,12 @@ function fecharModalJogo() {
 // ======================================================
 function aplicarModoModal() {
   const modoNovo = modoModalAgenda === "novo";
-  const modoAgendado = modoModalAgenda === "agendado";
-  const modoAndamento = modoModalAgenda === "andamento";
-  const modoCobranca = modoModalAgenda === "cobranca";
   const modoFechado = modoModalAgenda === "fechado";
   const modoCancelado = modoModalAgenda === "cancelado";
+
+  const podeEditarAgenda =
+    !modoFechado &&
+    !modoCancelado;
 
   const titulo = document.getElementById("modalReservaTitulo");
   const subtitulo = document.querySelector(".agenda-modal-subtitle");
@@ -1044,58 +1066,50 @@ function aplicarModoModal() {
 
   if (modoNovo) {
     titulo.textContent = "Novo horário";
-    subtitulo.textContent = "Cadastre o horário e os jogadores, se já souber.";
-  }
-
-  if (modoAgendado) {
-    titulo.textContent = "Jogo agendado";
-    subtitulo.textContent = "Dados salvos. Jogadores ficam registrados; pagamento só libera após o término.";
-  }
-
-  if (modoAndamento) {
-    titulo.textContent = "Jogo em andamento";
-    subtitulo.textContent = "Permite apenas ajustar o horário final, caso o jogo atrase.";
-  }
-
-  if (modoCobranca) {
-    titulo.textContent = "Cobrança do jogo";
-    subtitulo.textContent = "Marque valores, formas de pagamento e quem pagou.";
-  }
-
-  if (modoFechado) {
+    subtitulo.textContent = "Cadastre o horário, responsável e jogadores.";
+  } else if (modoFechado) {
     titulo.textContent = "Jogo fechado";
-    subtitulo.textContent = "Jogo já finalizado e conferido.";
-  }
-
-  if (modoCancelado) {
+    subtitulo.textContent = "Jogo já finalizado no caixa.";
+  } else if (modoCancelado) {
     titulo.textContent = "Jogo cancelado";
-    subtitulo.textContent = "Jogo cancelado. Não gera pendência financeira.";
+    subtitulo.textContent = "Jogo cancelado.";
+  } else {
+    titulo.textContent = "Editar jogo";
+    subtitulo.textContent = "Ajuste horário, responsável e jogadores. A cobrança é feita no Caixa.";
   }
 
-  const camposSempreTravados = [
+  [
     "clienteNome",
     "clienteTelefone",
     "dataAgendamento",
     "localRecurso",
+    "horaInicio",
+    "horaFim",
     "tipoJogo",
     "valorPrevisto",
     "recorrenciaJogo",
     "valorMensal",
     "diaPagamentoMensal",
-    "observacoes",
-    "statusJogo"
-  ];
-
-  camposSempreTravados.forEach(id => {
+    "observacoes"
+  ].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.disabled = !modoNovo;
+    if (el) el.disabled = !podeEditarAgenda;
   });
 
-  document.getElementById("horaInicio").disabled = !modoNovo;
-  document.getElementById("horaFim").disabled = !(modoNovo || modoAndamento);
+  const statusJogo = document.getElementById("statusJogo");
 
-  btnSalvar.style.display = (modoNovo || modoAndamento || modoCobranca) ? "inline-flex" : "none";
-  btnAdicionar.style.display = (modoNovo || modoAgendado) ? "inline-flex" : "none";
+  if (statusJogo) {
+    statusJogo.disabled = true;
+    statusJogo.closest(".input-group")?.style.setProperty("display", "none");
+  }
+
+  if (btnSalvar) {
+    btnSalvar.style.display = podeEditarAgenda ? "inline-flex" : "none";
+  }
+
+  if (btnAdicionar) {
+    btnAdicionar.style.display = podeEditarAgenda ? "inline-flex" : "none";
+  }
 
   document.querySelectorAll(".agenda-jogador-row").forEach(row => {
     const nome = row.querySelector(".jogador-nome");
@@ -1104,14 +1118,26 @@ function aplicarModoModal() {
     const pago = row.querySelector(".jogador-pago");
     const remover = row.querySelector(".agenda-remover-jogador");
 
-    row.classList.toggle("modo-agendamento", !modoCobranca);
-    row.classList.toggle("modo-cobranca", modoCobranca);
+    if (nome) nome.disabled = !podeEditarAgenda;
 
-    if (nome) nome.disabled = !(modoNovo || modoAgendado);
-    if (valor) valor.disabled = !modoCobranca;
-    if (pagamento) pagamento.disabled = !modoCobranca;
-    if (pago) pago.disabled = !modoCobranca;
-    if (remover) remover.style.display = (modoNovo || modoAgendado) ? "flex" : "none";
+    if (valor) {
+      valor.disabled = true;
+      valor.style.display = "none";
+    }
+
+    if (pagamento) {
+      pagamento.disabled = true;
+      pagamento.style.display = "none";
+    }
+
+    if (pago) {
+      pago.disabled = true;
+      pago.closest("label")?.style.setProperty("display", "none");
+    }
+
+    if (remover) {
+      remover.style.display = podeEditarAgenda ? "flex" : "none";
+    }
   });
 
   renderizarControleMarcarTodosJogadores();
@@ -1229,9 +1255,7 @@ function renderizarControleMarcarTodosJogadores() {
 
   document.getElementById("controleMarcarTodosJogadores")?.remove();
 
-  if (modoModalAgenda !== "cobranca") {
-    return;
-  }
+  return;
 
   const controle = document.createElement("div");
   controle.id = "controleMarcarTodosJogadores";
@@ -1303,6 +1327,10 @@ function adicionarLinhaJogador(jogador = {}) {
 
   row.className =
     "agenda-jogador-row";
+
+      if (jogador.id) {
+    row.dataset.jogadorId = jogador.id;
+  }
 
   row.innerHTML = `
     <input
@@ -1436,6 +1464,9 @@ function obterJogadoresModal() {
     )
   ]
     .map(row => ({
+      id:
+        row.dataset.jogadorId || null,
+
       nome:
         row.querySelector(
           ".jogador-nome"
@@ -1673,34 +1704,16 @@ jogadores.forEach(jogador => {
 
   if (!nomeLimpo) return;
 
-  jogadoresNormalizados.push({
-    nome: nomeLimpo,
-    valor: Number(jogador.valor || 0),
-    forma_pagamento: jogador.forma_pagamento || null,
-    pago: jogador.pago === true
-  });
+jogadoresNormalizados.push({
+  id: jogador.id || null,
+  nome: nomeLimpo,
+  valor: Number(jogador.valor || 0),
+  forma_pagamento: jogador.forma_pagamento || null,
+  pago: jogador.pago === true
 });
 
 jogadores.length = 0;
 jogadores.push(...jogadoresNormalizados);
-
-if (modoModalAgenda === "cobranca") {
-  const jogadorPagoSemValor = jogadores.some(j => j.pago && Number(j.valor || 0) <= 0);
-
-  if (jogadorPagoSemValor) {
-    return mostrarErro(
-      "Existe jogador marcado como pago sem valor informado."
-    );
-  }
-
-  const jogadorPagoSemForma = jogadores.some(j => j.pago && !j.forma_pagamento);
-
-  if (jogadorPagoSemForma) {
-    return mostrarErro(
-      "Informe a forma de pagamento dos jogadores marcados como pagos."
-    );
-  }
-}
 
 const recebido =
   jogadores
@@ -1714,17 +1727,13 @@ const recebido =
         .reduce((acc, j) =>
           acc + Number(j.valor || 0), 0);
 
-let statusJogo = modoModalAgenda === "novo"
-  ? "agendado"
-  : calcularStatusVisual({ data_agendamento: data, hora_inicio: inicio, hora_fim: fim, status_jogo: null });
+const jogoAtual =
+  agendaDados.find(j => String(j.id) === String(agendaAtualId));
 
-    if (
-      jogadores.length > 0 &&
-      pendente === 0 &&
-      recebido > 0
-    ) {
-      statusJogo = "fechado";
-    }
+let statusJogo =
+  modoModalAgenda === "novo"
+    ? "agendado"
+    : jogoAtual?.status_jogo || "agendado";
 
     const payload = {
 
@@ -1886,16 +1895,6 @@ if (!navigator.onLine) {
         throw error;
       }
 
-    const { error: deleteJogadoresError } = await sb
-  .from("agenda_jogadores")
-  .delete()
-  .eq("agenda_id", agendaId)
-  .eq("empresa_id", APP_EMPRESA_ID);
-
-if (deleteJogadoresError) {
-  throw deleteJogadoresError;
-}
-
     } else {
 
       const {
@@ -1916,51 +1915,69 @@ if (deleteJogadoresError) {
 
     }
 
-    if (jogadores.length) {
+    const jogadoresExistentes =
+      jogadoresPorAgenda[agendaId] || [];
 
-      const linhas =
-        jogadores.map(j => ({
+    const idsMantidos =
+      jogadores
+        .filter(j => j.id)
+        .map(j => String(j.id));
 
-          empresa_id:
-            APP_EMPRESA_ID,
+    for (const jogadorExistente of jogadoresExistentes) {
+      const foiRemovido =
+        !idsMantidos.includes(String(jogadorExistente.id));
 
-          agenda_id:
-            agendaId,
+      const podeRemover =
+        jogadorExistente.pago !== true &&
+        !jogadorExistente.comanda_id &&
+        !jogadorExistente.venda_id;
 
-          nome:
-            j.nome,
+      if (foiRemovido && podeRemover) {
+        const { error } = await sb
+          .from("agenda_jogadores")
+          .update({
+            removido: true,
+            removido_em: new Date().toISOString(),
+            motivo_remocao: "Removido pela agenda",
+            atualizado_em: new Date().toISOString()
+          })
+          .eq("id", jogadorExistente.id)
+          .eq("empresa_id", APP_EMPRESA_ID);
 
-          valor:
-            j.valor,
-
-          forma_pagamento:
-            j.forma_pagamento,
-
-          pago:
-            j.pago,
-
-          pago_em:
-            j.pago
-              ? new Date().toISOString()
-              : null
-
-        }));
-
-      const { error } = await sb
-        .from("agenda_jogadores")
-        .insert(linhas);
-
-      if (error) {
-        throw error;
+        if (error) throw error;
       }
-
     }
 
-    await sincronizarAgendaComCaixa(
-      agendaId,
-      payload,
-      jogadores
-    );
+    for (const jogador of jogadores) {
+      if (jogador.id) {
+        const { error } = await sb
+          .from("agenda_jogadores")
+          .update({
+            nome: jogador.nome,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq("id", jogador.id)
+          .eq("empresa_id", APP_EMPRESA_ID);
+
+        if (error) throw error;
+      } else {
+        const { error } = await sb
+          .from("agenda_jogadores")
+          .insert([{
+            empresa_id: APP_EMPRESA_ID,
+            agenda_id: agendaId,
+            nome: jogador.nome,
+            valor: 0,
+            forma_pagamento: null,
+            pago: false,
+            status_pagamento: "pendente",
+            pago_em: null,
+            removido: false
+          }]);
+
+        if (error) throw error;
+      }
+    }
 
     mostrarSucesso(
       "Jogo salvo com sucesso."
@@ -2034,231 +2051,4 @@ function removerJogo(id) {
 
   });
 
-}
-
-// ======================================================
-// INTEGRAR AGENDA COM CAIXA / VENDAS
-// Apenas segmentos com módulo agenda ativo
-// ======================================================
-async function sincronizarAgendaComCaixa(agendaId, jogo, jogadores) {
-
-  if (
-    typeof crvModuloAtivo === "function" &&
-    !crvModuloAtivo("agenda")
-  ) {
-    return;
-  }
-
-  const pagos = jogadores.filter(j =>
-    j.pago === true &&
-    Number(j.valor || 0) > 0
-  );
-
-  if (!pagos.length) {
-    return;
-  }
-
-  const totalPago = pagos.reduce((acc, j) => {
-    return acc + Number(j.valor || 0);
-  }, 0);
-
-  if (totalPago <= 0) {
-    return;
-  }
-
-  const formas = pagos
-    .map(j => j.forma_pagamento)
-    .filter(Boolean);
-
-const formasUnicas = [...new Set(
-  formas.map(forma => String(forma).toLowerCase())
-)];
-
-const formaPagamento =
-  formasUnicas.length > 1
-    ? "misto"
-    : formasUnicas[0] || "pix";
-
-// ======================================================
-// OFFLINE
-// ======================================================
-
-if (!navigator.onLine) {
-
-  const vendaOfflineId =
-    `offline-agenda-venda-${Date.now()}`;
-
-  const vendaPayload = {
-    id: vendaOfflineId,
-    empresa_id: APP_EMPRESA_ID,
-    caixa_id: null,
-    cliente_id: null,
-    data: new Date().toISOString(),
-    subtotal: totalPago,
-    desconto: 0,
-    total: totalPago,
-    forma_pagamento: formaPagamento,
-    troco: 0,
-    origem: "agenda",
-    origem_id: agendaId,
-    descricao:
-        `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`,
-    offline: true
-  };
-
-  const itensPayload =
-    pagos.map(jogador => ({
-      empresa_id: APP_EMPRESA_ID,
-      venda_id: vendaOfflineId,
-      produto_id: null,
-      nome:
-        `Pagamento de jogo - ${jogador.nome}`,
-      preco: Number(jogador.valor || 0),
-      quantidade: 1,
-      preco_custo: 0,
-      lucro_unitario:
-        Number(jogador.valor || 0),
-      lucro_total:
-        Number(jogador.valor || 0)
-    }));
-
-  await salvarAgendaOffline({
-    tabela: "vendas",
-    payload: vendaPayload
-  });
-
-  await salvarAgendaOffline({
-    tabela: "vendas_itens",
-    payload: itensPayload
-  });
-
-  crvLog(
-    "AGENDA OFFLINE",
-    "Pagamento salvo offline",
-    "warn"
-  );
-
-  return;
-}
-
-  const { data: caixaAberto, error: erroCaixa } = await sb
-    .from("caixa")
-    .select("id")
-    .eq("empresa_id", APP_EMPRESA_ID)
-    .eq("status", "aberto")
-    .order("data_abertura", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (erroCaixa) {
-    throw erroCaixa;
-  }
-
-  if (!caixaAberto?.id) {
-    throw new Error(
-      "Abra o caixa antes de marcar pagamentos da agenda."
-    );
-  }
-
-  const { data: vendaExistente, error: erroBuscaVenda } = await sb
-    .from("vendas")
-    .select("id")
-    .eq("empresa_id", APP_EMPRESA_ID)
-    .eq("origem", "agenda")
-    .eq("origem_id", agendaId)
-    .maybeSingle();
-
-  if (erroBuscaVenda) {
-    throw erroBuscaVenda;
-  }
-
-  if (vendaExistente?.id) {
-
-    await sb
-      .from("vendas_itens")
-      .delete()
-      .eq("empresa_id", APP_EMPRESA_ID)
-      .eq("venda_id", vendaExistente.id);
-
-    const { error: erroUpdate } = await sb
-      .from("vendas")
-      .update({
-        caixa_id: caixaAberto.id,
-        subtotal: totalPago,
-        desconto: 0,
-        total: totalPago,
-        forma_pagamento: formaPagamento,
-        troco: 0,
-        descricao:
-            `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
-      })
-      .eq("id", vendaExistente.id)
-      .eq("empresa_id", APP_EMPRESA_ID);
-
-    if (erroUpdate) {
-      throw erroUpdate;
-    }
-
-    await inserirItensVendaAgenda(
-      vendaExistente.id,
-      pagos,
-      jogo
-    );
-
-    return;
-  }
-
-  const { data: vendaNova, error: erroVenda } = await sb
-    .from("vendas")
-    .insert([{
-      empresa_id: APP_EMPRESA_ID,
-      caixa_id: caixaAberto.id,
-      cliente_id: null,
-      data: new Date().toISOString(),
-      subtotal: totalPago,
-      desconto: 0,
-      total: totalPago,
-      forma_pagamento: formaPagamento,
-      troco: 0,
-      origem: "agenda",
-      origem_id: agendaId,
-      descricao:
-        `${jogo.tipo_jogo === "mensal" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"}`
-    }])
-    .select("id")
-    .single();
-
-  if (erroVenda) {
-    throw erroVenda;
-  }
-
-  await inserirItensVendaAgenda(
-    vendaNova.id,
-    pagos,
-    jogo
-  );
-}
-
-async function inserirItensVendaAgenda(vendaId, jogadoresPagos, jogo) {
-
-  const itens = jogadoresPagos.map(jogador => ({
-    empresa_id: APP_EMPRESA_ID,
-    venda_id: vendaId,
-    produto_id: null,
-    nome:
-      `Pagamento de jogo - ${jogador.nome}`,
-    preco: Number(jogador.valor || 0),
-    quantidade: 1,
-    preco_custo: 0,
-    lucro_unitario: Number(jogador.valor || 0),
-    lucro_total: Number(jogador.valor || 0)
-  }));
-
-  const { error } = await sb
-    .from("vendas_itens")
-    .insert(itens);
-
-  if (error) {
-    throw error;
-  }
 }

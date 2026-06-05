@@ -294,6 +294,11 @@
 
 </div>
 
+            <!-- ========================================= -->
+<!-- JOGOS ATIVOS NO CAIXA -->
+<!-- ========================================= -->
+<div class="jogos-ativos-caixa" id="jogosAtivosCaixa" style="display:none;"></div>
+
 <!-- ========================================= -->
 <!-- Busca / código de barras -->
 <!-- ========================================= -->
@@ -353,9 +358,24 @@
   </p>
 
               <div class="pdv-manual-row">
-                <div class="input-group" style="flex:2;margin:0;">
-                  <input class="input" type="text" id="manualNome" placeholder="Nome do item" />
-                </div>
+<div class="input-group" style="width:150px;margin:0;">
+  <select class="input" id="manualTipo">
+    <option value="serviço">Serviço</option>
+    <option value="taxa">Taxa</option>
+    <option value="multa">Multa</option>
+    <option value="aluguel">Aluguel</option>
+    <option value="outros">Outros</option>
+  </select>
+</div>
+
+<div class="input-group" style="flex:2;margin:0;">
+  <input
+    class="input"
+    type="text"
+    id="manualDescricao"
+    placeholder="Descrição da cobrança"
+  />
+</div>
 
                 <div class="input-group" style="flex:1;margin:0;">
                   <input class="input input-money" type="text" id="manualPreco" placeholder="R$ 0,00" inputmode="decimal" autocomplete="off" />
@@ -464,10 +484,22 @@
                     <i data-lucide="banknote" width="18" height="18"></i>
                     <span>Dinheiro</span>
                   </button>
-                  <button class="pay-btn" data-method="cartao" onclick="selecionarPagamento(this)">
-                    <i data-lucide="credit-card" width="18" height="18"></i>
-                    <span>Cartão</span>
-                  </button>
+<div class="pay-card-wrap">
+  <button class="pay-btn" data-method="cartao" onclick="selecionarPagamento(this)">
+    <i data-lucide="credit-card" width="18" height="18"></i>
+    <span>Cartão</span>
+  </button>
+
+  <div class="cartao-subopcoes" id="cartaoSubopcoes">
+    <button type="button" data-card-type="debito" onclick="selecionarTipoCartaoRapido(this)">
+      Débito
+    </button>
+
+    <button type="button" data-card-type="credito" onclick="selecionarTipoCartaoRapido(this)">
+      Crédito
+    </button>
+  </div>
+</div>
                   <button class="pay-btn" data-method="pix" onclick="selecionarPagamento(this)">
                     <i data-lucide="zap" width="18" height="18"></i>
                     <span>PIX</span>

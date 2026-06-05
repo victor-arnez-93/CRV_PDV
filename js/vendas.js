@@ -121,6 +121,37 @@ function obterDataVenda(venda) {
   return venda.data || venda.created_at || venda.criado_em || new Date().toISOString();
 }
 
+function normalizarDataSupabaseVendas(data) {
+  if (!data) return null;
+
+  let texto = String(data);
+
+  const temTimezone =
+    texto.endsWith("Z") ||
+    /[+-]\d{2}:\d{2}$/.test(texto);
+
+  if (texto.includes("T") && !temTimezone) {
+    texto += "Z";
+  }
+
+  return texto;
+}
+
+function formatarHoraVendaBrasil(data) {
+  const normalizada = normalizarDataSupabaseVendas(data);
+  const objetoData = new Date(normalizada);
+
+  if (Number.isNaN(objetoData.getTime())) {
+    return "—";
+  }
+
+  return objetoData.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
+  });
+}
+
 async function obterEmpresaAtualVendas() {
   if (empresaAtualVendas) return empresaAtualVendas;
 
@@ -378,11 +409,7 @@ if (idsVendas.length) {
 
       return {
         id: v.id,
-        hora: new Date(obterDataVenda(v)).toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "America/Sao_Paulo"
-        }),
+        hora: formatarHoraVendaBrasil(obterDataVenda(v)),
         data: obterDataVenda(v),
         total: Number(v.total || 0),
         subtotal: Number(v.subtotal || v.total || 0),
@@ -423,11 +450,7 @@ vendasData = vendas.map(v => {
 
   return {
     id: v.id,
-    hora: new Date(obterDataVenda(v)).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "America/Sao_Paulo"
-    }),
+    hora: formatarHoraVendaBrasil(obterDataVenda(v)),
     data: obterDataVenda(v),
     total: Number(v.total || 0),
     subtotal: Number(v.subtotal || v.total || 0),
