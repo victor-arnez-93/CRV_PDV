@@ -1969,6 +1969,114 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 /* ======================================================
+   MODAL TODOS PRODUTOS — CAIXA
+====================================================== */
+
+.modal-produtos-caixa {
+  max-width: 820px;
+}
+
+.lista-produtos-caixa {
+  max-height: 460px;
+  overflow-y: auto;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+
+  padding-right: 4px;
+}
+
+.lista-produtos-caixa::-webkit-scrollbar {
+  width: 7px;
+}
+
+.lista-produtos-caixa::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.06);
+  border-radius: 999px;
+}
+
+.lista-produtos-caixa::-webkit-scrollbar-thumb {
+  background: var(--crv-orange);
+  border-radius: 999px;
+}
+
+.produto-caixa-item {
+  all: unset;
+  box-sizing: border-box;
+
+  min-height: 118px;
+  padding: 14px;
+
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.produto-caixa-item:hover {
+  border-color: var(--crv-orange);
+  background: var(--bg-hover);
+  box-shadow: var(--glow-orange);
+  transform: translateY(-1px);
+}
+
+.produto-caixa-nome {
+  font-size: .86rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.produto-caixa-categoria {
+  font-size: .66rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.produto-caixa-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.produto-caixa-preco {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--crv-orange);
+}
+
+.produto-caixa-estoque {
+  font-size: .68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.produto-caixa-estoque.baixo {
+  color: #ffb020;
+}
+
+.produto-caixa-estoque.zero {
+  color: #FF5050;
+}
+
+.pdv-manual-aviso {
+  margin: 0 0 12px;
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+/* ======================================================
    RESPONSIVE — CAIXA / PDV
 ====================================================== */
 

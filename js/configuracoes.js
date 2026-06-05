@@ -583,32 +583,44 @@ function aplicarBloqueioConfiguracao() {
 // ======================================================
 // ABAS CONFIGURAÇÕES / SOBRE
 // ======================================================
-
 function initConfigTabs() {
-  const tabConfiguracoes = document.getElementById("tabConfiguracoes");
-  const tabSobreSistema = document.getElementById("tabSobreSistema");
+  const tabs = [
+    {
+      tab: document.getElementById("tabConfiguracoes"),
+      sec: document.getElementById("secConfiguracoes")
+    },
+    {
+      tab: document.getElementById("tabOperadores"),
+      sec: document.getElementById("secOperadores")
+    },
+    {
+      tab: document.getElementById("tabSobreSistema"),
+      sec: document.getElementById("secSobreSistema")
+    }
+  ];
 
-  const secConfiguracoes = document.getElementById("secConfiguracoes");
-  const secSobreSistema = document.getElementById("secSobreSistema");
+  const tabsValidas = tabs.filter(item => item.tab && item.sec);
 
-  if (!tabConfiguracoes || !tabSobreSistema || !secConfiguracoes || !secSobreSistema) {
-    return;
-  }
+  if (!tabsValidas.length) return;
 
-  tabConfiguracoes.addEventListener("click", () => {
-    tabConfiguracoes.classList.add("active");
-    tabSobreSistema.classList.remove("active");
+  tabsValidas.forEach(item => {
+    item.tab.addEventListener("click", async () => {
+      tabsValidas.forEach(t => {
+        t.tab.classList.remove("active");
+        t.sec.classList.remove("active");
+      });
 
-    secConfiguracoes.classList.add("active");
-    secSobreSistema.classList.remove("active");
-  });
+      item.tab.classList.add("active");
+      item.sec.classList.add("active");
 
-  tabSobreSistema.addEventListener("click", () => {
-    tabSobreSistema.classList.add("active");
-    tabConfiguracoes.classList.remove("active");
-
-    secSobreSistema.classList.add("active");
-    secConfiguracoes.classList.remove("active");
+      if (
+        item.tab.id === "tabOperadores" &&
+        window.crvPermissoes &&
+        typeof window.crvPermissoes.carregarOperadores === "function"
+      ) {
+        await window.crvPermissoes.carregarOperadores();
+      }
+    });
   });
 }
 

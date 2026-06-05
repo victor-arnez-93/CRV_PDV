@@ -315,18 +315,42 @@
             <div class="pdv-suggestions" id="pdvSuggestions"></div>
 
             <!-- Produtos rápidos reais vindos do Supabase -->
-            <div class="pdv-quick-header">
-              <span>Produtos rápidos</span>
-              <a href="produtos.html" style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;">Gerenciar</a>
-            </div>
+<div class="pdv-quick-header">
+
+  <span>Produtos rápidos</span>
+
+  <div style="display:flex;align-items:center;gap:10px;">
+
+    <button
+      type="button"
+      class="btn-abrir-modal-comandas"
+      id="btnVerTodosProdutos"
+    >
+      Ver todos
+    </button>
+
+    <a
+      href="produtos.html"
+      style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;"
+    >
+      Gerenciar
+    </a>
+
+  </div>
+
+</div>
             <div class="pdv-quick-grid" id="produtosRapidos"></div>
 
-                        <!-- Entrada manual -->
-            <div class="pdv-manual card">
-              <h3 style="font-size:0.85rem;margin-bottom:12px;color:var(--text-muted);">
-                <i data-lucide="pencil" width="13" height="13"></i>
-                ADICIONAR VENDA MANUAL
-              </h3>
+<!-- Cobrança avulsa -->
+<div class="pdv-manual card">
+  <h3 style="font-size:0.85rem;margin-bottom:6px;color:var(--text-muted);">
+    <i data-lucide="pencil" width="13" height="13"></i>
+    COBRANÇA AVULSA
+  </h3>
+
+  <p class="pdv-manual-aviso">
+    Use apenas para cobranças que não sejam produtos cadastrados.
+  </p>
 
               <div class="pdv-manual-row">
                 <div class="input-group" style="flex:2;margin:0;">
@@ -513,6 +537,59 @@
           <p>Carregando comandas...</p>
         </div>
       </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL TODOS PRODUTOS -->
+<div
+  class="modal-overlay"
+  id="modalProdutosCaixa"
+  style="display:none;"
+>
+  <div class="modal card modal-produtos-caixa">
+
+    <div class="modal-header">
+      <div>
+        <h3>Todos os Produtos</h3>
+        <p class="modal-subtitle">
+          Selecione um produto para adicionar à venda.
+        </p>
+      </div>
+
+      <button
+        class="btn-ghost"
+        style="padding:6px;"
+        id="btnFecharProdutosCaixa"
+      >
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="pdv-search-wrap">
+        <i
+          data-lucide="search"
+          class="pdv-search-icon"
+          width="17"
+          height="17"
+        ></i>
+
+        <input
+          class="input pdv-search"
+          type="text"
+          id="inputBuscaProdutosCaixa"
+          placeholder="Pesquisar produto..."
+        />
+      </div>
+
+      <div
+        class="lista-produtos-caixa"
+        id="listaProdutosCaixa"
+      ></div>
 
     </div>
 

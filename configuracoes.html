@@ -139,15 +139,17 @@
 
 </div>
 
-      <div class="config-tabs">
-        <button class="config-tab active" id="tabConfiguracoes" type="button">
-          Configurações
-        </button>
+<button class="config-tab active" id="tabConfiguracoes" type="button">
+  Configurações
+</button>
 
-        <button class="config-tab" id="tabSobreSistema" type="button">
-          Sobre o sistema
-        </button>
-      </div>
+<button class="config-tab" id="tabOperadores" type="button">
+  Operadores
+</button>
+
+<button class="config-tab" id="tabSobreSistema" type="button">
+  Sobre o sistema
+</button>
 
       <section class="config-section active" id="secConfiguracoes">
         <section class="config-grid">
@@ -362,6 +364,48 @@
         </section>
       </section>
 
+            <section class="config-section" id="secOperadores">
+        <section class="config-grid operadores-grid">
+
+          <div class="card config-card config-card-wide">
+            <div class="operadores-header">
+              <div>
+                <h2>Operadores internos</h2>
+                <p class="config-muted">
+                  Cadastre funcionários ou responsáveis que usarão o sistema dentro desta empresa.
+                </p>
+              </div>
+
+              <button class="btn-primary" id="btnNovoOperador" type="button">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Novo operador</span>
+              </button>
+            </div>
+
+            <div class="operadores-lista" id="listaOperadores">
+              <div class="operadores-empty">
+                Nenhum operador carregado ainda.
+              </div>
+            </div>
+          </div>
+
+          <div class="card config-card">
+            <h2>Permissões do operador</h2>
+
+            <p class="config-muted" id="permissoesOperadorTexto">
+              Selecione um operador para configurar os acessos aos módulos e ações especiais.
+            </p>
+
+            <div class="permissoes-box" id="boxPermissoesOperador">
+              <div class="operadores-empty">
+                Nenhum operador selecionado.
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </section>
+
       <section class="config-section" id="secSobreSistema">
         <div class="card config-card crv-card crv-card-sobre">
           <div class="crv-card-title">
@@ -393,6 +437,70 @@
       <div id="cfgFeedback" class="cfg-feedback"></div>
 
     </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOperador" style="display:none;">
+  <div class="modal card modal-operador">
+
+    <div class="modal-header">
+      <h3 id="modalOperadorTitulo">Novo operador</h3>
+
+      <button class="btn-ghost" id="btnFecharOperador" type="button" style="padding:6px;">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <input type="hidden" id="operadorIdEdicao" />
+
+      <p class="config-muted">
+        Defina o nome, usuário interno e perfil de acesso.
+      </p>
+
+      <div class="form-row">
+        <div class="input-group">
+          <label class="input-label" for="operadorNome">Nome *</label>
+          <input class="input" id="operadorNome" type="text" placeholder="Ex: Vinicius" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="operadorUsuario">Usuário *</label>
+          <input class="input" id="operadorUsuario" type="text" placeholder="Ex: vinicius" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="input-group">
+          <label class="input-label" for="operadorSenha">Senha interna</label>
+          <input class="input" id="operadorSenha" type="password" placeholder="Senha interna" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="operadorPerfil">Perfil</label>
+          <select class="input" id="operadorPerfil">
+            <option value="admin">Admin</option>
+            <option value="gerente">Gerente</option>
+            <option value="operador">Operador</option>
+            <option value="caixa">Caixa</option>
+            <option value="agenda">Agenda</option>
+            <option value="relatorios">Relatórios</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btnCancelarOperador" type="button">
+        Cancelar
+      </button>
+
+      <button class="btn-secondary" id="btnSalvarOperador" type="button">
+        <i data-lucide="save" width="15" height="15"></i>
+        <span>Salvar</span>
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -469,6 +577,7 @@
 
 <script src="js/core/user.js"></script>
 <script src="js/core/config.js"></script>
+<script src="js/core/permissoes.js"></script>
 
 <!-- CORE OFFLINE -->
 <script src="js/core/logger.js"></script>

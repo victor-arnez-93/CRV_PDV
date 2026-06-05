@@ -379,6 +379,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupModoPDV();
   setupModalSelecionarComanda();
   setupModalSelecionarJogo();
+  setupModalTodosProdutosCaixa();
 
   caixaInicializado = true;
 
@@ -909,6 +910,178 @@ function renderProdutosRapidos() {
 }
 
 // ======================================================
+// MODAL TODOS PRODUTOS
+// ======================================================
+
+function setupModalTodosProdutosCaixa() {
+  const btnAbrir = document.getElementById("btnVerTodosProdutos");
+  const btnFechar = document.getElementById("btnFecharProdutosCaixa");
+  const inputBusca = document.getElementById("inputBuscaProdutosCaixa");
+
+  if (btnAbrir) {
+    btnAbrir.onclick = abrirModalTodosProdutosCaixa;
+  }
+
+  if (btnFechar) {
+    btnFechar.onclick = fecharModalTodosProdutosCaixa;
+  }
+
+  if (inputBusca) {
+    inputBusca.addEventListener("input", () => {
+      renderTodosProdutosCaixa(inputBusca.value);
+    });
+  }
+}
+
+function abrirModalTodosProdutosCaixa() {
+  const modal = document.getElementById("modalProdutosCaixa");
+  const inputBusca = document.getElementById("inputBuscaProdutosCaixa");
+
+  if (!modal) return;
+
+  modal.style.display = "flex";
+
+  if (inputBusca) {
+    inputBusca.value = "";
+  }
+
+  renderTodosProdutosCaixa("");
+
+  setTimeout(() => {
+    inputBusca?.focus();
+  }, 80);
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function fecharModalTodosProdutosCaixa() {
+  const modal = document.getElementById("modalProdutosCaixa");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  const inputBusca = document.getElementById("inputBusca");
+
+  if (inputBusca) {
+    inputBusca.focus();
+  }
+}
+
+function renderTodosProdutosCaixa(termoBusca = "") {
+  const lista = document.getElementById("listaProdutosCaixa");
+
+  if (!lista) return;
+
+  const termo = String(termoBusca || "").toLowerCase().trim();
+
+  const filtrados = produtos.filter(produto => {
+    const nome = String(produto.nome || "").toLowerCase();
+    const codigo = String(produto.codigo || "").toLowerCase();
+    const codigoBarras = String(produto.codigo_barras || "").toLowerCase();
+    const categoria = String(produto.categoria || "").toLowerCase();
+
+    return (
+      !termo ||
+      nome.includes(termo) ||
+      codigo.includes(termo) ||
+      codigoBarras.includes(termo) ||
+      categoria.includes(termo)
+    );
+  });
+
+  if (!filtrados.length) {
+    lista.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <i data-lucide="package-x" width="28" height="28"></i>
+        <p>Nenhum produto encontrado.</p>
+      </div>
+    `;
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    return;
+  }
+
+  lista.innerHTML = filtrados.map(produto => {
+    const estoque = Number(produto.estoque || 0);
+
+    const classeEstoque =
+      estoque <= 0
+        ? "zero"
+        : estoque <= 5
+          ? "baixo"
+          : "";
+
+    return `
+      <button
+        type="button"
+        class="produto-caixa-item"
+        data-produto-id="${produto.id}"
+      >
+        <div>
+          <div class="produto-caixa-nome">
+            ${produto.nome || "Produto"}
+          </div>
+
+          <div class="produto-caixa-categoria">
+            ${produto.categoria || "Sem categoria"}
+          </div>
+        </div>
+
+        <div class="produto-caixa-bottom">
+          <span class="produto-caixa-preco">
+            ${fmt(produto.preco || 0)}
+          </span>
+
+          <span class="produto-caixa-estoque ${classeEstoque}">
+            Est: ${estoque}
+          </span>
+        </div>
+      </button>
+    `;
+  }).join("");
+
+  lista.querySelectorAll(".produto-caixa-item").forEach(btn => {
+    btn.onclick = async () => {
+      const produtoId = btn.dataset.produtoId;
+
+      const produto = produtos.find(item => {
+        return String(item.id) === String(produtoId);
+      });
+
+      if (!produto) {
+        await alertaCaixa(
+          "Produto não encontrado",
+          "Não foi possível localizar este produto."
+        );
+        return;
+      }
+
+      if (modoPDV === "comanda" && !comandaAtiva) {
+        await alertaCaixa(
+          "Comanda não selecionada",
+          "Abra ou selecione uma comanda antes de adicionar produtos."
+        );
+        return;
+      }
+
+      if (modoPDV === "comanda" && comandaAtiva) {
+        await adicionarProdutoNaComanda(produto);
+      } else {
+        await adicionarCarrinho(produto);
+      }
+
+      fecharModalTodosProdutosCaixa();
+    };
+  });
+}
+
+// ======================================================
 // BUSCA
 // ======================================================
 function setupBusca() {
@@ -1194,6 +1367,35 @@ async function adicionarManual() {
   const nome = String(nomeInput?.value || "").trim();
   const preco = normalizarNumero(precoInput?.value || 0);
   const quantidade = Math.max(1, parseInt(qtdInput?.value || "1", 10));
+
+  const nomeNormalizado = nome
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "");
+
+const produtoExistente = produtos.find(produto => {
+  const produtoNome = String(produto.nome || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return (
+    produtoNome === nomeNormalizado ||
+    produtoNome.includes(nomeNormalizado) ||
+    nomeNormalizado.includes(produtoNome)
+  );
+});
+
+if (produtoExistente) {
+  await alertaCaixa(
+    "Produto já cadastrado",
+    `
+      <strong>${produtoExistente.nome}</strong> já existe no cadastro de produtos.<br><br>
+      Use a busca, os produtos rápidos ou o botão <strong>Ver todos</strong> para vender pela forma correta.
+    `
+  );
+  return;
+}
 
 if (!nome) {
   await alertaCaixa(
