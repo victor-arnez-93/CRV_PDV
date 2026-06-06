@@ -389,20 +389,6 @@
             </div>
           </div>
 
-          <div class="card config-card">
-            <h2>Permissões do operador</h2>
-
-            <p class="config-muted" id="permissoesOperadorTexto">
-              Selecione um operador para configurar os acessos aos módulos e ações especiais.
-            </p>
-
-            <div class="permissoes-box" id="boxPermissoesOperador">
-              <div class="operadores-empty">
-                Nenhum operador selecionado.
-              </div>
-            </div>
-          </div>
-
         </section>
       </section>
 
@@ -499,6 +485,32 @@
         <i data-lucide="save" width="15" height="15"></i>
         <span>Salvar</span>
       </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalPermissoesOperador" style="display:none;">
+  <div class="modal card modal-permissoes-operador">
+
+    <div class="modal-header">
+      <h3 id="modalPermissoesTitulo">Permissões do operador</h3>
+
+      <button class="btn-ghost" id="btnFecharPermissoesOperador" type="button" style="padding:6px;">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="config-muted" id="permissoesOperadorTexto">
+        Configure os acessos aos módulos e ações especiais deste operador.
+      </p>
+
+      <div class="permissoes-box" id="boxPermissoesOperador">
+        <div class="operadores-empty">
+          Nenhum operador selecionado.
+        </div>
+      </div>
     </div>
 
   </div>

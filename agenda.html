@@ -146,10 +146,19 @@
     </p>
   </div>
 
-  <button class="btn-primary" id="btnNovaReserva">
-    <i data-lucide="plus" width="16" height="16"></i>
-    <span>Novo Horário</span>
-  </button>
+    <div class="agenda-hero-actions">
+
+    <button class="btn-secondary" id="btnHorariosFixos" type="button">
+      <i data-lucide="calendar-search" width="16" height="16"></i>
+      <span>Ver horários fixos</span>
+    </button>
+
+    <button class="btn-primary" id="btnNovaReserva">
+      <i data-lucide="plus" width="16" height="16"></i>
+      <span>Novo Horário</span>
+    </button>
+
+  </div>
 
 </section>
 
@@ -408,6 +417,29 @@
 
 </div>
 
+      <div class="agenda-times-toggle">
+
+  <label class="agenda-times-check">
+    <input type="checkbox" id="usarTimesJogo">
+    <span>Usar Times A x B</span>
+  </label>
+
+</div>
+
+<div class="form-row agenda-times-box" id="boxTimesJogo">
+
+  <div class="input-group">
+    <label class="input-label">Time A</label>
+    <input class="input" id="timeA" placeholder="Ex: Azul">
+  </div>
+
+  <div class="input-group">
+    <label class="input-label">Time B</label>
+    <input class="input" id="timeB" placeholder="Ex: Vermelho">
+  </div>
+
+</div>
+
       <div class="agenda-jogadores-box">
 
         <div class="agenda-jogadores-header">
@@ -472,6 +504,76 @@
         <i data-lucide="save" width="15" height="15"></i>
         <span>Salvar jogo</span>
       </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- MODAL HORÁRIOS FIXOS -->
+<div class="modal-overlay" id="modalHorariosFixos" style="display:none;">
+
+  <div class="modal card agenda-horarios-modal">
+
+    <div class="modal-header">
+
+      <div>
+        <h3>Horários fechados</h3>
+        <p class="agenda-modal-subtitle">
+          Visualize jogos agendados, mensalistas, eventos e campeonatos.
+        </p>
+      </div>
+
+    </div>
+
+        <button
+      class="btn-ghost"
+      id="btnFecharModalHorariosFixos"
+      style="padding:6px;"
+    >
+      <i data-lucide="x" width="16" height="16"></i>
+    </button>
+
+    <div class="modal-body agenda-horarios-body">
+
+            <div class="agenda-horarios-busca-wrap">
+        <input
+          class="input"
+          id="buscaHorariosFixos"
+          placeholder="Buscar por jogador, responsável, tipo, dia, horário ou campo..."
+        >
+      </div>
+
+      <div class="agenda-horarios-tabs">
+
+        <button class="agenda-horarios-tab active" data-tipo="hoje" type="button">
+          Hoje
+        </button>
+
+        <button class="agenda-horarios-tab" data-tipo="todos" type="button">
+          Todos
+        </button>
+
+        <button class="agenda-horarios-tab" data-tipo="mensalista" type="button">
+          Mensalistas
+        </button>
+
+        <button class="agenda-horarios-tab" data-tipo="avulso" type="button">
+          Avulsos
+        </button>
+
+        <button class="agenda-horarios-tab" data-tipo="evento" type="button">
+          Eventos
+        </button>
+
+        <button class="agenda-horarios-tab" data-tipo="campeonato" type="button">
+          Campeonatos
+        </button>
+
+      </div>
+
+      <div class="agenda-horarios-lista" id="listaHorariosFixos"></div>
 
     </div>
 

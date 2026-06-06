@@ -218,6 +218,37 @@ function obterUsuarioId() {
   return null;
 }
 
+function obterOperadorAtualId() {
+  return sessionStorage.getItem("CRV_OPERADOR_ID") || null;
+}
+
+async function registrarAuditoriaCaixa({
+  modulo = "caixa",
+  acao,
+  tabela = null,
+  registroId = null,
+  descricao = null,
+  dadosAntes = null,
+  dadosDepois = null
+}) {
+  if (!sistemaOnline()) return;
+
+  try {
+    await sb.rpc("registrar_auditoria", {
+      p_operador_id: obterOperadorAtualId(),
+      p_modulo: modulo,
+      p_acao: acao,
+      p_tabela: tabela,
+      p_registro_id: registroId,
+      p_descricao: descricao,
+      p_dados_antes: dadosAntes,
+      p_dados_depois: dadosDepois
+    });
+  } catch (err) {
+    console.warn("[CAIXA][AUDITORIA]", err);
+  }
+}
+
 function sistemaOnline() {
   return Boolean(
     window.APP_STATUS &&
@@ -773,7 +804,9 @@ async function abrirCaixa() {
       data_fechamento: null,
       observacoes: null,
       usuario_abertura: usuarioId,
-      usuario_fechamento: null
+      usuario_fechamento: null,
+      operador_abertura_id: obterOperadorAtualId(),
+      operador_fechamento_id: null
     };
 
     const { data, error } = await sb
@@ -785,6 +818,13 @@ async function abrirCaixa() {
     if (error) throw error;
 
     caixa = data;
+    await registrarAuditoriaCaixa({
+  acao: "abrir_caixa",
+  tabela: "caixa",
+  registroId: data.id,
+  descricao: "Caixa aberto",
+  dadosDepois: data
+});
     vendas = [];
     carrinho = [];
 
@@ -916,12 +956,25 @@ async function fecharCaixa() {
         status: "fechado",
         valor_final: valorFinal,
         data_fechamento: new Date().toISOString(),
-        usuario_fechamento: usuarioId
+        usuario_fechamento: usuarioId,
+        operador_fechamento_id: obterOperadorAtualId()
       })
       .eq("id", caixa.id)
       .eq("empresa_id", obterEmpresaId());
 
     if (error) throw error;
+
+    await registrarAuditoriaCaixa({
+      acao: "fechar_caixa",
+      tabela: "caixa",
+      registroId: caixa.id,
+      descricao: `Caixa fechado com valor final de ${fmt(valorFinal)}`,
+      dadosAntes: caixa,
+      dadosDepois: {
+        status: "fechado",
+        valor_final: valorFinal
+      }
+    });
 
     caixa = null;
     vendas = [];
@@ -2032,7 +2085,9 @@ if (!sistemaOnline()) {
     forma_pagamento: metodoPagamento,
     troco,
     data: new Date().toISOString(),
-    offline: true
+    offline: true,
+    operador_id: obterOperadorAtualId(),
+    venda_manual: carrinho.some(item => item.produto_manual === true)
   };
 
   const itensPayload = carrinho.map(item => ({
@@ -2180,7 +2235,9 @@ const vendaPayload = {
   origem: "pdv",
   origem_id: null,
   descricao: "Venda rápida",
-  data: new Date().toISOString()
+  data: new Date().toISOString(),
+  operador_id: obterOperadorAtualId(),
+  venda_manual: carrinho.some(item => item.produto_manual === true)
 };
 
     const { data: vendaData, error: vendaError } = await sb
@@ -3218,6 +3275,141 @@ function fecharModalSelecionarJogo() {
   }
 }
 
+function obterHojeISOCaixa() {
+  const agora = new Date();
+
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
+function obterDiaSemanaCaixa(dataISO) {
+  if (!dataISO) return null;
+
+  const data = new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
+
+  return data.getDay();
+}
+
+function jogoMensalModeloCaixa(jogo) {
+  return (
+    (
+      String(jogo.recorrencia || "") === "mensal" ||
+      String(jogo.tipo_jogo || "") === "mensalista"
+    ) &&
+    !jogo.recorrencia_origem_id &&
+    jogo.status_jogo !== "cancelado" &&
+    jogo.status_jogo !== "fechado"
+  );
+}
+
+async function gerarOcorrenciasMensaisCaixa(dataAlvo) {
+  if (!dataAlvo) return;
+  if (!caixaPermiteJogos()) return;
+  if (!sistemaOnline()) return;
+
+  const empresaId = obterEmpresaId();
+
+  const { data: jogosBase, error: erroBase } = await sb
+    .from("agenda")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .neq("status_jogo", "cancelado")
+    .neq("status_jogo", "fechado");
+
+  if (erroBase) {
+    console.warn("[CAIXA][RECORRÊNCIA]", erroBase);
+    return;
+  }
+
+  const modelos = (jogosBase || []).filter(jogo => {
+    if (!jogoMensalModeloCaixa(jogo)) return false;
+
+    const dataBase = String(jogo.data_agendamento || "").slice(0, 10);
+
+    if (!dataBase) return false;
+    if (dataAlvo <= dataBase) return false;
+
+    return obterDiaSemanaCaixa(dataBase) === obterDiaSemanaCaixa(dataAlvo);
+  });
+
+  for (const modelo of modelos) {
+    const jaExiste = (jogosBase || []).some(jogo => {
+      return (
+        String(jogo.recorrencia_origem_id || "") === String(modelo.id) &&
+        String(jogo.data_agendamento || "").slice(0, 10) === dataAlvo
+      );
+    });
+
+    if (jaExiste) continue;
+
+    const { data: novaOcorrencia, error: erroInsert } = await sb
+      .from("agenda")
+      .insert([{
+        empresa_id: empresaId,
+        cliente_nome: modelo.cliente_nome,
+        cliente_telefone: modelo.cliente_telefone || null,
+        data_agendamento: dataAlvo,
+        hora_inicio: modelo.hora_inicio,
+        hora_fim: modelo.hora_fim,
+        local_recurso: modelo.local_recurso,
+        tipo_jogo: modelo.tipo_jogo || "mensalista",
+        status_jogo: "agendado",
+        recorrencia: "avulso",
+        recorrencia_origem_id: modelo.id,
+        ocorrencia_gerada: true,
+        valor_previsto: modelo.valor_previsto || 0,
+        valor_mensal: modelo.valor_mensal || 0,
+        dia_pagamento_mensal: modelo.dia_pagamento_mensal || null,
+        observacoes: modelo.observacoes || null,
+        usar_times: modelo.usar_times === true,
+        time_a: modelo.time_a || null,
+        time_b: modelo.time_b || null,
+        atualizado_em: new Date().toISOString()
+      }])
+      .select("id")
+      .single();
+
+    if (erroInsert) {
+      console.warn("[CAIXA][GERAR OCORRÊNCIA]", erroInsert);
+      continue;
+    }
+
+    const { data: jogadoresModelo, error: erroJogadores } = await sb
+      .from("agenda_jogadores")
+      .select("*")
+      .eq("empresa_id", empresaId)
+      .eq("agenda_id", modelo.id)
+      .neq("removido", true);
+
+    if (erroJogadores) {
+      console.warn("[CAIXA][COPIAR JOGADORES]", erroJogadores);
+      continue;
+    }
+
+    if (jogadoresModelo?.length) {
+      await sb
+        .from("agenda_jogadores")
+        .insert(
+          jogadoresModelo.map(jogador => ({
+            empresa_id: empresaId,
+            agenda_id: novaOcorrencia.id,
+            nome: jogador.nome,
+            time_jogador: jogador.time_jogador || null,
+            valor: 0,
+            forma_pagamento: null,
+            pago: false,
+            status_pagamento: STATUS_JOGADOR_CAIXA.PENDENTE,
+            pago_em: null,
+            removido: false
+          }))
+        );
+    }
+  }
+}
+
 async function carregarJogosCaixa() {
   const lista = document.getElementById("listaJogosCaixa");
 
@@ -3236,6 +3428,8 @@ async function carregarJogosCaixa() {
     if (!sistemaOnline()) {
       throw new Error("Sistema offline.");
     }
+
+    await gerarOcorrenciasMensaisCaixa(obterHojeISOCaixa());
 
     const { data: jogos, error: erroJogos } = await sb
       .from("agenda")
@@ -4066,7 +4260,8 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
         total: valorCobrado,
         origem: "agenda",
         origem_id: jogo.id,
-        agenda_jogador_id: jogador.id
+        agenda_jogador_id: jogador.id,
+        operador_id: obterOperadorAtualId()
       }
     ]);
 
@@ -4537,7 +4732,8 @@ const descricao =
         origem_id: jogo.id,
         agenda_id: jogo.id,
         descricao: descricao,
-        data: new Date().toISOString()
+        data: new Date().toISOString(),
+        operador_id: obterOperadorAtualId()
       })
       .eq("id", vendaId)
       .eq("empresa_id", obterEmpresaId());
@@ -4559,7 +4755,8 @@ const descricao =
         origem_id: jogo.id,
         agenda_id: jogo.id,
         descricao: descricao,
-        data: new Date().toISOString()
+        data: new Date().toISOString(),
+        operador_id: obterOperadorAtualId()
       }])
       .select("id")
       .single();
@@ -5872,7 +6069,8 @@ async function adicionarProdutoNaComanda(produto) {
           total: preco,
           origem: "pdv",
           origem_id: null,
-          agenda_jogador_id: null
+          agenda_jogador_id: null,
+          operador_id: obterOperadorAtualId()
         }
       ]);
 
@@ -5921,6 +6119,7 @@ async function adicionarItemManualNaComanda({
         origem: "pdv",
         origem_id: null,
         agenda_jogador_id: null,
+        operador_id: obterOperadorAtualId(),
         offline: true
       });
 
@@ -6228,6 +6427,7 @@ if (!sistemaOnline()) {
     descricao:
       `Comanda ${comandaAtiva?.codigo || ""}`,
     data: new Date().toISOString(),
+    operador_id: obterOperadorAtualId(),
     offline: true
   };
 
@@ -6413,7 +6613,8 @@ const vendaPayload = {
   origem: "comanda",
   origem_id: comandaAtiva.id,
   descricao: `Comanda ${comandaAtiva.codigo || ""} fechada`,
-  data: new Date().toISOString()
+  data: new Date().toISOString(),
+  operador_id: obterOperadorAtualId()
 };
 
     const { data: vendaData, error: vendaError } = await sb

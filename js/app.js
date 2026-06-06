@@ -11,6 +11,8 @@
 
   window.CRV_THEME = savedTheme;
 
+  document.documentElement.classList.add("crv-permissoes-carregando");
+
 })();
 
 let crvAppCaixaAberto = false;
@@ -54,6 +56,57 @@ function crvCapitalizarNome(nome) {
     .join(" ");
 }
 
+let crvToastGlobalTimer = null;
+
+function crvAvisoGlobal(mensagem, tipo = "alerta") {
+  if (!mensagem) return;
+
+  let toast = document.getElementById("crvToastGlobal");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "crvToastGlobal";
+    toast.className = "toast-config";
+
+    toast.innerHTML = `
+      <i class="fa-solid fa-circle-info" id="crvToastGlobalIcon"></i>
+      <span id="crvToastGlobalTexto"></span>
+    `;
+
+    document.body.appendChild(toast);
+  }
+
+  const texto = document.getElementById("crvToastGlobalTexto");
+  const icon = document.getElementById("crvToastGlobalIcon");
+
+  if (!texto) return;
+
+  texto.textContent = mensagem;
+
+  toast.classList.remove("sucesso", "erro", "alerta", "active");
+
+  if (tipo === "erro") {
+    toast.classList.add("erro");
+    if (icon) icon.className = "fa-solid fa-circle-xmark";
+  } else if (tipo === "sucesso") {
+    toast.classList.add("sucesso");
+    if (icon) icon.className = "fa-solid fa-circle-check";
+  } else {
+    toast.classList.add("alerta");
+    if (icon) icon.className = "fa-solid fa-circle-info";
+  }
+
+  toast.classList.add("active");
+
+  clearTimeout(crvToastGlobalTimer);
+
+  crvToastGlobalTimer = setTimeout(() => {
+    toast.classList.remove("active");
+  }, 3200);
+}
+
+window.crvAvisoGlobal = crvAvisoGlobal;
+
 function crvObterEmpresaIdGlobal() {
   if (window.APP_EMPRESA_ID) return window.APP_EMPRESA_ID;
 
@@ -63,6 +116,364 @@ function crvObterEmpresaIdGlobal() {
 
   return null;
 }
+
+function crvObterOperadorAtual() {
+  return {
+    id: sessionStorage.getItem("CRV_OPERADOR_ID") || null,
+    nome: sessionStorage.getItem("CRV_OPERADOR_NOME") || null,
+    perfil: sessionStorage.getItem("CRV_OPERADOR_PERFIL") || null
+  };
+}
+
+function crvLimparOperadorAtual() {
+  sessionStorage.removeItem("CRV_OPERADOR_ID");
+  sessionStorage.removeItem("CRV_OPERADOR_NOME");
+  sessionStorage.removeItem("CRV_OPERADOR_PERFIL");
+}
+
+function crvSalvarOperadorAtual(operador) {
+  sessionStorage.setItem("CRV_OPERADOR_ID", operador.id);
+  sessionStorage.setItem("CRV_OPERADOR_NOME", operador.nome || "");
+  sessionStorage.setItem("CRV_OPERADOR_PERFIL", operador.perfil || "");
+}
+
+window.CRV_PERMISSOES_OPERADOR = {
+  modulos: {},
+  especiais: {},
+  modulosNegocio: {}
+};
+
+async function crvCarregarPermissoesOperadorAtual() {
+  window.CRV_PERMISSOES_OPERADOR = {
+    modulos: {},
+    especiais: {},
+    modulosNegocio: {}
+  };
+
+  const empresaId = crvObterEmpresaIdGlobal();
+
+  if (!empresaId || !window.sb) {
+    return window.CRV_PERMISSOES_OPERADOR;
+  }
+
+  const { data: empresa, error: erroEmpresa } = await sb
+    .from("empresas")
+    .select("tipo_negocio")
+    .eq("id", empresaId)
+    .maybeSingle();
+
+  if (erroEmpresa) {
+    console.warn("[CRV PERMISSÕES][EMPRESA]", erroEmpresa);
+  }
+
+  const tipoNegocio = empresa?.tipo_negocio || null;
+
+  if (tipoNegocio) {
+    const { data: modulosNegocio, error: erroModulosNegocio } = await sb
+      .from("tipos_negocio_modulos")
+      .select("modulo_codigo, ativo")
+      .eq("tipo_negocio", tipoNegocio)
+      .eq("ativo", true);
+
+    if (erroModulosNegocio) {
+      console.warn("[CRV PERMISSÕES][TIPO NEGÓCIO]", erroModulosNegocio);
+    }
+
+    (modulosNegocio || []).forEach(item => {
+      window.CRV_PERMISSOES_OPERADOR.modulosNegocio[item.modulo_codigo] = true;
+    });
+  }
+
+  const operador = crvObterOperadorAtual();
+
+  if (!operador.id) {
+    return window.CRV_PERMISSOES_OPERADOR;
+  }
+
+  const { data: modulos, error: erroModulos } = await sb
+    .from("operador_permissoes")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("operador_id", operador.id);
+
+  if (erroModulos) {
+    console.warn("[CRV PERMISSÕES][MÓDULOS]", erroModulos);
+    return window.CRV_PERMISSOES_OPERADOR;
+  }
+
+  const { data: especiais, error: erroEspeciais } = await sb
+    .from("operador_permissoes_especiais")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("operador_id", operador.id);
+
+  if (erroEspeciais) {
+    console.warn("[CRV PERMISSÕES][ESPECIAIS]", erroEspeciais);
+  }
+
+  (modulos || []).forEach(item => {
+    window.CRV_PERMISSOES_OPERADOR.modulos[item.modulo_codigo] = {
+      visualizar: item.pode_visualizar === true,
+      criar: item.pode_criar === true,
+      editar: item.pode_editar === true,
+      excluir: item.pode_excluir === true
+    };
+  });
+
+  (especiais || []).forEach(item => {
+    window.CRV_PERMISSOES_OPERADOR.especiais[item.permissao] =
+      item.permitido === true;
+  });
+
+  return window.CRV_PERMISSOES_OPERADOR;
+}
+
+function crvModuloPorHref(href) {
+  const texto = String(href || "").toLowerCase();
+
+  if (texto.includes("dashboard")) return "dashboard";
+  if (texto.includes("caixa")) return "caixa";
+  if (texto.includes("comandas")) return "comandas";
+  if (texto.includes("agenda")) return "agenda";
+  if (texto.includes("vendas")) return "vendas";
+  if (texto.includes("produtos")) return "produtos";
+  if (texto.includes("clientes")) return "clientes";
+  if (texto.includes("relatorios")) return "relatorios";
+  if (texto.includes("configuracoes")) return "configuracoes";
+
+  return null;
+}
+
+function crvModuloLiberadoNoNegocio(modulo) {
+  if (!modulo) return true;
+
+  const modulosNegocio =
+    window.CRV_PERMISSOES_OPERADOR?.modulosNegocio || {};
+
+  if (!Object.keys(modulosNegocio).length) return true;
+
+  return modulosNegocio[modulo] === true;
+}
+
+function crvOperadorPodeModulo(modulo, acao = "visualizar") {
+  const operador = crvObterOperadorAtual();
+
+  if (!crvModuloLiberadoNoNegocio(modulo)) {
+    return false;
+  }
+
+  if (!operador.id) return true;
+  if (operador.perfil === "admin") return true;
+
+  const permissao =
+    window.CRV_PERMISSOES_OPERADOR?.modulos?.[modulo];
+
+  if (!permissao) return false;
+
+  return permissao[acao] === true;
+}
+
+function crvOperadorPodeEspecial(permissao) {
+  const operador = crvObterOperadorAtual();
+
+  if (!operador.id) return true;
+  if (operador.perfil === "admin") return true;
+
+  return window.CRV_PERMISSOES_OPERADOR?.especiais?.[permissao] === true;
+}
+
+function crvBloquearElemento(el, mensagem) {
+  if (!el) return;
+
+  el.classList.add("crv-permissao-oculto");
+  el.hidden = true;
+  el.setAttribute("data-crv-bloqueado", "1");
+  el.setAttribute("data-crv-msg-bloqueio", mensagem || "Sem permissão para esta ação.");
+}
+
+function crvLiberarElemento(el) {
+  if (!el) return;
+
+  el.classList.remove("crv-permissao-oculto");
+  el.classList.remove("crv-permissao-bloqueado");
+  el.hidden = false;
+  el.removeAttribute("data-crv-bloqueado");
+  el.removeAttribute("data-crv-msg-bloqueio");
+}
+
+function crvAplicarPermissoesInterface() {
+  const linksMenu =
+    document.querySelectorAll(".sidebar-nav .nav-item");
+
+  linksMenu.forEach(link => {
+    const modulo = crvModuloPorHref(link.getAttribute("href"));
+
+    if (!modulo) return;
+
+    if (!crvOperadorPodeModulo(modulo, "visualizar")) {
+      crvBloquearElemento(
+        link,
+        "Operador sem permissão para acessar este módulo."
+      );
+    } else {
+      crvLiberarElemento(link);
+    }
+  });
+
+  document.querySelectorAll("[data-crv-modulo]").forEach(el => {
+    const modulo = el.dataset.crvModulo;
+    const acao = el.dataset.crvAcao || "visualizar";
+
+    if (!crvOperadorPodeModulo(modulo, acao)) {
+      crvBloquearElemento(
+        el,
+        "Operador sem permissão para esta ação."
+      );
+    } else {
+      crvLiberarElemento(el);
+    }
+  });
+
+  document.querySelectorAll("[data-crv-especial]").forEach(el => {
+    const permissao = el.dataset.crvEspecial;
+
+    if (!crvOperadorPodeEspecial(permissao)) {
+      crvBloquearElemento(
+        el,
+        "Operador sem permissão especial para esta ação."
+      );
+    } else {
+      crvLiberarElemento(el);
+    }
+  });
+
+  document.querySelectorAll(".nav-section-label").forEach(label => {
+    let proximo = label.nextElementSibling;
+    let temItemVisivel = false;
+
+    while (proximo && !proximo.classList.contains("nav-section-label")) {
+      if (
+        proximo.classList.contains("nav-item") &&
+        !proximo.classList.contains("crv-permissao-oculto")
+      ) {
+        temItemVisivel = true;
+        break;
+      }
+
+      proximo = proximo.nextElementSibling;
+    }
+
+    if (!temItemVisivel) {
+      crvBloquearElemento(label, "");
+    } else {
+      crvLiberarElemento(label);
+    }
+  });
+
+  document.documentElement.classList.remove("crv-permissoes-carregando");
+}
+
+function crvPrimeiraTelaPermitida() {
+  const ordem = [
+    "dashboard",
+    "caixa",
+    "comandas",
+    "agenda",
+    "vendas",
+    "produtos",
+    "clientes",
+    "relatorios",
+    "configuracoes"
+  ];
+
+  const rotas = {
+    dashboard: "dashboard.html",
+    caixa: "caixa.html",
+    comandas: "comandas.html",
+    agenda: "agenda.html",
+    vendas: "vendas.html",
+    produtos: "produtos.html",
+    clientes: "clientes.html",
+    relatorios: "relatorios.html",
+    configuracoes: "configuracoes.html"
+  };
+
+  const modulo = ordem.find(item =>
+    crvOperadorPodeModulo(item, "visualizar")
+  );
+
+  return rotas[modulo] || "dashboard.html";
+}
+
+function crvValidarPermissaoPaginaAtual() {
+  const pagina = window.location.pathname.split("/").pop() || "dashboard.html";
+  const modulo = crvModuloPorHref(pagina);
+
+  if (!modulo) return;
+
+  if (!crvOperadorPodeModulo(modulo, "visualizar")) {
+    crvAvisoGlobal("Operador sem permissão para acessar este módulo.", "erro");
+
+    setTimeout(() => {
+      window.location.href = crvPrimeiraTelaPermitida();
+    }, 700);
+  }
+}
+
+function crvInterceptarCliqueBloqueado() {
+  document.addEventListener("click", event => {
+    const bloqueado = event.target.closest("[data-crv-bloqueado='1']");
+
+    if (!bloqueado) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    crvAvisoGlobal(
+      bloqueado.getAttribute("data-crv-msg-bloqueio") ||
+      "Operador sem permissão para esta ação.",
+      "erro"
+    );
+  }, true);
+}
+
+let crvPermissoesObserver = null;
+
+function crvObservarMudancasInterface() {
+  if (crvPermissoesObserver) {
+    crvPermissoesObserver.disconnect();
+  }
+
+  crvPermissoesObserver = new MutationObserver(() => {
+    clearTimeout(window.__crvPermissoesTimer);
+
+    window.__crvPermissoesTimer = setTimeout(() => {
+      crvAplicarPermissoesInterface();
+    }, 80);
+  });
+
+  crvPermissoesObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+async function crvInicializarPermissoesSistema() {
+  document.documentElement.classList.add("crv-permissoes-carregando");
+
+  await crvCarregarPermissoesOperadorAtual();
+
+  crvAplicarPermissoesInterface();
+  crvValidarPermissaoPaginaAtual();
+  crvInterceptarCliqueBloqueado();
+  crvObservarMudancasInterface();
+}
+
+window.crvOperadorPodeModulo = crvOperadorPodeModulo;
+window.crvOperadorPodeEspecial = crvOperadorPodeEspecial;
+window.crvAplicarPermissoesInterface = crvAplicarPermissoesInterface;
+window.crvCarregarPermissoesOperadorAtual = crvCarregarPermissoesOperadorAtual;
+window.crvInicializarPermissoesSistema = crvInicializarPermissoesSistema;
 
 function crvObterUserGlobal() {
   if (window.USER) return window.USER;
@@ -398,8 +809,13 @@ function crvCriarModalUsuarioGlobal() {
         </div>
 
         <div class="user-row">
+          <span>Operador atual:</span>
+          <strong id="userModalOperador">Conta principal</strong>
+        </div>
+
+        <div class="user-row">
           <span>Perfil:</span>
-          <strong id="userModalPerfil">Operador</strong>
+          <strong id="userModalPerfil">Principal</strong>
         </div>
 
         <div class="user-row">
@@ -414,6 +830,10 @@ function crvCriarModalUsuarioGlobal() {
 
           <button class="btn-secondary" id="btnUserAlterarSenha" type="button">
             <span>Alterar Senha</span>
+          </button>
+
+          <button class="btn-secondary" id="btnUserTrocarOperador" type="button">
+            <span>Trocar operador</span>
           </button>
 
           <button class="btn-primary" id="btnUserLogout" type="button">
@@ -444,7 +864,9 @@ async function crvPreencherModalUsuarioGlobal() {
   const nomeEl = document.getElementById("userModalNome");
   const emailEl = document.getElementById("userModalEmail");
   const perfilEl = document.getElementById("userModalPerfil");
+  const operadorEl = document.getElementById("userModalOperador");
   const tempoEl = document.getElementById("userModalTempoSessao");
+  const btnAlterarSenha = document.getElementById("btnUserAlterarSenha");
 
   const email =
     user?.email ||
@@ -460,6 +882,22 @@ async function crvPreencherModalUsuarioGlobal() {
   if (nomeEl) nomeEl.textContent = crvCapitalizarNome(nome);
   if (emailEl) emailEl.textContent = email || "E-mail não encontrado";
   if (perfilEl) perfilEl.textContent = window.APP_USER?.perfil || "Operador";
+    const operadorAtual = crvObterOperadorAtual();
+
+  if (operadorEl) {
+    operadorEl.textContent = operadorAtual.nome || "Conta principal";
+  }
+
+  if (perfilEl) {
+    perfilEl.textContent = operadorAtual.perfil || window.APP_USER?.perfil || "Principal";
+  }
+
+    if (btnAlterarSenha) {
+    btnAlterarSenha.classList.toggle(
+      "crv-permissao-oculto",
+      Boolean(operadorAtual.id)
+    );
+  }
 
   if (tempoEl) {
     tempoEl.textContent =
@@ -637,6 +1075,211 @@ function crvAbrirModalConfirmacaoSaidaGlobal() {
   };
 }
 
+async function crvAbrirModalTrocarOperadorGlobal() {
+  const modalExistente = document.getElementById("modalTrocarOperador");
+
+  if (modalExistente) {
+    modalExistente.remove();
+  }
+
+  const modal = document.createElement("div");
+  modal.id = "modalTrocarOperador";
+  modal.className = "modal-overlay";
+
+  modal.innerHTML = `
+    <div class="user-modal" style="max-width:440px;">
+      <div class="user-modal-header">
+        <div class="user-info">
+          <div class="user-avatar">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+
+          <div>
+            <strong>Trocar operador</strong>
+            <span>Selecione quem está usando esta sessão</span>
+          </div>
+        </div>
+
+        <button class="modal-close" id="btnFecharTrocarOperador" type="button">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="user-modal-body">
+        <label class="input-label">Operador</label>
+
+        <select class="input" id="selectTrocarOperador">
+          <option value="">Conta principal — acesso completo</option>
+        </select>
+
+        <label class="input-label" style="margin-top:12px;">Senha interna</label>
+
+        <input
+          class="input"
+          type="password"
+          id="senhaTrocarOperador"
+          placeholder="Digite a senha interna"
+          autocomplete="off"
+        >
+
+        <div
+          id="feedbackTrocarOperador"
+          style="margin:14px 0;color:var(--text-secondary);font-size:.88rem;"
+        ></div>
+
+        <div class="user-actions">
+          <button class="btn-secondary" id="btnCancelarTrocarOperador" type="button">
+            <span>Cancelar</span>
+          </button>
+
+          <button class="btn-primary" id="btnConfirmarTrocarOperador" type="button">
+            Confirmar operador
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const select = document.getElementById("selectTrocarOperador");
+  const senhaInput = document.getElementById("senhaTrocarOperador");
+  const feedback = document.getElementById("feedbackTrocarOperador");
+
+  const labelSenha = senhaInput?.previousElementSibling;
+
+select.addEventListener("change", () => {
+  const usandoContaPrincipal = !select.value;
+
+  if (labelSenha) {
+    labelSenha.style.display = usandoContaPrincipal ? "none" : "";
+  }
+
+  if (senhaInput) {
+    senhaInput.style.display = usandoContaPrincipal ? "none" : "";
+    senhaInput.value = "";
+  }
+});
+
+select.dispatchEvent(new Event("change"));
+
+  const fechar = () => modal.remove();
+
+  document.getElementById("btnFecharTrocarOperador").onclick = fechar;
+  document.getElementById("btnCancelarTrocarOperador").onclick = fechar;
+
+  try {
+    const empresaId = crvObterEmpresaIdGlobal();
+
+    if (!empresaId) {
+      throw new Error("Empresa não encontrada.");
+    }
+
+    const { data, error } = await sb
+      .from("operadores_internos")
+      .select("id, nome, usuario, perfil, ativo")
+      .eq("empresa_id", empresaId)
+      .eq("ativo", true)
+      .order("nome", { ascending: true });
+
+    if (error) throw error;
+
+    (data || [])
+      .filter(operador => operador.usuario !== "admin")
+      .forEach(operador => {
+        const option = document.createElement("option");
+        option.value = operador.id;
+        option.textContent = `${operador.nome} — ${operador.perfil}`;
+        option.dataset.nome = operador.nome || "";
+        option.dataset.perfil = operador.perfil || "";
+        select.appendChild(option);
+      });
+
+  } catch (err) {
+    feedback.textContent = err.message || "Erro ao carregar operadores.";
+    feedback.style.color = "#FF7070";
+  }
+
+  document.getElementById("btnConfirmarTrocarOperador").onclick = async () => {
+    const operadorId = select.value;
+    const senha = String(senhaInput.value || "").trim();
+
+    if (!operadorId) {
+      crvLimparOperadorAtual();
+
+      await crvCarregarPermissoesOperadorAtual();
+      crvAplicarPermissoesInterface();
+      crvValidarPermissaoPaginaAtual();
+
+      fechar();
+
+      await crvPreencherModalUsuarioGlobal();
+
+      crvAvisoGlobal("Sessão voltou para a conta principal.", "sucesso");
+
+      return;
+    }
+
+    if (!senha) {
+      feedback.textContent = "Digite a senha interna do operador.";
+      feedback.style.color = "#FF7070";
+      return;
+    }
+
+    try {
+      feedback.textContent = "Validando operador...";
+      feedback.style.color = "var(--text-secondary)";
+
+      const { data, error } = await sb
+        .from("operadores_internos")
+        .select("id, nome, usuario, perfil, senha, ativo")
+        .eq("empresa_id", crvObterEmpresaIdGlobal())
+        .eq("id", operadorId)
+        .eq("ativo", true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        throw new Error("Operador não encontrado ou inativo.");
+      }
+
+      if (String(data.senha || "") !== senha) {
+        throw new Error("Senha interna incorreta.");
+      }
+
+      crvSalvarOperadorAtual(data);
+
+      await crvCarregarPermissoesOperadorAtual();
+      crvAplicarPermissoesInterface();
+      crvValidarPermissaoPaginaAtual();
+
+      await sb
+        .from("operadores_internos")
+        .update({
+          ultimo_login_em: new Date().toISOString(),
+          atualizado_em: new Date().toISOString()
+        })
+        .eq("id", data.id)
+        .eq("empresa_id", crvObterEmpresaIdGlobal());
+
+      fechar();
+
+      await crvPreencherModalUsuarioGlobal();
+
+      crvAvisoGlobal(`Operador ativo: ${data.nome}`, "sucesso");
+
+    } catch (err) {
+      feedback.textContent = err.message || "Erro ao trocar operador.";
+      feedback.style.color = "#FF7070";
+    }
+  };
+
+  setTimeout(() => {
+    select?.focus();
+  }, 80);
+}
+
 function crvInicializarModalUsuario() {
   const avatar = document.querySelector(".topbar-avatar");
 
@@ -666,6 +1309,11 @@ function crvInicializarModalUsuario() {
   document.getElementById("btnUserAlterarSenha").onclick = () => {
     modal.classList.add("hidden");
     crvAbrirModalRedefinicaoSenhaGlobal();
+  };
+
+  document.getElementById("btnUserTrocarOperador").onclick = () => {
+    modal.classList.add("hidden");
+    crvAbrirModalTrocarOperadorGlobal();
   };
 
 document.getElementById("btnUserLogout").onclick = () => {
@@ -754,7 +1402,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await crvAtualizarSaudacao();
   await crvAtualizarStatusCaixaGlobal();
-await crvCarregarLogoEmpresaTopbar();
+  await crvCarregarLogoEmpresaTopbar();
+
+  await crvInicializarPermissoesSistema();
 
 if (
   window.crvSync &&

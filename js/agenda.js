@@ -152,54 +152,86 @@ let avisosJogosEmitidos = new Set();
 // ======================================================
 // INIT
 // ======================================================
-
 document.addEventListener("DOMContentLoaded", async () => {
 
   if (window.lucide) {
     lucide.createIcons();
   }
 
-  setTimeout(async () => {
-
-    if (typeof crvCarregarConfiguracoesEmpresa === "function") {
-      await crvCarregarConfiguracoesEmpresa();
-    }
-
-    if (
-      typeof crvBloquearPaginaSemModulo === "function" &&
-      crvBloquearPaginaSemModulo("agenda")
-    ) {
-      return;
-    }
-
-    inicializarEventosAgenda();
-
-    setupMascarasAgenda();
-
-    definirDataInicial();
-
-    await carregarAgenda();
-
-    verificarAvisosFimDeJogo();
-
-    setInterval(() => {
-      aplicarFiltrosAgenda();
-      verificarAvisosFimDeJogo();
-    }, 15000);
-
-  }, 800);
+  await inicializarAgendaComSeguranca();
 
 });
+
+async function inicializarAgendaComSeguranca() {
+
+  let tentativas = 0;
+
+  while (
+    tentativas < 20 &&
+    (
+      typeof APP_EMPRESA_ID === "undefined" ||
+      !APP_EMPRESA_ID
+    )
+  ) {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    tentativas++;
+  }
+
+  if (typeof crvCarregarConfiguracoesEmpresa === "function") {
+    await crvCarregarConfiguracoesEmpresa();
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  if (
+    typeof crvBloquearPaginaSemModulo === "function" &&
+    crvBloquearPaginaSemModulo("agenda")
+  ) {
+    return;
+  }
+
+  inicializarEventosAgenda();
+
+  setupMascarasAgenda();
+
+  definirDataInicial();
+
+  await carregarAgenda();
+
+  verificarAvisosFimDeJogo();
+
+  setInterval(() => {
+    aplicarFiltrosAgenda();
+    verificarAvisosFimDeJogo();
+  }, 15000);
+
+}
 
 // ======================================================
 // EVENTOS
 // ======================================================
-
 function inicializarEventosAgenda() {
 
   document
     .getElementById("btnNovaReserva")
     ?.addEventListener("click", abrirNovoJogo);
+
+      document
+    .getElementById("btnHorariosFixos")
+    ?.addEventListener("click", abrirModalHorariosFixos);
+
+  document
+    .getElementById("btnFecharModalHorariosFixos")
+    ?.addEventListener("click", fecharModalHorariosFixos);
+
+      document
+    .getElementById("buscaHorariosFixos")
+    ?.addEventListener("input", () => {
+      const abaAtiva =
+        document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo || "todos";
+
+      renderizarHorariosFixos(abaAtiva);
+    });
 
   document
     .getElementById("btnFecharModalReserva")
@@ -232,6 +264,10 @@ function inicializarEventosAgenda() {
   document
     .getElementById("recorrenciaJogo")
     ?.addEventListener("change", alternarCamposMensais);
+
+      document
+    .getElementById("usarTimesJogo")
+    ?.addEventListener("change", alternarTimesJogo);
 
   document
     .getElementById("modalReserva")
@@ -310,6 +346,222 @@ function voltarHojeAgenda() {
 }
 
 // ======================================================
+// MODAL HORÁRIOS FIXOS
+// ======================================================
+
+function abrirModalHorariosFixos() {
+  const modal = document.getElementById("modalHorariosFixos");
+
+  if (!modal) return;
+
+  modal.style.display = "flex";
+
+  const busca =
+    document.getElementById("buscaHorariosFixos");
+
+  if (busca) {
+    busca.value = "";
+  }
+
+  configurarAbasHorariosFixos();
+
+    renderizarHorariosFixos("hoje");
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function fecharModalHorariosFixos() {
+  const modal = document.getElementById("modalHorariosFixos");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function configurarAbasHorariosFixos() {
+  document
+    .querySelectorAll(".agenda-horarios-tab")
+    .forEach(btn => {
+      btn.onclick = () => {
+        document
+          .querySelectorAll(".agenda-horarios-tab")
+          .forEach(item => item.classList.remove("active"));
+
+        btn.classList.add("active");
+
+        renderizarHorariosFixos(btn.dataset.tipo || "todos");
+      };
+    });
+}
+
+function renderizarHorariosFixos(tipo = "todos") {
+  const lista = document.getElementById("listaHorariosFixos");
+
+  if (!lista) return;
+
+  let jogos = [...agendaDados];
+
+    const termoBusca =
+    String(document.getElementById("buscaHorariosFixos")?.value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+  const diasSemanaAgenda = [
+    "domingo",
+    "segunda",
+    "terca",
+    "quarta",
+    "quinta",
+    "sexta",
+    "sabado"
+  ];
+
+  const hoje =
+    hojeISOAgenda();
+
+  jogos = jogos.filter(jogo => {
+    if (jogo.status_jogo === "cancelado") return false;
+    if (jogo.status_jogo === "fechado") return false;
+
+    if (tipo === "hoje") {
+      const dataJogo =
+        String(jogo.data_agendamento || "").slice(0, 10);
+
+      if (dataJogo !== hoje) {
+        return false;
+      }
+    } else if (tipo !== "todos" && String(jogo.tipo_jogo || "") !== tipo) {
+      return false;
+    }
+
+    if (!termoBusca) {
+      return true;
+    }
+
+    const jogadores =
+      (jogadoresPorAgenda[jogo.id] || [])
+        .filter(j => j.removido !== true);
+
+    const nomesJogadores =
+      jogadores
+        .map(j => j.nome || "")
+        .join(" ");
+
+    const diaSemana =
+      diasSemanaAgenda[
+        obterDiaSemanaAgenda(jogo.data_agendamento)
+      ] || "";
+
+    const horarioInicio =
+      formatarHora(jogo.hora_inicio);
+
+    const horarioFim =
+      formatarHora(jogo.hora_fim);
+
+    const textoBusca = [
+      jogo.cliente_nome,
+      jogo.local_recurso,
+      jogo.tipo_jogo,
+      jogo.recorrencia,
+      jogo.status_jogo,
+      nomesJogadores,
+      diaSemana,
+      horarioInicio,
+      horarioFim,
+      `${horarioInicio} ${horarioFim}`,
+      `${horarioInicio}-${horarioFim}`,
+      `${horarioInicio} as ${horarioFim}`,
+      jogo.recorrencia === "mensal" || jogo.tipo_jogo === "mensalista"
+        ? `toda ${diaSemana}`
+        : ""
+    ]
+      .join(" ")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    return textoBusca.includes(termoBusca);
+  });
+
+  jogos.sort((a, b) => {
+    const dataA = `${a.data_agendamento || ""} ${a.hora_inicio || ""}`;
+    const dataB = `${b.data_agendamento || ""} ${b.hora_inicio || ""}`;
+
+    return dataA.localeCompare(dataB);
+  });
+
+  if (!jogos.length) {
+    lista.innerHTML = `
+      <div class="agenda-horarios-empty">
+        Nenhum horário encontrado para este filtro.
+      </div>
+    `;
+    return;
+  }
+
+  lista.innerHTML = jogos.map(jogo => {
+    const jogadores =
+      (jogadoresPorAgenda[jogo.id] || [])
+        .filter(j => j.removido !== true);
+
+    const dataFormatada =
+      String(jogo.data_agendamento || "").slice(0, 10).split("-").reverse().join("/");
+
+          const diasSemanaAgenda = [
+      "domingo",
+      "segunda",
+      "terça",
+      "quarta",
+      "quinta",
+      "sexta",
+      "sábado"
+    ];
+
+    const diaSemana =
+      diasSemanaAgenda[
+        obterDiaSemanaAgenda(jogo.data_agendamento)
+      ];
+
+    const horarioTexto =
+      jogo.recorrencia === "mensal" || jogo.tipo_jogo === "mensalista"
+        ? `Toda ${diaSemana}, das ${formatarHora(jogo.hora_inicio)} às ${formatarHora(jogo.hora_fim)}`
+        : `${dataFormatada} • ${formatarHora(jogo.hora_inicio)} - ${formatarHora(jogo.hora_fim)}`;
+
+    return `
+      <div class="agenda-horario-item">
+
+        <div class="agenda-horario-main">
+
+          <strong>${jogo.cliente_nome || "-"}</strong>
+
+          <span>
+            ${horarioTexto}
+          </span>
+
+          <small>
+            ${jogo.local_recurso || "-"}
+            •
+            ${jogo.tipo_jogo || "avulso"}
+            •
+            ${jogadores.length} jogador(es)
+          </small>
+
+        </div>
+
+        <div class="agenda-horario-badge">
+          ${jogo.recorrencia === "mensal" ? "Mensal" : jogo.tipo_jogo || "Avulso"}
+        </div>
+
+      </div>
+    `;
+  }).join("");
+}
+
+// ======================================================
 // MODAL AVISO
 // ======================================================
 
@@ -370,10 +622,131 @@ function fecharModalAviso() {
 
 }
 
+function empresaUsaAgendaEsportiva() {
+  const tipo =
+    String(
+      window.CRV_SEGMENTO ||
+      localStorage.getItem("CRV_SEGMENTO") ||
+      localStorage.getItem("crv_segmento") ||
+      ""
+    )
+      .toLowerCase();
+
+  return (
+    tipo.includes("arena") ||
+    tipo.includes("quadra") ||
+    tipo.includes("society") ||
+    tipo.includes("beach") ||
+    tipo.includes("esport")
+  );
+}
+
+function dataEhMesmoDiaSemana(dataBase, dataAlvo) {
+  return obterDiaSemanaAgenda(dataBase) === obterDiaSemanaAgenda(dataAlvo);
+}
+
+function jogoMensalModelo(jogo) {
+  return (
+    jogoEhMensalAgenda(jogo) &&
+    !jogo.recorrencia_origem_id &&
+    jogo.status_jogo !== "cancelado" &&
+    jogo.status_jogo !== "fechado"
+  );
+}
+
+async function gerarOcorrenciasMensaisParaData(dataAlvo) {
+  if (!dataAlvo) return;
+  if (!empresaUsaAgendaEsportiva()) return;
+
+  const modelos = agendaDados.filter(jogo => {
+    if (!jogoMensalModelo(jogo)) return false;
+
+    const dataBase =
+      String(jogo.data_agendamento || "").slice(0, 10);
+
+    if (!dataBase) return false;
+    if (dataAlvo <= dataBase) return false;
+
+    return dataEhMesmoDiaSemana(dataBase, dataAlvo);
+  });
+
+  for (const modelo of modelos) {
+    const jaExiste =
+      agendaDados.some(jogo => {
+        return (
+          String(jogo.recorrencia_origem_id || "") === String(modelo.id) &&
+          String(jogo.data_agendamento || "").slice(0, 10) === dataAlvo
+        );
+      });
+
+    if (jaExiste) continue;
+
+    const payloadOcorrencia = {
+      empresa_id: APP_EMPRESA_ID,
+      cliente_nome: modelo.cliente_nome,
+      cliente_telefone: modelo.cliente_telefone || null,
+      data_agendamento: dataAlvo,
+      hora_inicio: modelo.hora_inicio,
+      hora_fim: modelo.hora_fim,
+      local_recurso: modelo.local_recurso,
+      tipo_jogo: modelo.tipo_jogo || "mensalista",
+      status_jogo: "agendado",
+      recorrencia: "avulso",
+      recorrencia_origem_id: modelo.id,
+      ocorrencia_gerada: true,
+      valor_previsto: modelo.valor_previsto || 0,
+      valor_mensal: modelo.valor_mensal || 0,
+      dia_pagamento_mensal: modelo.dia_pagamento_mensal || null,
+      observacoes: modelo.observacoes || null,
+      usar_times: modelo.usar_times === true,
+      time_a: modelo.time_a || null,
+      time_b: modelo.time_b || null,
+      total_jogadores: modelo.total_jogadores || 0,
+      total_pago_jogadores: 0,
+      total_pendente_jogadores: 0,
+      atualizado_em: new Date().toISOString()
+    };
+
+    const { data: novaOcorrencia, error } = await sb
+      .from("agenda")
+      .insert([payloadOcorrencia])
+      .select("id")
+      .single();
+
+    if (error) {
+      console.warn("[AGENDA RECORRÊNCIA]", error);
+      continue;
+    }
+
+    const jogadoresModelo =
+      (jogadoresPorAgenda[modelo.id] || [])
+        .filter(j => j.removido !== true);
+
+    if (jogadoresModelo.length) {
+      const jogadoresNovaOcorrencia =
+        jogadoresModelo.map(j => ({
+          empresa_id: APP_EMPRESA_ID,
+          agenda_id: novaOcorrencia.id,
+          nome: j.nome,
+          time_jogador: j.time_jogador || null,
+          valor: 0,
+          forma_pagamento: null,
+          pago: false,
+          status_pagamento: "pendente",
+          pago_em: null,
+          removido: false
+        }));
+
+      await sb
+        .from("agenda_jogadores")
+        .insert(jogadoresNovaOcorrencia);
+    }
+  }
+}
+
 // ======================================================
 // CARREGAMENTO
 // ======================================================
-
 async function carregarAgenda() {
 
   try {
@@ -408,6 +781,30 @@ async function carregarAgenda() {
     jogadoresPorAgenda = agruparJogadores(
       jogadores || []
     );
+
+    const dataFiltro =
+      document.getElementById("filtroData")?.value || hojeISOAgenda();
+
+    await gerarOcorrenciasMensaisParaData(dataFiltro);
+
+    if (dataFiltro) {
+      const { data: agendaAtualizada } = await sb
+        .from("agenda")
+        .select("*")
+        .eq("empresa_id", APP_EMPRESA_ID)
+        .order("data_agendamento", {
+          ascending: true
+        });
+
+      const { data: jogadoresAtualizados } = await sb
+        .from("agenda_jogadores")
+        .select("*")
+        .eq("empresa_id", APP_EMPRESA_ID)
+        .neq("removido", true);
+
+      agendaDados = agendaAtualizada || [];
+      jogadoresPorAgenda = agruparJogadores(jogadoresAtualizados || []);
+    }
 
     aplicarFiltrosAgenda();
 
@@ -1003,6 +1400,29 @@ function abrirJogo(id) {
   ).value =
     jogo.observacoes || "";
 
+      const usarTimesJogo =
+    document.getElementById("usarTimesJogo");
+
+  if (usarTimesJogo) {
+    usarTimesJogo.checked = jogo.usar_times === true;
+  }
+
+  const timeA =
+    document.getElementById("timeA");
+
+  if (timeA) {
+    timeA.value = jogo.time_a || "";
+  }
+
+  const timeB =
+    document.getElementById("timeB");
+
+  if (timeB) {
+    timeB.value = jogo.time_b || "";
+  }
+
+  alternarTimesJogo();
+
   const jogadores =
     jogadoresPorAgenda[jogo.id] || [];
 
@@ -1090,7 +1510,10 @@ function aplicarModoModal() {
     "recorrenciaJogo",
     "valorMensal",
     "diaPagamentoMensal",
-    "observacoes"
+    "observacoes",
+    "usarTimesJogo",
+    "timeA",
+    "timeB"
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !podeEditarAgenda;
@@ -1143,10 +1566,35 @@ function aplicarModoModal() {
   renderizarControleMarcarTodosJogadores();
 }
 
+function alternarTimesJogo() {
+  const usarTimes =
+    document.getElementById("usarTimesJogo")?.checked === true;
+
+  const boxTimes =
+    document.getElementById("boxTimesJogo");
+
+  if (boxTimes) {
+    if (usarTimes) {
+      boxTimes.classList.add("ativo");
+    } else {
+      boxTimes.classList.remove("ativo");
+    }
+  }
+
+  document
+    .querySelectorAll(".jogador-time")
+    .forEach(select => {
+      select.style.display = usarTimes ? "block" : "none";
+
+      if (!usarTimes) {
+        select.value = "";
+      }
+    });
+}
+
 // ======================================================
 // CAMPOS MENSAIS
 // ======================================================
-
 function alternarCamposMensais() {
 
   const valor =
@@ -1170,7 +1618,6 @@ function alternarCamposMensais() {
 // ======================================================
 // LIMPAR
 // ======================================================
-
 function limparModal() {
 
   [
@@ -1183,7 +1630,9 @@ function limparModal() {
     "valorPrevisto",
     "valorMensal",
     "diaPagamentoMensal",
-    "observacoes"
+    "observacoes",
+    "timeA",
+    "timeB"
   ].forEach(id => {
 
     const el =
@@ -1198,6 +1647,15 @@ function limparModal() {
   document.getElementById(
     "listaJogadores"
   ).innerHTML = "";
+
+    const usarTimesJogo =
+    document.getElementById("usarTimesJogo");
+
+  if (usarTimesJogo) {
+    usarTimesJogo.checked = false;
+  }
+
+  alternarTimesJogo();
 
   esconderFeedback();
 
@@ -1339,6 +1797,12 @@ function adicionarLinhaJogador(jogador = {}) {
       value="${jogador.nome || ""}"
     >
 
+    <select class="input jogador-time">
+      <option value="">Time</option>
+      <option value="A" ${jogador.time_jogador === "A" ? "selected" : ""}>Time A</option>
+      <option value="B" ${jogador.time_jogador === "B" ? "selected" : ""}>Time B</option>
+    </select>
+
     <input
       class="input jogador-valor"
       placeholder="Valor"
@@ -1420,15 +1884,41 @@ function adicionarLinhaJogador(jogador = {}) {
     });
   }
 
-  row
-    .querySelector(".agenda-remover-jogador")
-    .addEventListener("click", () => {
+row
+  .querySelector(".agenda-remover-jogador")
+  .addEventListener("click", () => {
 
-      row.remove();
+    const jogadorId = row.dataset.jogadorId || null;
 
-      atualizarTotalizadorModal();
+    if (jogadorId && agendaAtualId) {
+      const jogadoresExistentes =
+        jogadoresPorAgenda[agendaAtualId] || [];
 
-    });
+      const jogadorExistente =
+        jogadoresExistentes.find(j => String(j.id) === String(jogadorId));
+
+      const jogadorVinculado =
+        jogadorExistente &&
+        (
+          jogadorExistente.pago === true ||
+          jogadorExistente.comanda_id ||
+          jogadorExistente.venda_id
+        );
+
+      if (jogadorVinculado) {
+        mostrarErro(
+          "Este jogador já possui pagamento ou comanda vinculada. Você pode editar o nome, mas não pode removê-lo."
+        );
+
+        return;
+      }
+    }
+
+    row.remove();
+
+    atualizarTotalizadorModal();
+
+  });
 
   row
     .querySelectorAll("input, select")
@@ -1471,6 +1961,9 @@ function obterJogadoresModal() {
         row.querySelector(
           ".jogador-nome"
         )?.value.trim(),
+
+      time_jogador:
+        row.querySelector(".jogador-time")?.value || null,
 
       valor:
         normalizarMoedaAgenda(
@@ -1527,6 +2020,21 @@ function atualizarTotalizadorModal() {
 // ======================================================
 // CONFLITO
 // ======================================================
+function obterDiaSemanaAgenda(dataISO) {
+  if (!dataISO) return null;
+
+  const data =
+    new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
+
+  return data.getDay();
+}
+
+function jogoEhMensalAgenda(jogo) {
+  return (
+    String(jogo.recorrencia || "") === "mensal" ||
+    String(jogo.tipo_jogo || "") === "mensalista"
+  );
+}
 
 function existeConflitoHorario() {
 
@@ -1552,11 +2060,28 @@ function existeConflitoHorario() {
       "horaFim"
     ).value;
 
+  const recorrenciaNova =
+    document.getElementById(
+      "recorrenciaJogo"
+    )?.value || "avulso";
+
+  const tipoNovo =
+    document.getElementById(
+      "tipoJogo"
+    )?.value || "avulso";
+
+  const novoEhMensal =
+    recorrenciaNova === "mensal" ||
+    tipoNovo === "mensalista";
+
   const novoInicio =
     horaParaMinutos(inicio);
 
   const novoFim =
     horaParaMinutos(fim);
+
+  const novoDiaSemana =
+    obterDiaSemanaAgenda(data);
 
   return agendaDados.some(jogo => {
 
@@ -1570,12 +2095,6 @@ function existeConflitoHorario() {
     if (
       jogo.status_jogo ===
       "cancelado"
-    ) {
-      return false;
-    }
-
-    if (
-      jogo.data_agendamento !== data
     ) {
       return false;
     }
@@ -1598,10 +2117,53 @@ function existeConflitoHorario() {
         jogo.hora_fim
       );
 
-    return (
+    const conflitoHora =
       novoInicio < fimExistente &&
-      novoFim > inicioExistente
-    );
+      novoFim > inicioExistente;
+
+    if (!conflitoHora) {
+      return false;
+    }
+
+    const jogoExistenteEhMensal =
+      jogoEhMensalAgenda(jogo);
+
+    const diaSemanaExistente =
+      obterDiaSemanaAgenda(jogo.data_agendamento);
+
+    if (
+      novoEhMensal &&
+      jogoExistenteEhMensal &&
+      novoDiaSemana === diaSemanaExistente
+    ) {
+      return true;
+    }
+
+    if (
+      novoEhMensal &&
+      !jogoExistenteEhMensal &&
+      novoDiaSemana === diaSemanaExistente
+    ) {
+      return true;
+    }
+
+    if (
+      !novoEhMensal &&
+      jogoExistenteEhMensal &&
+      novoDiaSemana === diaSemanaExistente
+    ) {
+      return true;
+    }
+
+    if (
+      !novoEhMensal &&
+      !jogoExistenteEhMensal &&
+      String(jogo.data_agendamento || "").slice(0, 10) === data
+    ) {
+      return true;
+    }
+
+    return false;
 
   });
 
@@ -1704,12 +2266,18 @@ jogadores.forEach(jogador => {
 
   if (!nomeLimpo) return;
 
+const usarTimes =
+  document.getElementById("usarTimesJogo")?.checked === true;
+
 jogadoresNormalizados.push({
   id: jogador.id || null,
   nome: nomeLimpo,
+  time_jogador: usarTimes ? jogador.time_jogador || null : null,
   valor: Number(jogador.valor || 0),
   forma_pagamento: jogador.forma_pagamento || null,
   pago: jogador.pago === true
+});
+
 });
 
 jogadores.length = 0;
@@ -1798,6 +2366,19 @@ let statusJogo =
         document.getElementById(
           "observacoes"
         ).value.trim() || null,
+
+      usar_times:
+        document.getElementById("usarTimesJogo")?.checked === true,
+
+      time_a:
+        document.getElementById("usarTimesJogo")?.checked === true
+          ? document.getElementById("timeA")?.value.trim() || null
+          : null,
+
+      time_b:
+        document.getElementById("usarTimesJogo")?.checked === true
+          ? document.getElementById("timeB")?.value.trim() || null
+          : null,
 
       total_jogadores:
         jogadores.length,
@@ -1932,6 +2513,12 @@ if (!navigator.onLine) {
         !jogadorExistente.comanda_id &&
         !jogadorExistente.venda_id;
 
+      if (foiRemovido && !podeRemover) {
+        return mostrarErro(
+          `O jogador ${jogadorExistente.nome || ""} já possui pagamento ou comanda vinculada. Ele não pode ser removido.`
+        );
+      }
+
       if (foiRemovido && podeRemover) {
         const { error } = await sb
           .from("agenda_jogadores")
@@ -1954,6 +2541,7 @@ if (!navigator.onLine) {
           .from("agenda_jogadores")
           .update({
             nome: jogador.nome,
+            time_jogador: jogador.time_jogador || null,
             atualizado_em: new Date().toISOString()
           })
           .eq("id", jogador.id)
@@ -1967,6 +2555,7 @@ if (!navigator.onLine) {
             empresa_id: APP_EMPRESA_ID,
             agenda_id: agendaId,
             nome: jogador.nome,
+            time_jogador: jogador.time_jogador || null,
             valor: 0,
             forma_pagamento: null,
             pago: false,
