@@ -24,14 +24,9 @@ const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
 
 const categoriaLabel = {
   bebidas: "Bebidas",
-  alimentos: "Alimentos",
+  bebidas_alcoolicas: "Bebidas alcoólicas",
   refrigerantes: "Refrigerantes",
-  aguas: "Águas",
-  sucos: "Sucos",
-  energeticos: "Energéticos",
-  cervejas: "Cervejas",
-  vinhos: "Vinhos",
-  destilados: "Destilados",
+  alimentos: "Alimentos",
   lanches: "Lanches",
   salgados: "Salgados",
   doces: "Doces",
@@ -45,50 +40,74 @@ const categoriaLabel = {
   sobremesas: "Sobremesas",
   cafes: "Cafés",
   bebidas_quentes: "Bebidas quentes",
-  bebidas_geladas: "Bebidas geladas",
   higiene: "Higiene",
   limpeza: "Limpeza",
   congelados: "Congelados",
   mercearia: "Mercearia",
   tabacaria: "Tabacaria",
   utilidades: "Utilidades",
-  jogos: "Jogos",
-  mensalistas: "Mensalistas",
-  pacotes: "Pacotes",
-  mensalidades: "Mensalidades",
-  produtos: "Produtos",
   combos: "Combos",
   servicos: "Serviços",
+  produtos: "Produtos",
+  pacotes: "Pacotes",
+  mensalidades: "Mensalidades",
   outros: "Outros",
   "": "—",
   null: "—"
 };
 
 const categoriasInteligentesProdutos = {
-  aguas: ["agua", "água", "mineral", "com gas", "com gás", "sem gas", "sem gás"],
-  refrigerantes: ["refrigerante", "coca", "coca-cola", "pepsi", "guarana", "guaraná", "fanta", "sprite"],
-  energeticos: ["energetico", "energético", "red bull", "monster", "gatorade"],
-  sucos: ["suco", "del valle", "natural", "polpa"],
-  cervejas: ["cerveja", "skol", "brahma", "antarctica", "heineken", "amstel", "original"],
-  salgados: ["salgado", "coxinha", "pastel", "risoles", "kibe", "esfiha", "enroladinho"],
+  bebidas: [
+    "bebida", "agua", "água", "mineral", "gatorade", "guaravita",
+    "energetico", "energético", "red bull", "monster", "suco"
+  ],
+
+  bebidas_alcoolicas: [
+    "cerveja", "skol", "brahma", "brhama", "antarctica", "heineken",
+    "amstel", "original", "corona", "vinho", "vodka", "whisky", "gin",
+    "destilado"
+  ],
+
+  refrigerantes: [
+    "refrigerante", "coca", "coca-cola", "pepsi", "guarana", "guaraná",
+    "fanta", "sprite"
+  ],
+
+  alimentos: [
+    "alimento", "salgadinho", "salgado", "lanche", "doce", "petisco",
+    "porcao", "porção", "bolo", "pao", "pão"
+  ],
+
+  salgados: ["salgado", "coxinha", "pastel", "risoles", "kibe", "esfiha"],
   doces: ["doce", "brigadeiro", "beijinho", "chocolate", "trufa", "bombom"],
-  lanches: ["lanche", "hamburguer", "hambúrguer", "x-burger", "x-salada", "x-tudo"],
+  lanches: ["lanche", "hamburguer", "hambúrguer", "x-burger", "x-salada"],
   porcoes: ["porcao", "porção", "batata", "frango", "calabresa", "mandioca"],
   petiscos: ["petisco", "amendoim", "torresmo", "batata", "isca"]
 };
 
 const categoriasPorSegmento = {
-  comercio_geral: ["bebidas", "alimentos", "produtos", "servicos", "combos", "outros"],
-  padaria: ["paes", "salgados", "doces", "bolos", "bebidas", "refrigerantes", "frios", "laticinios", "combos", "outros"],
-  restaurante: ["pratos", "porcoes", "sobremesas", "bebidas", "refrigerantes", "sucos", "cervejas", "combos", "outros"],
-  bar_adega: ["cervejas", "destilados", "vinhos", "refrigerantes", "aguas", "energeticos", "petiscos", "combos", "outros"],
-  lanchonete: ["lanches", "salgados", "porcoes", "refrigerantes", "sucos", "sobremesas", "combos", "outros"],
-  cafeteria_doceria: ["cafes", "bebidas_quentes", "bebidas_geladas", "doces", "bolos", "salgados", "combos", "outros"],
-  mercado_mercearia: ["bebidas", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "combos", "outros"],
-  loja_conveniencia: ["bebidas", "refrigerantes", "energeticos", "salgados", "doces", "tabacaria", "utilidades", "combos", "outros"],
-  arena_esportiva: ["jogos", "mensalistas", "bebidas", "refrigerantes", "energeticos", "aguas", "lanches", "salgados", "combos", "outros"],
-  arena_beach: ["jogos", "mensalistas", "bebidas", "refrigerantes", "energeticos", "aguas", "lanches", "salgados", "combos", "outros"],
-  quadras_esportivas: ["jogos", "mensalistas", "bebidas", "refrigerantes", "energeticos", "aguas", "lanches", "salgados", "combos", "outros"],
+  comercio_geral: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "produtos", "servicos", "combos", "outros"],
+
+  padaria: ["paes", "salgados", "doces", "bolos", "bebidas", "refrigerantes", "frios", "laticinios", "alimentos", "combos", "outros"],
+
+  restaurante: ["pratos", "porcoes", "sobremesas", "bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "combos", "outros"],
+
+  bar_adega: ["bebidas_alcoolicas", "bebidas", "refrigerantes", "alimentos", "petiscos", "combos", "outros"],
+
+  lanchonete: ["lanches", "salgados", "porcoes", "bebidas", "refrigerantes", "sobremesas", "alimentos", "combos", "outros"],
+
+  cafeteria_doceria: ["cafes", "bebidas_quentes", "bebidas", "doces", "bolos", "salgados", "alimentos", "combos", "outros"],
+
+  mercado_mercearia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "combos", "outros"],
+
+  loja_conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "salgados", "doces", "tabacaria", "utilidades", "combos", "outros"],
+
+  arena_esportiva: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "lanches", "salgados", "combos", "outros"],
+
+  arena_beach: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "lanches", "salgados", "combos", "outros"],
+
+  quadras_esportivas: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "lanches", "salgados", "combos", "outros"],
+
   servicos: ["servicos", "pacotes", "mensalidades", "produtos", "outros"]
 };
 
@@ -421,6 +440,16 @@ async function carregarTipoNegocioProdutos() {
 function obterCategoriasDoSegmento() {
   return categoriasPorSegmento[tipoNegocioProdutos] ||
     categoriasPorSegmento.comercio_geral;
+}
+
+function categoriaDisponivelNoSegmento(categoria) {
+  const valor = String(categoria || "");
+
+  return (
+    valor === "" ||
+    valor === "outros" ||
+    obterCategoriasDoSegmento().includes(valor)
+  );
 }
 
 function preencherFiltrosCategoriaProduto() {
@@ -851,9 +880,8 @@ async function abrirModalEditar(id) {
   document.getElementById("produtoEstoque").value = produto.estoque;
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = produto.codigo || "";
-  const categoriasFixas = ["", "bebidas", "alimentos", "combos", "servicos", "outros"];
 
-if (categoriasFixas.includes(produto.categoria || "")) {
+if (categoriaDisponivelNoSegmento(produto.categoria)) {
   document.getElementById("produtoCategoria").value = produto.categoria || "";
   document.getElementById("produtoCategoriaOutros").value = "";
 } else {
@@ -908,16 +936,7 @@ async function duplicarProduto(id) {
 
   document.getElementById("produtoCodigo").value = "";
 
-  const categoriasFixas = [
-    "",
-    "bebidas",
-    "alimentos",
-    "combos",
-    "servicos",
-    "outros"
-  ];
-
-  if (categoriasFixas.includes(produto.categoria || "")) {
+if (categoriaDisponivelNoSegmento(produto.categoria)) {
     document.getElementById("produtoCategoria").value =
       produto.categoria || "";
 
