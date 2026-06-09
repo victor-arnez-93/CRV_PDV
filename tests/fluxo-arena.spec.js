@@ -2,51 +2,6 @@ const { test, expect } = require('@playwright/test');
 
 const produtos = [
   {
-    nome: 'Cerveja Brahma garrafa 300ml',
-    venda: '0,600',
-    custo: '0,299',
-    estoque: '24',
-    categoria: 'bebidas',
-    codigo: '00000928000011',
-    rapido: true
-  },
-  {
-    nome: 'Cerveja Original garrafa 300ml',
-    venda: '0,600',
-    custo: '0,299',
-    estoque: '24',
-    categoria: 'bebidas',
-    codigo: '08300210999222',
-    rapido: true
-  },
-  {
-    nome: 'Cerveja Skol garrafa 300ml',
-    venda: '0,600',
-    custo: '0,299',
-    estoque: '24',
-    categoria: 'bebidas',
-    codigo: '00000928000033',
-    rapido: true
-  },
-  {
-    nome: 'Heineken long neck',
-    venda: '0,1200',
-    custo: '0,699',
-    estoque: '24',
-    categoria: 'bebidas',
-    codigo: '00000928000044',
-    rapido: true
-  },
-  {
-    nome: 'Corona long neck',
-    venda: '0,1200',
-    custo: '0,699',
-    estoque: '24',
-    categoria: 'bebidas',
-    codigo: '00000928000055',
-    rapido: true
-  },
-  {
     nome: 'Salgadinho',
     venda: '0,500',
     custo: '0,250',
@@ -138,7 +93,7 @@ async function cadastrarProduto(page, produto) {
 }
 
 test('01 - preparar ambiente da arena com comandas e produtos', async ({ page }) => {
-  await criarComandas(page);
+  // await criarComandas(page);
 
   for (const produto of produtos) {
     await cadastrarProduto(page, produto);

@@ -1936,13 +1936,15 @@ row
 
     });
 
-  aplicarModoModal();
+aplicarModoModal();
 
-  atualizarTotalizadorModal();
+alternarTimesJogo();
 
-  if (window.lucide) {
-    lucide.createIcons();
-  }
+atualizarTotalizadorModal();
+
+if (window.lucide) {
+  lucide.createIcons();
+}
 
 }
 
