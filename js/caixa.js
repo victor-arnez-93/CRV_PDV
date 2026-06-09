@@ -4806,7 +4806,7 @@ const descricao =
         empresa_id: obterEmpresaId(),
         caixa_id: caixa.id,
         cliente_id: null,
-        total: totalPagoAgenda,
+        subtotal: totalPagoAgenda,
         desconto: 0,
         total: totalPagoAgenda,
         forma_pagamento: formaPagamento || metodoPagamento,
@@ -4855,15 +4855,18 @@ const itensPayload = jogadoresParaVenda.map(jogador => ({
     if (erroItens) throw erroItens;
   }
 
-  const { error: erroMarcarVendaJogadores } = await sb
-    .from("agenda_jogadores")
-    .update({
-      venda_id: vendaId,
-      atualizado_em: new Date().toISOString()
-    })
-    .eq("empresa_id", obterEmpresaId())
-    .eq("agenda_id", jogo.id)
-    .eq("status_pagamento", STATUS_JOGADOR_CAIXA.PAGO_DIRETO);
+const { error: erroMarcarVendaJogadores } = await sb
+  .from("agenda_jogadores")
+  .update({
+    venda_id: vendaId,
+    atualizado_em: new Date().toISOString()
+  })
+  .eq("empresa_id", obterEmpresaId())
+  .eq("agenda_id", jogo.id)
+  .in("status_pagamento", [
+    STATUS_JOGADOR_CAIXA.PAGO_DIRETO,
+    STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA
+  ]);
 
   if (erroMarcarVendaJogadores) {
     throw erroMarcarVendaJogadores;
@@ -6522,9 +6525,9 @@ if (!sistemaOnline()) {
     payload: itensPayload
   });
 
-  vendas.unshift(vendaPayload);
+vendas.unshift(vendaPayload);
 
-  exibirModalSucesso(total, troco);
+exibirModalSucesso(total, troco);
 
   comandaAtiva = null;
   comandaOculta = false;
@@ -6619,6 +6622,15 @@ if (!confirmar) return;
   const desconto = calcularDesconto();
   const total = calcularTotalCarrinho();
 
+  const itensAgendaComanda = carrinho.filter(item => item.agenda_jogador_id);
+const itensExtrasComanda = carrinho.filter(item => !item.agenda_jogador_id);
+
+const subtotalComandaExtra = itensExtrasComanda.reduce((acc, item) => {
+  return acc + Number(item.preco || 0) * Number(item.quantidade || 0);
+}, 0);
+
+const totalComandaExtra = Math.max(0, subtotalComandaExtra - desconto);
+
 if (desconto > subtotal) {
   await alertaCaixa(
     "Desconto inválido",
@@ -6666,65 +6678,66 @@ if (desconto > subtotal) {
 
     const empresaId = obterEmpresaId();
 
-const vendaPayload = {
-  empresa_id: empresaId,
-  caixa_id: caixa.id,
-  cliente_id: null,
-  subtotal: subtotal,
-  desconto: desconto,
-  total: total,
-  forma_pagamento: metodoPagamento,
-  troco: troco,
-  origem: "comanda",
-  origem_id: comandaAtiva.id,
-  descricao: `Comanda ${comandaAtiva.codigo || ""} fechada`,
-  data: new Date().toISOString(),
-  operador_id: obterOperadorAtualId()
-};
+let vendaData = null;
 
-    const { data: vendaData, error: vendaError } = await sb
-      .from("vendas")
-      .insert([vendaPayload])
-      .select("*")
-      .single();
+if (itensExtrasComanda.length > 0) {
+  const vendaPayload = {
+    empresa_id: empresaId,
+    caixa_id: caixa.id,
+    cliente_id: null,
+    subtotal: subtotalComandaExtra,
+    desconto: desconto,
+    total: totalComandaExtra,
+    forma_pagamento: metodoPagamento,
+    troco: troco,
+    origem: "comanda",
+    origem_id: comandaAtiva.id,
+    descricao: `Comanda ${comandaAtiva.codigo || ""} fechada`,
+    data: new Date().toISOString(),
+    operador_id: obterOperadorAtualId()
+  };
 
-    if (vendaError) throw vendaError;
+  const { data: vendaComandaData, error: vendaError } = await sb
+    .from("vendas")
+    .insert([vendaPayload])
+    .select("*")
+    .single();
 
-    vendaCriadaId = vendaData.id;
+  if (vendaError) throw vendaError;
 
-    const itensPayload = carrinho.map(item => {
+  vendaData = vendaComandaData;
+  vendaCriadaId = vendaData.id;
 
-      const precoVenda = Number(item.preco || 0);
-      const precoCusto = Number(item.preco_custo || 0);
-      const quantidade = Number(item.quantidade || 0);
+  const itensPayload = itensExtrasComanda.map(item => {
+    const precoVenda = Number(item.preco || 0);
+    const precoCusto = Number(item.preco_custo || 0);
+    const quantidade = Number(item.quantidade || 0);
 
-      const lucroUnitario =
-        precoVenda - precoCusto;
+    const lucroUnitario = precoVenda - precoCusto;
+    const lucroTotal = lucroUnitario * quantidade;
 
-      const lucroTotal =
-        lucroUnitario * quantidade;
+    return {
+      empresa_id: empresaId,
+      venda_id: vendaData.id,
+      produto_id: item.produto_manual ? null : item.id,
+      nome: item.nome,
+      preco: precoVenda,
+      preco_custo: precoCusto,
+      lucro_unitario: lucroUnitario,
+      lucro_total: lucroTotal,
+      quantidade: quantidade,
+      origem: item.origem || "pdv",
+      origem_id: item.origem_id || null,
+      agenda_jogador_id: null
+    };
+  });
 
-      return {
-        empresa_id: empresaId,
-        venda_id: vendaData.id,
-        produto_id: item.produto_manual ? null : item.id,
-        nome: item.nome,
-        preco: precoVenda,
-        preco_custo: precoCusto,
-        lucro_unitario: lucroUnitario,
-        lucro_total: lucroTotal,
-        quantidade: quantidade,
-        origem: item.origem || "pdv",
-        origem_id: item.origem_id || null,
-        agenda_jogador_id: item.agenda_jogador_id || null
-      };
-    });
+  const { error: itensError } = await sb
+    .from("vendas_itens")
+    .insert(itensPayload);
 
-    const { error: itensError } = await sb
-      .from("vendas_itens")
-      .insert(itensPayload);
-
-    if (itensError) throw itensError;
+  if (itensError) throw itensError;
+}
 
     const jogadoresDaComanda = carrinho.filter(item => {
       return item.agenda_jogador_id;
@@ -6741,7 +6754,7 @@ const vendaPayload = {
           pago: true,
           status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA,
           forma_pagamento: "comanda",
-          venda_id: vendaData.id,
+          venda_id: null,
           pago_em: new Date().toISOString(),
           atualizado_em: new Date().toISOString()
         })
@@ -6760,9 +6773,15 @@ const vendaPayload = {
         )
       ];
 
-      for (const agendaId of agendaIds) {
-        await atualizarResumoAgendaAposComandaCaixa(agendaId);
-      }
+        for (const agendaId of agendaIds) {
+          await atualizarResumoAgendaAposComandaCaixa(agendaId);
+
+          const jogoRelacionado =
+            jogosCaixa.find(jogo => String(jogo.id) === String(agendaId)) ||
+            { id: agendaId };
+
+          await atualizarVendaAgendaPeloCaixa(jogoRelacionado);
+        }
     }
 
     await baixarEstoqueProdutos();
@@ -6788,9 +6807,16 @@ const { error: erroComanda } = await sb
 
     if (erroComanda) throw erroComanda;
 
-    vendas.unshift(vendaData);
+if (vendaData) {
+  vendas.unshift(vendaData);
 
-    exibirModalSucesso(total, troco);
+  exibirModalSucesso(totalComandaExtra, troco);
+} else {
+  await alertaCaixa(
+    "Comanda fechada",
+    "Comanda fechada sem venda extra. O valor do jogo foi mantido na cobrança da agenda."
+  );
+}
 
     comandaAtiva = null;
     comandaOculta = false;
