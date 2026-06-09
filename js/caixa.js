@@ -3105,14 +3105,18 @@ function iniciarAvisosFimDeJogoCaixa() {
     clearInterval(intervaloAvisosJogosCaixa);
   }
 
-  intervaloAvisosJogosCaixa = setInterval(async () => {
-    if (!caixaPermiteJogos()) return;
+intervaloAvisosJogosCaixa = setInterval(async () => {
+  if (!caixaPermiteJogos()) return;
 
-    await carregarJogosCaixa();
-    verificarAvisosFimDeJogoCaixa();
-    await atualizarBadgesModosCaixa();
+  await carregarJogosCaixa();
+  verificarAvisosFimDeJogoCaixa();
+  await atualizarBadgesModosCaixa();
 
-  }, 15000);
+  if (modoPDV === "jogos") {
+    renderJogosAtivosNoCaixa();
+  }
+
+}, 15000);
 }
 
 function verificarAvisosFimDeJogoCaixa() {
@@ -4532,16 +4536,50 @@ async function confirmarPagamentoJogoCaixa() {
     };
   });
 
-  const confirmar = await abrirConfirmacaoCaixa({
-    titulo: "Confirmar pagamento do jogo",
-mensagem: `
-  Confirmar pagamento direto de
-  <strong>${fmt(atualizarTotalSelecionadoJogoCaixa())}</strong>
-  para este jogo?<br><br>
-  Jogadores enviados para comanda continuam na comanda aberta e não entram como pagamento direto agora.
-`,
-    textoConfirmar: "Confirmar pagamento"
-  });
+const totalSelecionado = atualizarTotalSelecionadoJogoCaixa();
+
+const jogadoresEmComanda = jogadores.filter(jogador => {
+  return jogadorEmComandaCaixa(jogador);
+}).length;
+
+const jogadoresPendentesAposPagamento =
+  jogadores.length -
+  linhasSelecionadas.length -
+  jogadoresEmComanda -
+  jogadores.filter(jogador => jogadorPagoCaixa(jogador)).length;
+
+const pagamentoParcial =
+  jogadoresPendentesAposPagamento > 0 || jogadoresEmComanda > 0;
+
+const confirmar = await abrirConfirmacaoCaixa({
+  titulo: pagamentoParcial
+    ? "Confirmar pagamento parcial"
+    : "Confirmar pagamento final do jogo",
+
+  mensagem: pagamentoParcial
+    ? `
+      Confirmar pagamento parcial de
+      <strong>${fmt(totalSelecionado)}</strong>
+      para este jogo?<br><br>
+
+      ${linhasSelecionadas.length} jogador(es) serão marcados como pagos agora.<br>
+      ${jogadoresEmComanda} jogador(es) estão em comanda.<br>
+      ${Math.max(0, jogadoresPendentesAposPagamento)} jogador(es) continuarão pendentes.<br><br>
+
+      O jogo continuará em cobrança até todos pagarem ou as comandas vinculadas serem fechadas.
+    `
+    : `
+      Confirmar pagamento final de
+      <strong>${fmt(totalSelecionado)}</strong>
+      para este jogo?<br><br>
+
+      Após confirmar, o jogo será finalizado e entrará nas atividades recentes.
+    `,
+
+  textoConfirmar: pagamentoParcial
+    ? "Confirmar parcial"
+    : "Confirmar pagamento"
+});
 
   if (!confirmar) return;
 
@@ -4577,10 +4615,32 @@ mensagem: `
     fecharModalFinalizarJogoCaixa();
     fecharModalSelecionarJogo();
 
-    await alertaCaixa(
-      "Jogo atualizado",
-      "Pagamento do jogo lançado no caixa, vendas e relatórios."
-    );
+const jogadoresAtualizados = jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [];
+
+const pendentesAgora = jogadoresAtualizados.filter(jogador =>
+  jogadorPendenteCaixa(jogador)
+).length;
+
+const emComandaAgora = jogadoresAtualizados.filter(jogador =>
+  jogadorEmComandaCaixa(jogador)
+).length;
+
+if (pendentesAgora > 0 || emComandaAgora > 0) {
+  await alertaCaixa(
+    "Pagamento parcial confirmado",
+    `
+      Pagamento parcial lançado.<br><br>
+      Ainda falta(m) <strong>${pendentesAgora}</strong> jogador(es) pendente(s).<br>
+      <strong>${emComandaAgora}</strong> jogador(es) seguem em comanda.<br><br>
+      O jogo continuará em cobrança até a quitação total.
+    `
+  );
+} else {
+  await alertaCaixa(
+    "Jogo finalizado",
+    "Pagamento total lançado no caixa, vendas, relatórios e atividades recentes."
+  );
+}
 
     await alterarModoPDV("jogos");
 
@@ -4723,9 +4783,9 @@ const descricao =
       .from("vendas")
       .update({
         caixa_id: caixa.id,
-        subtotal: totalPagoDireto,
+        subtotal: totalPagoAgenda,
         desconto: 0,
-        total: totalPagoDireto,
+        total: totalPagoAgenda,
         forma_pagamento: formaPagamento || metodoPagamento,
         troco: 0,
         origem: "agenda",
@@ -4746,9 +4806,9 @@ const descricao =
         empresa_id: obterEmpresaId(),
         caixa_id: caixa.id,
         cliente_id: null,
-        subtotal: totalPagoDireto,
+        total: totalPagoAgenda,
         desconto: 0,
-        total: totalPagoDireto,
+        total: totalPagoAgenda,
         forma_pagamento: formaPagamento || metodoPagamento,
         troco: 0,
         origem: "agenda",
@@ -4766,7 +4826,12 @@ const descricao =
     vendaId = vendaNova.id;
   }
 
-  const itensPayload = pagosDiretos.map(jogador => ({
+  const jogadoresParaVenda = [
+  ...pagosDiretos,
+  ...pagosComanda
+];
+
+const itensPayload = jogadoresParaVenda.map(jogador => ({
     empresa_id: obterEmpresaId(),
     venda_id: vendaId,
     produto_id: null,
