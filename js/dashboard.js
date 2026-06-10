@@ -176,10 +176,17 @@ async function initDashboard() {
 
   await aplicarNomeFantasiaDashboard();
 
+  document.documentElement.classList.toggle(
+  "crv-agenda-ativa",
+  empresaUsaAgendaEsportivaDashboard()
+);
+
   try {
     let vendas = [];
     let itens = [];
     let caixaAtual = null;
+    let produtosBaixo = [];
+    let jogosHoje = [];
 
     if (APP_STATUS.online && APP_STATUS.supabase_ok) {
       logSistema("DASHBOARD", "Buscando dados do Supabase...");
@@ -213,6 +220,31 @@ async function initDashboard() {
       if (caixaError) throw caixaError;
 
       caixaAtual = caixaData?.[0] || null;
+
+const { data: produtosBaixoData, error: produtosBaixoError } = await sb
+  .from("produtos")
+  .select("id,nome,estoque")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .eq("ativo", true)
+  .lte("estoque", 5);
+
+if (produtosBaixoError) throw produtosBaixoError;
+
+produtosBaixo = produtosBaixoData || [];
+
+if (empresaUsaAgendaEsportivaDashboard()) {
+  const hojeLocal = obterHojeLocalDashboard();
+
+  const { data: jogosData, error: jogosError } = await sb
+    .from("agenda")
+    .select("id,status,data")
+    .eq("empresa_id", APP_EMPRESA_ID)
+    .eq("data", hojeLocal);
+
+  if (jogosError) throw jogosError;
+
+  jogosHoje = jogosData || [];
+}
 
       await crvOfflineDB.salvarCache("dashboard_vendas", vendas);
       await crvOfflineDB.salvarCache("dashboard_itens", itens);
@@ -293,6 +325,11 @@ async function initDashboard() {
     document.getElementById("deltaTicket").textContent = "por venda";
 
     atualizarStatusCaixa(caixaAtual);
+    atualizarAtalhoCaixaDashboard(caixaAtual);
+atualizarAtencaoHojeDashboard({
+  produtosBaixo,
+  jogosHoje
+});
     atualizarPagamentos(pagamentos);
     renderizarUltimasVendas(ultimas);
 
@@ -323,6 +360,64 @@ function atualizarStatusCaixa(caixaAtual) {
     text.textContent = "Caixa fechado";
     text.style.color = "";
   }
+}
+
+function obterHojeLocalDashboard() {
+  const agora = new Date();
+
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
+function empresaUsaAgendaEsportivaDashboard() {
+  const tipo = String(window.CRV_CONFIG?.empresa?.tipo_negocio || "")
+    .toLowerCase()
+    .trim();
+
+  return [
+    "arena",
+    "society",
+    "arena_society",
+    "arena_beach",
+    "beach_sports",
+    "beach_tennis",
+    "futvolei",
+    "volei_areia",
+    "quadras"
+  ].includes(tipo);
+}
+
+function atualizarAtalhoCaixaDashboard(caixaAtual) {
+  const btnTopo = document.getElementById("btnDashboardCaixa");
+
+  if (!btnTopo) return;
+
+  const caixaAberto = caixaAtual?.status === "aberto";
+
+  const texto = caixaAberto ? "Nova venda" : "Abrir Caixa";
+  const icone = caixaAberto ? "fa-cart-shopping" : "fa-cash-register";
+
+  btnTopo.href = "caixa.html";
+  btnTopo.innerHTML = `
+    <i class="fa-solid ${icone}"></i>
+    <span>${texto}</span>
+  `;
+}
+
+function atualizarAtencaoHojeDashboard({ produtosBaixo, jogosHoje }) {
+  const elEstoque = document.getElementById("dashEstoqueBaixo");
+  const elJogos = document.getElementById("dashJogosHoje");
+
+  if (elEstoque) elEstoque.textContent = produtosBaixo.length;
+  if (elJogos) elJogos.textContent = jogosHoje.length;
+
+  document.documentElement.classList.toggle(
+    "crv-agenda-ativa",
+    empresaUsaAgendaEsportivaDashboard()
+  );
 }
 
 // ===== PAGAMENTOS =====

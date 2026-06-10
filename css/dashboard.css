@@ -18,6 +18,134 @@
   color: var(--text-muted);
 }
 
+/* ===== OPERACIONAL MINI ===== */
+
+.dash-operacional-mini {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 270px));
+  gap: 14px;
+  margin: -4px 0 24px;
+}
+
+.dash-op-mini-card {
+  min-height: 76px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.dash-op-mini-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.dash-op-icon {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dash-op-icon > i:first-child {
+  font-size: 1.02rem;
+}
+
+.dash-op-plus {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+
+  width: 18px;
+  height: 18px;
+  margin: 0 !important;
+
+  border-radius: 999px;
+  border: 2px solid var(--bg-card);
+  background: var(--crv-orange);
+  color: #fff !important;
+
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-op-plus i {
+  font-size: .55rem;
+  line-height: 1;
+}
+
+.dash-op-icon.produto {
+  background: rgba(212, 168, 67, .16);
+  color: #b88700;
+}
+
+.dash-op-icon.operador {
+  background: rgba(0, 56, 135, .12);
+  color: #003887;
+}
+
+.dash-op-icon.jogo {
+  background: rgba(84, 205, 22, .14);
+  color: #3a9b12;
+}
+
+[data-theme="dark"] .dash-op-icon.produto {
+  background: rgba(212, 168, 67, .18);
+  color: #D4A843;
+}
+
+[data-theme="dark"] .dash-op-icon.operador {
+  background: rgba(91, 143, 212, .16);
+  color: #5B8FD4;
+}
+
+[data-theme="dark"] .dash-op-icon.jogo {
+  background: rgba(84, 205, 22, .14);
+  color: #54CD16;
+}
+
+[data-theme="dark"] .dash-op-plus {
+  border-color: var(--bg-card);
+  background: #D4A843;
+  color: #111 !important;
+}
+
+.dash-op-mini-card strong {
+  display: block;
+  font-weight: 800;
+  font-size: .9rem;
+  line-height: 1.15;
+}
+
+.dash-op-mini-card span:not(.dash-op-plus) {
+  display: block;
+  margin-top: 4px;
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+
+.dash-op-mini-card span b {
+  color: var(--text-primary);
+}
+
+.dash-only-agenda {
+  display: none;
+}
+
+html.crv-agenda-ativa .dash-only-agenda {
+  display: flex;
+}
+
 /* ===== CARDS ===== */
 .dash-cards {
   display: grid;
@@ -248,6 +376,14 @@
   .dash-payment-card {
     min-width: 0;
   }
+}
+
+.dash-operacional-grid {
+  grid-template-columns: 1fr;
+}
+
+.dash-quick-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 768px) {
@@ -541,6 +677,59 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
+}
+
+.dash-operacional-grid {
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dash-quick-card,
+.dash-alert-card {
+  padding: 12px 10px;
+}
+
+.dash-section-head {
+  margin-bottom: 10px;
+}
+
+.dash-section-head h3 {
+  font-size: .92rem;
+}
+
+.dash-section-head p {
+  font-size: .72rem;
+}
+
+.dash-quick-actions,
+.dash-alert-list {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.dash-action-btn {
+  min-height: 48px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 12px;
+}
+
+.dash-action-btn span {
+  font-size: .78rem;
+}
+
+.dash-alert-item {
+  padding: 10px;
+}
+
+.dash-alert-item strong {
+  font-size: 1rem;
+}
+
+.dash-alert-item span {
+  font-size: .7rem;
 }
 
 @media (max-width: 380px) {

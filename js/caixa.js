@@ -7,6 +7,7 @@
 
 // ===== ESTADO GLOBAL =====
 let caixa = null;
+let ultimoFechamentoCaixa = null;
 let carrinho = [];
 let vendas = [];
 let produtos = [];
@@ -520,6 +521,23 @@ async function carregarDadosSupabase() {
 
     caixa = caixaData?.[0] || null;
 
+    if (!caixa) {
+  const { data: ultimoFechamentoData, error: ultimoFechamentoError } = await sb
+    .from("caixa")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .eq("status", "fechado")
+    .not("valor_final", "is", null)
+    .order("data_fechamento", { ascending: false })
+    .limit(1);
+
+  if (ultimoFechamentoError) throw ultimoFechamentoError;
+
+  ultimoFechamentoCaixa = ultimoFechamentoData?.[0] || null;
+} else {
+  ultimoFechamentoCaixa = null;
+}
+
     if (caixa?.id) {
       const { data: vendasData, error: vendasError } = await sb
         .from("vendas")
@@ -761,11 +779,49 @@ function renderEstado() {
 
     text.textContent = "Caixa fechado";
     text.style.color = "";
+    renderUltimoFechamentoCaixa();
   }
 
   if (window.lucide) {
     lucide.createIcons();
   }
+}
+
+function renderUltimoFechamentoCaixa() {
+  const boxCheck = document.getElementById("boxUsarUltimoFechamento");
+  const info = document.getElementById("ultimoFechamentoInfo");
+  const valorEl = document.getElementById("ultimoFechamentoValor");
+  const dataEl = document.getElementById("ultimoFechamentoData");
+  const inputValor = document.getElementById("valorInicial");
+  const check = document.getElementById("chkUsarUltimoFechamento");
+
+  if (!boxCheck || !info || !inputValor || !check) return;
+
+  if (!ultimoFechamentoCaixa?.valor_final) {
+    boxCheck.style.display = "none";
+    info.style.display = "none";
+    inputValor.disabled = false;
+    return;
+  }
+
+  const valorFinal = Number(ultimoFechamentoCaixa.valor_final || 0);
+
+  boxCheck.style.display = "flex";
+  info.style.display = "flex";
+
+  if (valorEl) valorEl.textContent = fmt(valorFinal);
+  if (dataEl) {
+    dataEl.textContent = ultimoFechamentoCaixa.data_fechamento
+      ? formatarDataHoraBrasil(ultimoFechamentoCaixa.data_fechamento)
+      : "Data não informada";
+  }
+
+  check.checked = true;
+  inputValor.value = valorFinal.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  inputValor.disabled = true;
 }
 
 // ======================================================
@@ -2604,6 +2660,27 @@ function setupInputs() {
     document.getElementById("valorFechamento"),
     calcularDiferenca
   );
+  const chkUltimoFechamento = document.getElementById("chkUsarUltimoFechamento");
+const inputValorInicial = document.getElementById("valorInicial");
+
+if (chkUltimoFechamento && inputValorInicial) {
+  chkUltimoFechamento.addEventListener("change", () => {
+    if (chkUltimoFechamento.checked && ultimoFechamentoCaixa?.valor_final) {
+      const valorFinal = Number(ultimoFechamentoCaixa.valor_final || 0);
+
+      inputValorInicial.value = valorFinal.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      inputValorInicial.disabled = true;
+    } else {
+      inputValorInicial.disabled = false;
+      inputValorInicial.value = "";
+      inputValorInicial.focus();
+    }
+  });
+}
   setupCobrancaAvulsaToggle();
 }
 

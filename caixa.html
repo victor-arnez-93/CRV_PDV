@@ -134,6 +134,21 @@
             <h2>Caixa está fechado</h2>
             <p>Informe o valor inicial para iniciar as operações do dia.</p>
 
+            <label class="caixa-reutilizar-troco" id="boxUsarUltimoFechamento" style="display:none;">
+  <input
+    type="checkbox"
+    id="chkUsarUltimoFechamento"
+    checked
+  >
+  <span>Utilizar valor final do último fechamento</span>
+</label>
+
+<div class="ultimo-fechamento-info" id="ultimoFechamentoInfo" style="display:none;">
+  <span>Último fechamento</span>
+  <strong id="ultimoFechamentoValor">R$ 0,00</strong>
+  <small id="ultimoFechamentoData">—</small>
+</div>
+
             <div class="input-group" style="max-width:280px;width:100%;">
               <label class="input-label" for="valorInicial">Valor inicial (troco)</label>
               <input

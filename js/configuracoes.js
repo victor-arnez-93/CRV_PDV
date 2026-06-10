@@ -622,12 +622,47 @@ function initConfigTabs() {
       }
     });
   });
+    const params = new URLSearchParams(window.location.search);
+  const abaInicial = params.get("aba");
+
+  if (abaInicial === "operadores") {
+    document.getElementById("tabOperadores")?.click();
+  }
+
+  if (abaInicial === "sobre") {
+    document.getElementById("tabSobreSistema")?.click();
+  }
+}
+
+async function aguardarEmpresaECarregarConfiguracoes() {
+  let tentativas = 0;
+
+  while (!window.APP_EMPRESA_ID && tentativas < 30) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    tentativas++;
+  }
+
+  if (!window.APP_EMPRESA_ID) {
+    cfgFeedback("Empresa não encontrada.", "erro");
+    return;
+  }
+
+  await carregarConfiguracoes();
+
+  if (window.crvCarregarConfiguracoesEmpresa) {
+    await crvCarregarConfiguracoesEmpresa();
+  }
+
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("aba") === "operadores") {
+    document.getElementById("tabOperadores")?.click();
+  }
 }
 
 // ======================================================
 // INIT
 // ======================================================
-
 document.addEventListener("DOMContentLoaded", () => {
   const btnSalvar = document.getElementById("btnSalvarConfiguracoes");
   const logoInput = document.getElementById("cfgLogoFile");
@@ -704,15 +739,16 @@ if (logoInput) {
   });
 }
 
-  setTimeout(() => {
-    carregarConfiguracoes();
-  }, 700);
+aguardarEmpresaECarregarConfiguracoes();
 
+const params = new URLSearchParams(window.location.search);
+
+if (params.get("aba") === "operadores") {
   setTimeout(() => {
-    if (window.crvCarregarConfiguracoesEmpresa) {
-      crvCarregarConfiguracoesEmpresa();
-    }
-  }, 900);
+    document.getElementById("tabOperadores")?.click();
+  }, 100);
+}
+
   const tipoNegocio =
   document.getElementById("cfgTipoNegocio");
 
