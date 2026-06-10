@@ -1260,7 +1260,11 @@ return;
     logProdutos("Erro ao salvar: " + err.message, "error");
       await abrirAlertaProduto({
       titulo: "Erro ao salvar produto",
-      mensagem: err.message || "Não foi possível salvar o produto."
+      mensagem:
+  err.message?.includes("duplicate") ||
+  err.message?.includes("unique")
+    ? "Já existe um produto com este nome ou código cadastrado."
+    : err.message || "Não foi possível salvar o produto."
     });
   }
 }
