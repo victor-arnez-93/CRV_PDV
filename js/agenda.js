@@ -2235,6 +2235,15 @@ async function salvarJogo() {
       );
     }
 
+    const inicioMinutos = horaParaMinutos(inicio);
+const fimMinutos = horaParaMinutos(fim);
+
+if (fimMinutos <= inicioMinutos) {
+  return mostrarErro(
+    "O horário final deve ser maior que o horário inicial."
+  );
+}
+
     if (existeConflitoHorario()) {
 
       return mostrarErro(
