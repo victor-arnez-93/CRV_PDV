@@ -122,6 +122,31 @@ function vendaTemJogoVendas(venda) {
   );
 }
 
+function vendaEhComandaVendas(venda) {
+  const origem = String(venda.origem || "").toLowerCase();
+  const descricao = String(venda.descricao || "").toLowerCase();
+
+  return (
+    origem === "comanda" ||
+    descricao.includes("comanda") ||
+    Boolean(venda.origem_id && origem === "comanda")
+  );
+}
+
+function obterOrigemVisualVenda(venda) {
+  if (vendaTemJogoVendas(venda)) {
+    return vendaEhComandaVendas(venda)
+      ? "comanda_jogo"
+      : "agenda";
+  }
+
+  if (vendaEhComandaVendas(venda)) {
+    return "comanda";
+  }
+
+  return "pdv";
+}
+
 function limparDescricaoJogoVendas(descricao) {
   let texto = String(descricao || "Pagamento de jogo").trim();
 
@@ -621,9 +646,15 @@ function getVendasFiltradas() {
   filtroAtivo === 'todos' ||
   v.formaPagamento === filtroAtivo;
 
+const origemVisual = obterOrigemVisualVenda(v);
+
 const passaOrigem =
-  filtroOrigem === 'todos' ||
-  v.origem === filtroOrigem;
+  filtroOrigem === "todos" ||
+  origemVisual === filtroOrigem ||
+  (
+    filtroOrigem === "agenda" &&
+    origemVisual === "comanda_jogo"
+  );
 
 let passaTexto = !texto;
 
@@ -733,15 +764,25 @@ function verDetalhe(id) {
       <span style="font-family:'Courier New',monospace;">${venda.hora}</span>
     </div>
 
-        ${vendaTemJogoVendas(venda) ? `
+${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
 <div class="detalhe-row">
   <span>Origem</span>
-  <span>${venda.origem === "comanda" ? "Comanda / Jogo" : "Agenda / Jogo"}</span>
+  <span>${
+    vendaTemJogoVendas(venda)
+      ? vendaEhComandaVendas(venda)
+        ? "Comanda / Jogo"
+        : "Agenda / Jogo"
+      : "Comanda"
+  }</span>
 </div>
 
 <div class="detalhe-row">
   <span>Descrição</span>
-    <span>${limparDescricaoJogoVendas(venda.descricao || venda.itens.find(itemEhJogoVendas)?.nome)}</span>
+  <span>${
+    vendaTemJogoVendas(venda)
+      ? limparDescricaoJogoVendas(venda.descricao || venda.itens.find(itemEhJogoVendas)?.nome)
+      : venda.descricao || "Venda em comanda"
+  }</span>
 </div>
 ` : ""}
 
