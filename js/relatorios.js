@@ -715,20 +715,25 @@ function montarRankingProdutos(vendas) {
         return;
       }
 
-      const nome = item.nome || "Produto";
+      const chave = String(item.nome || "Produto")
+        .trim()
+        .toLowerCase();
 
-      if (!mapa[nome]) {
-        mapa[nome] = {
-          nome,
+      const nomeFormatado =
+        chave.charAt(0).toUpperCase() + chave.slice(1);
+
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          nome: nomeFormatado,
           qtd: 0,
           total: 0,
           lucro: 0
         };
       }
 
-      mapa[nome].qtd += Number(item.quantidade || 0);
-      mapa[nome].total += Number(item.preco || 0) * Number(item.quantidade || 0);
-      mapa[nome].lucro += Number(item.lucro_total || 0);
+      mapa[chave].qtd += Number(item.quantidade || 0);
+      mapa[chave].total += Number(item.preco || 0) * Number(item.quantidade || 0);
+      mapa[chave].lucro += Number(item.lucro_total || 0);
     });
   });
 
@@ -948,6 +953,36 @@ function limparDescricaoJogoRelatorio(descricao) {
   return texto.trim() || "Jogo";
 }
 
+function quebrarDescricaoJogoRelatorio(descricao) {
+  let texto = String(descricao || "Jogo").trim();
+
+  texto = limparDescricaoJogoRelatorio(texto);
+
+  const lower = texto.toLowerCase();
+
+  let tipo = "Jogo";
+  let nome = texto;
+
+  if (lower.includes("mensal")) {
+    tipo = "Mensal";
+  } else if (lower.includes("avulso")) {
+    tipo = "Avulso";
+  }
+
+  nome = texto
+    .replace(/^jogo\s*mensal\s*-\s*/i, "")
+    .replace(/^jogo\s*avulso\s*-\s*/i, "")
+    .replace(/^jogo\s*-\s*/i, "")
+    .replace(/campo\s*maior\s*-\s*/i, "")
+    .replace(/campo\s*menor\s*-\s*/i, "")
+    .trim();
+
+  return {
+    tipo,
+    nome: nome || texto
+  };
+}
+
 function montarRecebimentosJogosAgrupados(vendas) {
   const mapa = {};
 
@@ -981,9 +1016,13 @@ function montarRecebimentosJogosAgrupados(vendas) {
           );
 
     if (!mapa[chave]) {
+      const jogoInfo = quebrarDescricaoJogoRelatorio(descricaoLimpa);
+
       mapa[chave] = {
         responsavel: obterResponsavelJogoRelatorio(venda),
         descricao: descricaoLimpa,
+        nome: jogoInfo.nome,
+        tipo: jogoInfo.tipo,
         data: venda.data,
         formas: new Set(),
         total: 0,
@@ -1027,18 +1066,20 @@ function montarRecebimentosJogosAgrupados(vendas) {
     }
   });
 
-  return Object.values(mapa).map(item => {
-    item.total =
-      Number(item.totalDireto || 0) +
-      Number(item.totalComanda || 0);
+  return Object.values(mapa)
+    .map(item => {
+      item.total =
+        Number(item.totalDireto || 0) +
+        Number(item.totalComanda || 0);
 
-    item.forma =
-      item.formas.size > 1
-        ? "MISTO"
-        : [...item.formas][0] || "—";
+      item.forma =
+        item.formas.size > 1
+          ? "MISTO"
+          : [...item.formas][0] || "—";
 
-    return item;
-  });
+      return item;
+    })
+    .filter(item => Number(item.total || 0) > 0);
 }
 
 // ======================================================
@@ -1077,44 +1118,42 @@ function exportarCSV() {
     ]);
   });
 
-  linhas.push([]);
-  linhas.push(["PRODUTOS VENDIDOS"]);
-  linhas.push(["Produto", "Quantidade", "Preço venda", "Custo", "Total vendido", "Lucro"]);
+  const rankingVendidos = montarRankingProdutos(vendas)
+    .sort((a, b) => b.qtd - a.qtd);
 
-  vendas.forEach(v => {
-    if (String(v.origem || "").toLowerCase() === "agenda") return;
+  if (rankingVendidos.length) {
+    linhas.push([]);
+    linhas.push(["PRODUTOS MAIS VENDIDOS"]);
+    linhas.push(["Produto", "Quantidade", "Total vendido", "Lucro"]);
 
-    (v.itens || []).forEach(item => {
-      if (itemEhPagamentoJogo(item)) return;
-
+    rankingVendidos.forEach(produto => {
       linhas.push([
-        item.nome,
-        item.quantidade,
-        numeroExcel(item.preco),
-        numeroExcel(item.preco_custo),
-        numeroExcel(Number(item.preco || 0) * Number(item.quantidade || 0)),
-        numeroExcel(item.lucro_total)
+        produto.nome,
+        produto.qtd,
+        numeroExcel(produto.total),
+        numeroExcel(produto.lucro)
       ]);
     });
-  });
+  }
 
   const jogosAgrupados = montarRecebimentosJogosAgrupados(vendas);
 
   if (jogosAgrupados.length) {
     linhas.push([]);
     linhas.push(["RECEBIMENTOS DE JOGOS"]);
-    linhas.push(["Data", "Jogo", "Pagamento", "Direto", "Comanda", "Total"]);
+    linhas.push(["Data", "Tipo", "Jogo", "Pagamento", "Direto", "Comanda", "Total"]);
 
-    jogosAgrupados.forEach(jogo => {
-      linhas.push([
-        formatarDataVendaRelatorio(jogo.data),
-        jogo.descricao,
-        jogo.forma,
-        `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalDireto)}`,
-        `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalComanda)}`,
-        numeroExcel(jogo.total)
-      ]);
-    });
+jogosAgrupados.forEach(jogo => {
+  linhas.push([
+    formatarDataVendaRelatorio(jogo.data),
+    jogo.tipo,
+    jogo.nome,
+    jogo.forma,
+    `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalDireto)}`,
+    `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalComanda)}`,
+    numeroExcel(jogo.total)
+  ]);
+});
   }
 
   const csv = linhas
@@ -1335,38 +1374,39 @@ function exportarPDF() {
         O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos produtos no momento da venda. A margem bruta estimada do período foi de ${margem.toFixed(1)}%.
       </p>
 
-      <h2>Resumo por venda</h2>
+<h2>Formas de pagamento</h2>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Hora</th>
-            <th>Pagamento</th>
-            <th class="right">Total</th>
-            <th class="right">Lucro</th>
-            <th class="right">Margem</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${vendas.map(v => {
-            const total = Number(v.total || 0);
-            const lucroVenda = Number(v.lucro_total || 0);
-            const margemVenda = total > 0 ? (lucroVenda / total) * 100 : 0;
+<table>
+  <thead>
+    <tr>
+      <th>Forma</th>
+      <th class="right">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${Object.entries(
+      vendas.reduce((acc, venda) => {
+        const forma = labelFormaPagamentoRelatorio(
+          venda.forma_pagamento
+        );
 
-            return `
-              <tr>
-                <td>${formatarDataVendaRelatorio(v.data)}</td>
-                <td>${formatarHoraVendaRelatorio(v.data)}</td>
-                <td>${v.forma_pagamento || "—"}</td>
-                <td class="right">${fmt(total)}</td>
-                <td class="right">${fmt(lucroVenda)}</td>
-                <td class="right">${margemVenda.toFixed(1)}%</td>
-              </tr>
-            `;
-          }).join("")}
-        </tbody>
-      </table>
+        acc[forma] =
+          (acc[forma] || 0) +
+          Number(venda.total || 0);
+
+        return acc;
+      }, {})
+    )
+      .sort((a, b) => b[1] - a[1])
+      .map(([forma, total]) => `
+        <tr>
+          <td>${forma}</td>
+          <td class="right">${fmt(total)}</td>
+        </tr>
+      `)
+      .join("")}
+  </tbody>
+</table>
 
       <h2>Produtos mais vendidos</h2>
 
@@ -1413,6 +1453,34 @@ function exportarPDF() {
       </table>
 
       ${
+  produtosData.length
+    ? `
+      <h2>Produtos com estoque baixo</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th class="right">Estoque</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${produtosData.map(produto => `
+            <tr>
+              <td>${produto.nome}</td>
+              <td>${produto.categoria || "-"}</td>
+              <td class="right">${produto.estoque}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `
+    : ""
+}
+
+      ${
         recebimentosJogos.length
           ? `
             <h2>Recebimentos de jogos</h2>
@@ -1421,29 +1489,17 @@ function exportarPDF() {
               <thead>
                 <tr>
                   <th>Jogo</th>
+                  <th>Tipo</th>
                   <th>Data</th>
-                  <th>Pagamento</th>
-                  <th>Direto</th>
-                  <th>Comanda</th>
-                  <th class="right">Total</th>
+                  <th class="right">Valor total</th>
                 </tr>
               </thead>
               <tbody>
                 ${recebimentosJogos.map(item => `
                   <tr>
-                    <td>${item.descricao}</td>
+                    <td>${item.nome}</td>
+                    <td>${item.tipo}</td>
                     <td>${formatarDataVendaRelatorio(item.data)}</td>
-                    <td>${item.forma}</td>
-                    <td>
-                      ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}
-                      <br>
-                      ${fmt(item.totalDireto)}
-                    </td>
-                    <td>
-                      ${item.qtdComanda} jogador${item.qtdComanda !== 1 ? "es" : ""}
-                      <br>
-                      ${fmt(item.totalComanda)}
-                    </td>
                     <td class="right">${fmt(item.total)}</td>
                   </tr>
                 `).join("")}

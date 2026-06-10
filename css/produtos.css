@@ -189,7 +189,7 @@
 }
 
 [data-theme="dark"] .estoque-low {
-  color: #ffb347;
+  color: #FF5050;
 }
 
 [data-theme="dark"] .estoque-zero {
@@ -202,7 +202,7 @@
 }
 
 [data-theme="light"] .estoque-low {
-  color: var(--crv-blue);
+  color: #D93025;
 }
 
 [data-theme="light"] .estoque-zero {

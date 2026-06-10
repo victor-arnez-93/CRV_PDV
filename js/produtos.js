@@ -407,6 +407,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   renderProdutos();
   verificarEstoqueBaixo();
+  const params = new URLSearchParams(window.location.search);
+
+if (params.get("alerta") === "estoque") {
+  setTimeout(verificarEstoqueBaixo, 500);
+}
   atualizarStatusCaixa();
 
   if (window.lucide) {
@@ -1558,36 +1563,46 @@ setTimeout(() => {
 // ======================================================
 // ALERTA ESTOQUE BAIXO
 // ======================================================
-
 function verificarEstoqueBaixo() {
-  if (!Array.isArray(produtos) || !produtos.length) {
-    return;
-  }
+  if (!Array.isArray(produtos) || !produtos.length) return;
 
   const baixos = produtos.filter(produto => {
-    return Number(produto.estoque || 0) > 0 &&
-           Number(produto.estoque || 0) <= 5 &&
-           produto.ativo !== false;
+    const estoque = Number(produto.estoque || 0);
+
+    return estoque <= 5 && produto.ativo !== false;
   });
 
-  if (!baixos.length) {
+  if (!baixos.length) return;
+
+  const nomes = baixos
+    .slice(0, 3)
+    .map(produto => `${produto.nome} (${produto.estoque})`)
+    .join(", ");
+
+  const extras = baixos.length > 3
+    ? ` e mais ${baixos.length - 3}`
+    : "";
+
+  const mensagem = `${nomes}${extras}`;
+
+  if (typeof crvToast === "function") {
+    crvToast({
+      titulo: "Produtos com estoque baixo",
+      mensagem,
+      tipo: "warn",
+      tempo: 7000
+    });
     return;
   }
-
-  const primeiro = baixos[0];
 
   if (typeof mostrarToast === "function") {
     mostrarToast({
       tipo: "warn",
-      titulo: "Estoque baixo",
-      mensagem:
-        `${primeiro.nome} está com apenas ${primeiro.estoque} unidade(s).`
+      titulo: "Produtos com estoque baixo",
+      mensagem
     });
-
     return;
   }
 
-  console.warn(
-    `[CRV PDV] Estoque baixo: ${primeiro.nome}`
-  );
+  console.warn("[CRV PDV] Produtos com estoque baixo:", mensagem);
 }
