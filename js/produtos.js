@@ -1148,6 +1148,65 @@ async function salvarItensComboProduto(comboId) {
   if (error) throw error;
 }
 
+async function validarProdutoDuplicadoBanco({ id, nome, codigo }) {
+  const empresaId = obterEmpresaId();
+  const nomeNormalizado = String(nome || "").trim().toLowerCase();
+  const codigoNormalizado = String(codigo || "").trim();
+
+  if (!empresaId || !nomeNormalizado) {
+    return true;
+  }
+
+  const { data: produtosMesmoNome, error: erroNome } = await sb
+    .from("produtos")
+    .select("id,nome")
+    .eq("empresa_id", empresaId)
+    .ilike("nome", nome.trim());
+
+  if (erroNome) throw erroNome;
+
+  const nomeDuplicado = (produtosMesmoNome || []).find(produto => {
+    return (
+      String(produto.id) !== String(id || "") &&
+      String(produto.nome || "").trim().toLowerCase() === nomeNormalizado
+    );
+  });
+
+  if (nomeDuplicado) {
+    await abrirAlertaProduto({
+      titulo: "Produto duplicado",
+      mensagem: `Já existe um produto com este nome: <strong>${nome}</strong>.`
+    });
+
+    return false;
+  }
+
+  if (codigoNormalizado) {
+    const { data: produtosMesmoCodigo, error: erroCodigo } = await sb
+      .from("produtos")
+      .select("id,nome,codigo_barras,codigo")
+      .eq("empresa_id", empresaId)
+      .or(`codigo_barras.eq.${codigoNormalizado},codigo.eq.${codigoNormalizado}`);
+
+    if (erroCodigo) throw erroCodigo;
+
+    const codigoDuplicado = (produtosMesmoCodigo || []).find(produto => {
+      return String(produto.id) !== String(id || "");
+    });
+
+    if (codigoDuplicado) {
+      await abrirAlertaProduto({
+        titulo: "Código duplicado",
+        mensagem: `Já existe um produto com este código de barras: <strong>${codigoNormalizado}</strong>.`
+      });
+
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // ======================================================
 // SALVAR
 // ======================================================
@@ -1179,6 +1238,16 @@ if (nomeExistente) {
   const categoria = obterCategoriaProduto();
   const ativo = document.getElementById("produtoAtivo")?.checked === true;
   const produtoRapido = document.getElementById("produtoRapido")?.checked === true;
+
+  const produtoValido = await validarProdutoDuplicadoBanco({
+  id,
+  nome,
+  codigo
+});
+
+if (!produtoValido) {
+  return;
+}
 
   if (!nome) {
     await abrirAlertaProduto({

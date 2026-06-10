@@ -2604,6 +2604,7 @@ function setupInputs() {
     document.getElementById("valorFechamento"),
     calcularDiferenca
   );
+  setupCobrancaAvulsaToggle();
 }
 
 function setupAtalhos() {
@@ -7005,6 +7006,45 @@ async function alterarQuantidadeCarrinho(index, delta) {
 
   item.quantidade = novaQuantidade;
   renderCarrinho();
+}
+
+function setupCobrancaAvulsaToggle() {
+  const cardManual = document.querySelector(".pdv-manual");
+
+  if (!cardManual || document.getElementById("btnToggleCobrancaAvulsa")) {
+    return;
+  }
+
+  cardManual.classList.add("manual-card-oculto");
+
+  const btn = document.createElement("button");
+
+  btn.id = "btnToggleCobrancaAvulsa";
+  btn.type = "button";
+  btn.className = "btn-secondary btn-toggle-manual";
+
+  btn.innerHTML = `
+    <i data-lucide="plus-circle"></i>
+    <span>Mostrar cobrança avulsa</span>
+  `;
+
+  cardManual.insertAdjacentElement("beforebegin", btn);
+
+  btn.onclick = () => {
+    const oculto = cardManual.classList.toggle("manual-card-oculto");
+
+    btn.innerHTML = oculto
+      ? `<i data-lucide="plus-circle"></i><span>Mostrar cobrança avulsa</span>`
+      : `<i data-lucide="minus-circle"></i><span>Ocultar cobrança avulsa</span>`;
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  };
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 setTimeout(() => {

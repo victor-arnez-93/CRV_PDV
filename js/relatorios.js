@@ -14,6 +14,7 @@ let chartPagtos = null;
 
 let vendasData = [];
 let itensData = [];
+let produtosData = [];
 let caixasHistorico = [];
 let agendaFechadaData = [];
 let nomeFantasiaRelatorio = "empresa";
@@ -184,6 +185,7 @@ async function carregarDados() {
     let vendas = [];
     let itens = [];
     let caixas = [];
+    let produtos = [];
     let empresa = null;
 
     if (
@@ -214,6 +216,20 @@ async function carregarDados() {
         .order("data_abertura", { ascending: false });
 
       if (erroCaixas) throw erroCaixas;
+
+      const { data: produtosSupabase, error: erroProdutos } = await sb
+  .from("produtos")
+  .select("*")
+  .eq("empresa_id", empresaId)
+  .eq("ativo", true)
+  .lte("estoque", 5)
+  .order("estoque", { ascending: true });
+
+if (erroProdutos) throw erroProdutos;
+
+produtos = Array.isArray(produtosSupabase)
+  ? produtosSupabase
+  : [];
 
             const { data: empresaSupabase, error: erroEmpresa } = await sb
         .from("empresas")
@@ -260,6 +276,10 @@ async function carregarDados() {
     itensData = Array.isArray(itens)
       ? itens
       : [];
+
+      produtosData = Array.isArray(produtos)
+  ? produtos
+  : [];
 
     vendasData = (vendas || []).map(venda => {
       const itensVenda = itensData.filter(item => {
@@ -309,6 +329,7 @@ async function carregarDados() {
 
     vendasData = [];
     itensData = [];
+    produtosData = [];
     caixasHistorico = [];
     agendaFechadaData = [];
   }
@@ -457,8 +478,7 @@ function renderRelatorio() {
   document.getElementById("relVendas").textContent = qtd;
   document.getElementById("relTicket").textContent = fmt(ticket);
 
-  document.getElementById("relFaturamentoDelta").textContent =
-    qtd > 0 ? `${qtd} transação(ões)` : "sem vendas";
+renderComparativoPeriodo(faturamento);
 
   document.getElementById("badgePeriodo").textContent = getPeriodoLabel();
   document.getElementById("subtitleRelatorio").textContent =
@@ -469,7 +489,101 @@ function renderRelatorio() {
   renderTopProdutos(vendas);
   renderTopProdutosLucro(vendas);
   renderRecebimentosJogos(vendas);
+  renderProdutosEstoqueBaixo();
   renderHistoricoCaixas();
+}
+
+function renderComparativoPeriodo(faturamentoAtual) {
+  const delta = document.getElementById("relFaturamentoDelta");
+  if (!delta) return;
+
+  const { inicio, fim } = getIntervaloPeriodo();
+  const duracao = fim.getTime() - inicio.getTime();
+
+  const inicioAnterior = new Date(inicio.getTime() - duracao - 1);
+  const fimAnterior = new Date(inicio.getTime() - 1);
+
+  const vendasAnterior = vendasData.filter(venda => {
+    if (!venda.data) return false;
+
+    const dataVenda = new Date(
+      String(venda.data).endsWith("Z")
+        ? venda.data
+        : `${venda.data}Z`
+    );
+
+    return dataVenda >= inicioAnterior && dataVenda <= fimAnterior;
+  });
+
+  const faturamentoAnterior = vendasAnterior.reduce((acc, venda) => {
+    return acc + Number(venda.total || 0);
+  }, 0);
+
+  if (faturamentoAnterior <= 0) {
+    delta.textContent = "sem período anterior";
+    delta.className = "card-sub";
+    return;
+  }
+
+  const variacao = ((faturamentoAtual - faturamentoAnterior) / faturamentoAnterior) * 100;
+  const sinal = variacao >= 0 ? "↑" : "↓";
+
+  delta.textContent = `${sinal} ${Math.abs(variacao).toFixed(1)}% vs período anterior`;
+  delta.className = variacao >= 0 ? "card-sub relatorio-delta positivo" : "card-sub relatorio-delta negativo";
+}
+
+function renderProdutosEstoqueBaixo() {
+  let card = document.getElementById("cardEstoqueBaixo");
+
+  if (!card) {
+    const referencia = document.getElementById("cardRelatorioJogos");
+
+    if (!referencia) return;
+
+    card = document.createElement("div");
+    card.id = "cardEstoqueBaixo";
+    card.className = "card relatorio-estoque-baixo";
+
+    card.innerHTML = `
+      <div class="grafico-header">
+        <h3>Produtos com estoque baixo</h3>
+        <span class="badge-soft" id="badgeEstoqueBaixo">0 item(ns)</span>
+      </div>
+
+      <div id="listaEstoqueBaixo"></div>
+    `;
+
+    referencia.insertAdjacentElement("afterend", card);
+  }
+
+  const lista = document.getElementById("listaEstoqueBaixo");
+  const badge = document.getElementById("badgeEstoqueBaixo");
+
+  const produtos = produtosData.filter(produto => {
+    return Number(produto.estoque || 0) <= 5;
+  });
+
+  if (badge) {
+    badge.textContent = `${produtos.length} item(ns)`;
+  }
+
+  if (!lista) return;
+
+  if (!produtos.length) {
+    lista.innerHTML = `<div class="empty-relatorio"><p>Nenhum produto com estoque baixo.</p></div>`;
+    return;
+  }
+
+  lista.innerHTML = produtos.map(produto => `
+    <div class="estoque-baixo-item">
+      <div>
+        <strong>${produto.nome || "Produto"}</strong>
+        <small>${produto.categoria || "Sem categoria"}</small>
+      </div>
+
+      <span>${Number(produto.estoque || 0)} un.</span>
+    </div>
+  `).join("");
 }
 
 // ======================================================

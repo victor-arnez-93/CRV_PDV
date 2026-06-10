@@ -369,24 +369,25 @@
 }
 
 .modal-aviso-card {
-    width: min(420px, 90%);
-    background: var(--card-bg, #111);
-    color: var(--text-color, #fff);
-    border: 1px solid rgba(255, 193, 7, 0.35);
-    border-radius: 18px;
-    padding: 28px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.45);
-    text-align: center;
+  width: min(420px, 90%);
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
 }
 
 .modal-aviso-card h3 {
-    margin-bottom: 12px;
-    color: var(--accent-color, #d6a21e);
+  margin-bottom: 12px;
+  color: var(--crv-orange) !important;
 }
 
 .modal-aviso-card p {
-    margin-bottom: 22px;
-    line-height: 1.5;
+  margin-bottom: 22px;
+  line-height: 1.5;
+  color: var(--text-secondary) !important;
 }
 
 .modal-aviso-card button {
@@ -397,6 +398,77 @@
     color: #111;
     font-weight: 700;
     cursor: pointer;
+}
+
+.relatorio-delta.positivo {
+  color: var(--crv-green);
+}
+
+.relatorio-delta.negativo {
+  color: #FF5050;
+}
+
+#listaJogosRelatorio,
+#historicoCaixas {
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+#listaJogosRelatorio::-webkit-scrollbar,
+#historicoCaixas::-webkit-scrollbar,
+#listaEstoqueBaixo::-webkit-scrollbar {
+  width: 5px;
+}
+
+#listaJogosRelatorio::-webkit-scrollbar-thumb,
+#historicoCaixas::-webkit-scrollbar-thumb,
+#listaEstoqueBaixo::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.relatorio-estoque-baixo {
+  margin-bottom: 20px;
+}
+
+#listaEstoqueBaixo {
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.estoque-baixo-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.estoque-baixo-item:last-child {
+  border-bottom: none;
+}
+
+.estoque-baixo-item strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: .9rem;
+}
+
+.estoque-baixo-item small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: .74rem;
+}
+
+.estoque-baixo-item span {
+  font-family: var(--font-display);
+  font-weight: 900;
+  color: #ffb020;
+  white-space: nowrap;
 }
 
 /* ======================================================

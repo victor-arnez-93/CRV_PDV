@@ -643,8 +643,12 @@ function getVendasFiltradas() {
 
   return vendasData.filter(v => {
     const passaFiltro =
-  filtroAtivo === 'todos' ||
-  v.formaPagamento === filtroAtivo;
+      filtroAtivo === "todos" ||
+      v.formaPagamento === filtroAtivo ||
+      (
+        filtroAtivo === "cartao" &&
+        ["cartao", "debito", "credito"].includes(v.formaPagamento)
+      );
 
 const origemVisual = obterOrigemVisualVenda(v);
 
