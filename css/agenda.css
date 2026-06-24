@@ -7,7 +7,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-
   margin-bottom: 20px;
   flex-wrap: wrap;
 }
@@ -28,7 +27,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-
   flex-wrap: wrap;
 }
 
@@ -40,7 +38,6 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
-
   margin-bottom: 18px;
 }
 
@@ -50,24 +47,18 @@
 
 .agenda-stat-label {
   display: block;
-
   margin-bottom: 8px;
-
   font-size: .72rem;
   font-weight: 700;
-
   letter-spacing: .08em;
   text-transform: uppercase;
-
   color: var(--text-muted);
 }
 
 .agenda-stat-card strong {
   display: block;
-
   font-size: 1.55rem;
   font-family: var(--font-display);
-
   margin-bottom: 4px;
 }
 
@@ -87,8 +78,44 @@
 
 .agenda-filtros-grid {
   display: grid;
-  grid-template-columns: 220px 1fr 220px;
+  grid-template-columns: 220px auto 1fr 220px;
   gap: 12px;
+}
+
+.agenda-date-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agenda-date-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.agenda-date-btn:hover {
+  border-color: var(--crv-orange);
+  color: var(--text-primary);
+}
+
+.agenda-date-btn.active {
+  background: rgba(249,137,72,.10);
+  border-color: var(--crv-orange);
+  color: var(--crv-orange);
 }
 
 /* ======================================================
@@ -102,8 +129,12 @@
 }
 
 .agenda-coluna {
-  padding: 16px;
   min-height: 420px;
+  max-height: 420px;
+  padding: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .agenda-coluna.destaque {
@@ -111,6 +142,7 @@
 }
 
 .agenda-coluna-header {
+  flex-shrink: 0;
   margin-bottom: 16px;
 }
 
@@ -118,13 +150,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-
   font-size: .82rem;
   font-weight: 700;
-
   text-transform: uppercase;
   letter-spacing: .08em;
-
   color: var(--text-muted);
 }
 
@@ -133,9 +162,22 @@
 }
 
 .agenda-coluna-body {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 330px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.agenda-coluna-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.agenda-coluna-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
 }
 
 /* ======================================================
@@ -143,15 +185,13 @@
 ====================================================== */
 
 .agenda-card {
+  position: relative;
+  min-height: 96px;
   padding: 14px;
-
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-
   background: var(--bg-elevated);
-
   cursor: pointer;
-
   transition: all var(--transition);
 }
 
@@ -160,11 +200,15 @@
   border-color: rgba(249,137,72,.5);
 }
 
+#agendaFuturos .agenda-card,
+#agendaAndamento .agenda-card {
+  padding-right: 96px;
+}
+
 .agenda-card-top {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-
   margin-bottom: 10px;
 }
 
@@ -176,45 +220,13 @@
 
 .agenda-card-local {
   margin-top: 2px;
-
   font-size: .76rem;
   color: var(--text-muted);
-}
-
-.agenda-card-status {
-  padding: 4px 10px;
-
-  border-radius: var(--radius-pill);
-
-  font-size: .66rem;
-  font-weight: 700;
-
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
-
-.status-agendado {
-  background: rgba(0,212,255,.12);
-  border: 1px solid rgba(0,212,255,.2);
-  color: var(--crv-cyan);
-}
-
-.status-andamento {
-  background: rgba(0,255,156,.12);
-  border: 1px solid rgba(0,255,156,.2);
-  color: var(--crv-green);
-}
-
-.status-cobranca {
-  background: rgba(249,137,72,.12);
-  border: 1px solid rgba(249,137,72,.2);
-  color: var(--crv-orange);
 }
 
 .agenda-card-responsavel {
   font-size: .92rem;
   font-weight: 700;
-
   margin-bottom: 3px;
 }
 
@@ -227,10 +239,8 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-
   margin-top: 12px;
   padding-top: 10px;
-
   border-top: 1px solid var(--border);
 }
 
@@ -252,754 +262,38 @@
 }
 
 /* ======================================================
-   MODAL
+   STATUS
 ====================================================== */
 
-#modalReserva {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-
-  display: none;
-  align-items: center;
-  justify-content: center;
-
-  padding: 20px;
-
-  background: rgba(0,0,0,.7);
-  backdrop-filter: blur(4px);
-}
-
-.agenda-modal-card {
-  width: 100%;
-  max-width: 760px;
-  max-height: 90vh;
-
-  overflow: hidden;
-
-  display: flex;
-  flex-direction: column;
-}
-
-.agenda-modal-card .modal-header {
-  padding: 20px 22px;
-  border-bottom: 1px solid var(--border);
-}
-
-.agenda-modal-subtitle {
-  margin-top: 4px;
-  font-size: .8rem;
-  color: var(--text-muted);
-}
-
-.agenda-modal-body {
-  flex: 1;
-
-  overflow-y: auto;
-
-  padding: 20px 22px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.agenda-modal-card .modal-footer {
-  padding: 16px 22px;
-
-  border-top: 1px solid var(--border);
-
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-/* ======================================================
-   TIMES A x B
-====================================================== */
-
-.agenda-times-toggle {
-  padding: 12px 14px;
-
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-
-  background: var(--bg-elevated);
-}
-
-.agenda-times-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
-  font-size: .82rem;
+.agenda-card-status {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: .66rem;
   font-weight: 700;
-
-  color: var(--text-primary);
-
-  cursor: pointer;
-}
-
-.agenda-times-check input {
-  width: 16px;
-  height: 16px;
-
-  accent-color: var(--crv-orange);
-}
-
-.agenda-times-box {
-  display: none;
-}
-
-.agenda-times-box.ativo {
-  display: grid;
-}
-
-/* ======================================================
-   JOGADORES
-====================================================== */
-
-.agenda-jogadores-box {
-  padding: 14px;
-
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-
-  background: var(--bg-elevated);
-}
-
-.agenda-jogadores-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 12px;
-
-  margin-bottom: 14px;
-}
-
-.agenda-jogadores-header strong {
-  display: block;
-  margin-bottom: 2px;
-}
-
-.agenda-jogadores-header small {
-  font-size: .74rem;
-  color: var(--text-muted);
-}
-
-.agenda-jogadores-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.agenda-jogador-row {
-  display: grid;
-  grid-template-columns: 1fr 130px 90px 120px 36px;
-  gap: 8px;
-  align-items: center;
-}
-
-.agenda-jogador-check {
-  height: 40px;
-
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-
-  background: var(--bg-card);
-
-  font-size: .75rem;
-}
-
-.agenda-jogador-check input {
-  accent-color: var(--crv-orange);
-}
-
-.agenda-remover-jogador {
-  all: unset;
-
-  width: 36px;
-  height: 36px;
-
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-
-  color: #FF5050;
-}
-
-.agenda-remover-jogador:hover {
-  background: rgba(255,80,80,.08);
-  border-color: #FF5050;
-}
-
-.jogador-time {
-  min-width: 130px;
-}
-
-/* ======================================================
-   TOTALIZADOR
-====================================================== */
-
-.agenda-totalizador-jogo {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.agenda-totalizador-jogo div {
-  padding: 14px;
-
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-
-  background: var(--bg-elevated);
-}
-
-.agenda-totalizador-jogo span {
-  display: block;
-
-  margin-bottom: 4px;
-
-  font-size: .72rem;
+  letter-spacing: .05em;
   text-transform: uppercase;
-
-  color: var(--text-muted);
 }
 
-.agenda-totalizador-jogo strong {
-  font-family: var(--font-display);
-  font-size: 1rem;
+.status-agendado {
+  background: rgba(0,212,255,.12);
+  border: 1px solid rgba(0,212,255,.2);
+  color: var(--crv-cyan);
 }
 
-.agenda-textarea {
-  min-height: 90px;
-  resize: vertical;
-}
-
-.agenda-feedback {
-  min-height: 18px;
-
-  font-size: .84rem;
-  font-weight: 600;
-}
-
-/* ======================================================
-   EMPTY
-====================================================== */
-
-.agenda-empty {
-  min-height: 180px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-
-  color: var(--text-muted);
-
-  font-size: .84rem;
-}
-
-/* ===== LIMITE DE CARDS POR COLUNA ===== */
-
-.agenda-coluna {
-  max-height: 400px;
-  overflow: hidden;
-
-  display: flex;
-  flex-direction: column;
-}
-
-.agenda-coluna-body {
-  flex: 1;
-
-  max-height: 302px;
-  overflow-y: auto;
-
-  padding-right: 4px;
-}
-
-.agenda-coluna-body::-webkit-scrollbar {
-  width: 5px;
-}
-
-.agenda-coluna-body::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 999px;
-}
-
-/* ===== AVISOS INTELIGENTES ===== */
-
-.agenda-alerta {
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(249,137,72,.25);
-  background: rgba(249,137,72,.08);
-  color: var(--text-primary);
-  font-size: .86rem;
-  display: none;
-}
-
-.agenda-alerta.ativo {
-  display: block;
-}
-
-/* ===== CAMPOS MENSAIS ===== */
-
-.agenda-mensal-box {
-  display: none;
-}
-
-.agenda-mensal-box.ativo {
-  display: grid;
-}
-
-/* ======================================================
-   FEEDBACK MODAL
-====================================================== */
-
-.agenda-feedback-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.agenda-feedback {
-  width: 100%;
-
-  text-align: center;
-
-  padding: 12px 14px;
-
-  border-radius: var(--radius-md);
-
-  font-size: .86rem;
-  font-weight: 700;
-
-  display: none;
-}
-
-.agenda-feedback.erro {
-  display: block;
-
-  color: #FF8A8A;
-
-  border: 1px solid rgba(255,80,80,.25);
-  background: rgba(255,80,80,.08);
-}
-
-.agenda-feedback.sucesso {
-  display: block;
-
+.status-andamento {
+  background: rgba(0,255,156,.12);
+  border: 1px solid rgba(0,255,156,.2);
   color: var(--crv-green);
-
-  border: 1px solid rgba(0,255,156,.18);
-  background: rgba(0,255,156,.06);
 }
 
-/* ======================================================
-   MODAL HORÁRIOS FIXOS
-====================================================== */
-
-#modalHorariosFixos {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-
-  display: none;
-  align-items: center;
-  justify-content: center;
-
-  padding: 20px;
-
-  background: rgba(0,0,0,.7);
-  backdrop-filter: blur(4px);
-}
-
-.agenda-horarios-modal {
-  position: relative;
-  width: 100%;
-  max-width: 760px;
-  max-height: 88vh;
-
-  overflow: hidden;
-
-  display: flex;
-  flex-direction: column;
-}
-
-.agenda-horarios-modal .modal-header {
-  padding: 20px 22px;
-  border-bottom: 1px solid var(--border);
-}
-
-.agenda-horarios-body {
-  flex: 1;
-
-  overflow-y: auto;
-
-  padding: 20px 22px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.agenda-horarios-busca-wrap {
-  width: 100%;
-}
-
-.agenda-horarios-busca-wrap .input {
-  width: 100%;
-}
-
-.agenda-horarios-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  flex-wrap: wrap;
-}
-
-.agenda-horarios-tab {
-  all: unset;
-
-  min-height: 36px;
-  padding: 0 14px;
-
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-
-  font-size: .76rem;
-  font-weight: 700;
-
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.agenda-horarios-tab:hover,
-.agenda-horarios-tab.active {
-  border-color: var(--crv-orange);
-  color: var(--crv-orange);
-  background: rgba(249,137,72,.10);
-}
-
-.agenda-horarios-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  max-height: 340px;
-  overflow-y: auto;
-  padding-right: 5px;
-}
-
-.agenda-horarios-lista::-webkit-scrollbar {
-  width: 5px;
-}
-
-.agenda-horarios-lista::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 999px;
-}
-
-.agenda-horario-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-
-  padding: 14px;
-
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-
-  background: var(--bg-elevated);
-}
-
-.agenda-horario-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.agenda-horario-main strong {
-  color: var(--text-primary);
-  font-size: .95rem;
-}
-
-.agenda-horario-main span {
-  color: var(--text-secondary);
-  font-size: .84rem;
-}
-
-.agenda-horario-main small {
-  color: var(--text-muted);
-  font-size: .76rem;
-}
-
-.agenda-horario-badge {
-  flex-shrink: 0;
-
-  padding: 5px 10px;
-
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(212,168,67,.35);
-
-  background: rgba(212,168,67,.10);
-  color: #d4a843;
-
-  font-size: .68rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-#btnFecharModalHorariosFixos {
-  position: absolute;
-  top: 22px;
-  right: 24px;
-  z-index: 20;
-
-  width: 34px;
-  height: 34px;
-  padding: 0 !important;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 999px;
-}
-
-#btnFecharModalHorariosFixos svg {
-  width: 16px;
-  height: 16px;
-  color: var(--text-primary);
-  stroke: currentColor;
-}
-
-.agenda-horarios-empty {
-  min-height: 160px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-
-  color: var(--text-muted);
-  font-size: .84rem;
-}
-
-/* ======================================================
-   MODAL AVISO
-====================================================== */
-
-.agenda-aviso-modal {
-  width: 100%;
-  max-width: 420px;
-
-  padding: 28px 24px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  text-align: center;
-
-  gap: 18px;
-}
-
-.agenda-aviso-icon {
-  width: 68px;
-  height: 68px;
-
-  border-radius: 50%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: rgba(249,137,72,.12);
-  border: 1px solid rgba(249,137,72,.25);
-
-  color: var(--crv-orange);
-}
-
-.agenda-aviso-icon svg {
-  width: 34px;
-  height: 34px;
-}
-
-.agenda-aviso-modal h3 {
-  font-size: 1.2rem;
-}
-
-.agenda-aviso-modal p {
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.agenda-aviso-actions {
-  width: 100%;
-
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-
-  margin-top: 6px;
-}
-
-/* ======================================================
-   JOGADORES - MODOS
-====================================================== */
-.agenda-jogador-row.modo-agendamento {
-  grid-template-columns: 1fr 130px 36px;
-}
-
-.agenda-jogador-row.modo-agendamento .jogador-valor,
-.agenda-jogador-row.modo-agendamento .jogador-pagamento,
-.agenda-jogador-row.modo-agendamento .agenda-jogador-check {
-  display: none;
-}
-
-.agenda-jogador-row.modo-cobranca {
-  grid-template-columns: 1fr 130px 110px 140px 90px 36px;
-}
-
-/* ======================================================
-   BOTÃO EXCLUIR CARD
-====================================================== */
-
-.agenda-card-actions {
-  display: flex;
-  justify-content: flex-end;
-
-  margin-top: 12px;
-}
-
-.btn-remover-jogo {
-  all: unset;
-
-  width: 34px;
-  height: 34px;
-
-  border-radius: 10px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-
-  color: #54CD16;
-
-  border: 1px solid rgba(255,80,80,.14);
-
-  transition: .2s;
-}
-
-.btn-remover-jogo:hover {
-  background: rgba(255,80,80,.08);
-  border-color: rgba(255,80,80,.4);
-
-  transform: translateY(-1px);
-}
-
-/* ======================================================
-   AJUSTE FINAL — SCROLL DOS CARDS DA AGENDA
-====================================================== */
-
-.agenda-coluna {
-  min-height: 420px;
-  max-height: 420px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.agenda-coluna-header {
-  flex-shrink: 0;
-}
-
-.agenda-coluna-body {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 5px;
-  max-height: 330px;
-}
-
-.agenda-coluna-body::-webkit-scrollbar {
-  width: 5px;
-}
-
-.agenda-coluna-body::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 999px;
-}
-
-/* mantém no máximo cerca de 3 cards visíveis antes do scroll */
-.agenda-card {
-  min-height: 96px;
-}
-
-/* cobrança pendente: amarelo com brilho leve */
 .status-cobranca {
-  background: rgba(212, 168, 67, .14);
-  border: 1px solid rgba(212, 168, 67, .55);
+  background: rgba(212,168,67,.14);
+  border: 1px solid rgba(212,168,67,.55);
   color: #d4a843;
-  box-shadow: 0 0 12px rgba(212, 168, 67, .18);
+  box-shadow: 0 0 12px rgba(212,168,67,.18);
   animation: agendaCobrancaGlow 2.2s ease-in-out infinite;
 }
 
-body.light .status-cobranca {
-  background: rgba(212, 168, 67, .22);
-  border: 1px solid rgba(212, 168, 67, .75);
-  color: #9b6b00;
-  box-shadow: 0 0 10px rgba(212, 168, 67, .12);
-}
-
-@keyframes agendaCobrancaGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(255, 193, 7, .12);
-  }
-
-  50% {
-    box-shadow: 0 0 16px rgba(255, 193, 7, .32);
-  }
-}
-
-/* pago/finalizado: vermelho com neon leve */
 .status-fechado {
   background: rgba(84,205,22,.10);
   border: 1px solid rgba(84,205,22,.35);
@@ -1007,106 +301,112 @@ body.light .status-cobranca {
   box-shadow: 0 0 12px rgba(84,205,22,.18);
 }
 
-/* botão lixeira mais bonito */
-.btn-remover-jogo {
+.status-cancelado {
+  background: rgba(255,80,80,.10);
+  border: 1px solid rgba(255,80,80,.35);
   color: #ff7070;
-  background: rgba(255, 80, 80, .05);
-  border: 1px solid rgba(255, 80, 80, .20);
 }
 
-.btn-remover-jogo:hover {
-  background: rgba(255, 80, 80, .12);
-  border-color: rgba(255, 80, 80, .55);
-  color: #ff8a8a;
-  box-shadow: 0 0 12px rgba(255, 80, 80, .22);
+body.light .status-cobranca {
+  background: rgba(212,168,67,.22);
+  border-color: rgba(212,168,67,.75);
+  color: #9b6b00;
+  box-shadow: 0 0 10px rgba(212,168,67,.12);
+}
+
+@keyframes agendaCobrancaGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255,193,7,.12);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(255,193,7,.32);
+  }
 }
 
 /* ======================================================
-   NAVEGAÇÃO DE DATA + CARD FINALIZADO
+   AÇÕES DO CARD
 ====================================================== */
 
-.agenda-filtros-grid {
-  grid-template-columns: 220px auto 1fr 220px;
-}
-
-.agenda-date-actions {
+.agenda-card-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
 }
 
-.agenda-date-btn {
+.btn-cancelar-jogo,
+.btn-apagar-jogo {
+  all: unset;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-
-  min-height: 40px;
-  padding: 8px 14px;
-
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-
-  font-size: .78rem;
-  font-weight: 700;
-  line-height: 1;
-
+  border-radius: 10px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all .18s ease;
 }
 
-.agenda-date-btn:hover {
-  border-color: var(--crv-orange);
-  color: var(--text-primary);
+.btn-cancelar-jogo {
+  color: #d4a843;
+  border: 1px solid rgba(212,168,67,.35);
+  background: rgba(212,168,67,.08);
 }
 
-.agenda-date-btn.active {
-  background: rgba(249,137,72,.10);
-  border-color: var(--crv-orange);
-  color: var(--crv-orange);
+.btn-cancelar-jogo:hover {
+  color: #f4c95d;
+  border-color: rgba(212,168,67,.7);
+  background: rgba(212,168,67,.16);
+  box-shadow: 0 0 12px rgba(212,168,67,.18);
 }
 
-/* X do modal no topo direito */
-.agenda-modal-card {
-  position: relative;
+.btn-apagar-jogo {
+  color: #ff7070;
+  border: 1px solid rgba(255,80,80,.30);
+  background: rgba(255,80,80,.07);
 }
 
-#btnFecharModalReserva {
-  position: absolute;
-  top: 22px;
-  right: 24px;
-  z-index: 20;
+.btn-apagar-jogo:hover {
+  color: #ff8a8a;
+  border-color: rgba(255,80,80,.65);
+  background: rgba(255,80,80,.14);
+  box-shadow: 0 0 12px rgba(255,80,80,.18);
 }
 
-/* Card de finalizados/cobrança */
+.btn-cancelar-jogo svg,
+.btn-apagar-jogo svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+}
+
+/* ======================================================
+   CARD FINALIZADOS / COBRANÇA
+====================================================== */
+
 #agendaFinalizados .agenda-card {
   display: grid;
-  grid-template-columns: 1fr 120px 54px;
+  grid-template-columns: 1fr 120px 74px;
   grid-template-rows: auto auto auto;
   grid-template-areas:
     "horario valores status"
-    "local   valores trash"
-    "nome    valores trash";
-
+    "local valores actions"
+    "nome valores actions";
   align-items: center;
   column-gap: 18px;
   row-gap: 4px;
-
   min-height: 122px;
   padding: 18px 20px;
 }
 
-#agendaFinalizados .agenda-card-top {
-  display: contents;
-  margin: 0;
-}
-
+#agendaFinalizados .agenda-card-top,
 #agendaFinalizados .agenda-card-top > div {
   display: contents;
+  margin: 0;
 }
 
 #agendaFinalizados .agenda-card-horario {
@@ -1130,12 +430,10 @@ body.light .status-cobranca {
 
 #agendaFinalizados .agenda-card-footer {
   grid-area: valores;
-
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 12px;
-
   margin: 0;
   padding: 0;
   border: 0;
@@ -1149,36 +447,813 @@ body.light .status-cobranca {
 }
 
 #agendaFinalizados .agenda-card-actions {
-  grid-area: trash;
+  grid-area: actions;
+  position: static;
   justify-self: center;
   align-self: end;
-  margin: 0;
 }
 
-#agendaFinalizados .btn-remover-jogo {
-  width: 40px;
-  height: 40px;
+#agendaFinalizados .btn-cancelar-jogo,
+#agendaFinalizados .btn-apagar-jogo {
+  width: 38px;
+  height: 38px;
 }
 
-/* Correção botão excluir — próximos jogos e em andamento */
-#agendaFuturos .agenda-card,
-#agendaAndamento .agenda-card {
+/* ======================================================
+   MODAL CONTROLE DO JOGO
+====================================================== */
+
+#modalReserva {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+}
+
+.agenda-modal-card {
   position: relative;
-  padding-right: 56px;
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-#agendaFuturos .agenda-card-actions,
-#agendaAndamento .agenda-card-actions {
+.agenda-modal-card .modal-header {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.agenda-modal-subtitle {
+  margin-top: 4px;
+  font-size: .8rem;
+  color: var(--text-muted);
+}
+
+#btnFecharModalReserva {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  margin: 0;
+  top: 22px;
+  right: 24px;
+  z-index: 20;
 }
 
-#agendaFuturos .btn-remover-jogo,
-#agendaAndamento .btn-remover-jogo {
+.agenda-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agenda-modal-card .modal-footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ======================================================
+   TIMES / RECORRÊNCIA / ALTERAÇÃO
+====================================================== */
+
+.agenda-times-toggle,
+.agenda-recorrencia-opcoes {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.agenda-recorrencia-opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agenda-times-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.agenda-times-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--crv-orange);
+}
+
+.agenda-times-box,
+.agenda-mensal-box {
+  display: none;
+}
+
+.agenda-times-box.ativo,
+.agenda-mensal-box.ativo {
+  display: grid;
+}
+
+.agenda-alteracao-box {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(212,168,67,.28);
+  background: rgba(212,168,67,.07);
+}
+
+.agenda-alteracao-box.ativo {
+  display: flex;
+}
+
+.agenda-alteracao-info {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(212,168,67,.38);
+  color: #d4a843;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+body.light .agenda-alteracao-box {
+  background: rgba(212,168,67,.10);
+}
+
+body.light .agenda-alteracao-info {
+  color: #8a6500;
+}
+
+/* ======================================================
+   JOGADORES
+====================================================== */
+
+.agenda-jogadores-box {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.agenda-jogadores-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.agenda-jogadores-header strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.agenda-jogadores-header small {
+  font-size: .74rem;
+  color: var(--text-muted);
+}
+
+.agenda-jogadores-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agenda-jogador-row {
+  display: grid;
+  grid-template-columns: 1fr 130px 130px 110px 120px 110px 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.agenda-jogador-row.modo-agendamento {
+  grid-template-columns: minmax(220px, 1fr) 130px 42px;
+}
+
+.agenda-jogador-row.modo-agendamento .jogador-valor,
+.agenda-jogador-row.modo-agendamento .jogador-pagamento,
+.agenda-jogador-row.modo-agendamento .agenda-jogador-check {
+  display: none;
+}
+
+.agenda-jogador-row.modo-cobranca {
+  grid-template-columns: 1fr 130px 130px 110px 120px 110px 36px;
+}
+
+.jogador-time,
+.agenda-jogador-origem,
+.agenda-jogador-cobrar {
+  min-width: 130px;
+}
+
+.agenda-jogador-check,
+.agenda-jogador-cobrar {
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--bg-card);
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.agenda-jogador-check input,
+.agenda-jogador-cobrar input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--crv-orange);
+}
+
+.agenda-remover-jogador {
+  all: unset;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,80,80,.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ff7070;
+  background: rgba(255,80,80,.05);
+  transition: all .18s ease;
+}
+
+.agenda-remover-jogador:hover {
+  background: rgba(255,80,80,.12);
+  border-color: rgba(255,80,80,.55);
+  color: #ff8a8a;
+}
+
+/* ======================================================
+   TOTALIZADOR / FEEDBACK
+====================================================== */
+
+.agenda-totalizador-jogo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.agenda-totalizador-jogo div {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.agenda-totalizador-jogo span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: .72rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.agenda-totalizador-jogo strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.agenda-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.agenda-feedback-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.agenda-feedback {
+  width: 100%;
+  min-height: 18px;
+  text-align: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: .86rem;
+  font-weight: 700;
+  display: none;
+}
+
+.agenda-feedback.erro {
+  display: block;
+  color: #FF8A8A;
+  border: 1px solid rgba(255,80,80,.25);
+  background: rgba(255,80,80,.08);
+}
+
+.agenda-feedback.sucesso {
+  display: block;
+  color: var(--crv-green);
+  border: 1px solid rgba(0,255,156,.18);
+  background: rgba(0,255,156,.06);
+}
+
+/* ======================================================
+   EMPTY / ALERTAS
+====================================================== */
+
+.agenda-empty,
+.agenda-horarios-empty {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: .84rem;
+}
+
+.agenda-empty {
+  min-height: 180px;
+}
+
+.agenda-horarios-empty.pequeno {
+  min-height: 70px;
+  font-size: .78rem;
+}
+
+.agenda-alerta {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(249,137,72,.25);
+  background: rgba(249,137,72,.08);
+  color: var(--text-primary);
+  font-size: .86rem;
+  display: none;
+}
+
+.agenda-alerta.ativo {
+  display: block;
+}
+
+/* ======================================================
+   MODAL AGENDA / HORÁRIOS
+====================================================== */
+
+#modalHorariosFixos {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+}
+
+.agenda-horarios-modal {
+  position: relative;
+  width: min(1120px, calc(100vw - 48px));
+  max-width: 1120px;
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-horarios-modal .modal-header {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+#btnFecharModalHorariosFixos {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 20;
   width: 34px;
   height: 34px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+#btnFecharModalHorariosFixos svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-primary);
+  stroke: currentColor;
+}
+
+.agenda-horarios-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agenda-horarios-busca-wrap,
+.agenda-horarios-busca-wrap .input {
+  width: 100%;
+}
+
+.agenda-horarios-data-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.agenda-horarios-data-actions .input {
+  width: 210px;
+  min-height: 42px;
+}
+
+.agenda-horarios-data-actions .agenda-date-btn {
+  min-height: 42px;
+  padding-inline: 18px;
+}
+
+.agenda-horarios-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agenda-horarios-tab {
+  all: unset;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.agenda-horarios-tab:hover {
+  border-color: var(--crv-orange);
+  color: var(--crv-orange);
+  background: rgba(249,137,72,.10);
+}
+
+.agenda-horarios-tab[data-tipo="fechados"],
+.agenda-horarios-tab[data-tipo="livres"] {
+  min-width: 110px;
+  min-height: 42px;
+  justify-content: center;
+  font-size: .82rem;
+}
+
+.agenda-horarios-tab[data-tipo="fechados"].active {
+  border-color: rgba(255,80,80,.75);
+  color: #ff7070;
+  background: rgba(255,80,80,.08);
+}
+
+.agenda-horarios-tab[data-tipo="livres"].active {
+  border-color: rgba(84,205,22,.75);
+  color: #54CD16;
+  background: rgba(84,205,22,.10);
+}
+
+.agenda-horarios-tab[data-tipo="mensalista"].active,
+.agenda-horarios-tab[data-tipo="evento"].active,
+.agenda-horarios-tab[data-tipo="campeonato"].active {
+  border-color: rgba(212,168,67,.75);
+  color: #d4a843;
+  background: rgba(212,168,67,.12);
+}
+
+.agenda-horarios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.agenda-horarios-lista::-webkit-scrollbar {
+  width: 5px;
+}
+
+.agenda-horarios-lista::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+/* ======================================================
+   CONFIGURAÇÃO DA GRADE
+====================================================== */
+
+.agenda-config-horarios {
+  position: relative;
+}
+
+.agenda-config-toggle {
+  all: unset;
+  min-height: 42px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: .76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .22s ease;
+}
+
+.agenda-config-toggle:hover,
+.agenda-config-toggle.ativo {
+  border-color: #d4a843;
+  color: #d4a843;
+  background: rgba(212,168,67,.08);
+}
+
+.agenda-config-box {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 520px;
+  max-width: calc(100vw - 80px);
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: 0 18px 40px rgba(0,0,0,.22);
+  opacity: 0;
+  transform: translateY(-6px) scale(.98);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+}
+
+.agenda-config-box.ativo {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.agenda-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.agenda-config-box .input,
+.agenda-config-box select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ======================================================
+   HORÁRIOS FECHADOS / LIVRES
+====================================================== */
+
+.agenda-horario-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.agenda-horario-click {
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.agenda-horario-click:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212,168,67,.45);
+  background: rgba(212,168,67,.06);
+}
+
+.agenda-horario-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda-horario-main strong {
+  color: var(--text-primary);
+  font-size: .95rem;
+}
+
+.agenda-horario-main span {
+  color: var(--text-secondary);
+  font-size: .84rem;
+}
+
+.agenda-horario-main small {
+  color: var(--text-muted);
+  font-size: .76rem;
+}
+
+.agenda-horario-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agenda-horario-badge {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(212,168,67,.35);
+  background: rgba(212,168,67,.10);
+  color: #d4a843;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.agenda-horario-alerta {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 6px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(212,168,67,.32);
+  background: rgba(212,168,67,.08);
+  color: #d4a843 !important;
+  font-weight: 800;
+}
+
+.agenda-livres-grupo {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.agenda-livres-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.agenda-livres-header strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.agenda-livres-header span {
+  color: #d4a843;
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.agenda-livres-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.agenda-horario-livre {
+  all: unset;
+  min-height: 86px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(84,205,22,.25);
+  background: rgba(84,205,22,.07);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.agenda-horario-livre:hover {
+  transform: translateY(-2px);
+  border-color: rgba(84,205,22,.55);
+  background: rgba(84,205,22,.12);
+}
+
+.agenda-horario-livre span {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.agenda-horario-livre small {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(84,205,22,.14);
+  color: #54CD16;
+  font-size: .66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+body.light .agenda-horario-livre {
+  border-color: rgba(84,205,22,.35);
+  background: rgba(84,205,22,.10);
+}
+
+/* ======================================================
+   MODAL AVISO
+====================================================== */
+
+.agenda-aviso-modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+}
+
+.agenda-aviso-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(249,137,72,.12);
+  border: 1px solid rgba(249,137,72,.25);
+  color: var(--crv-orange);
+}
+
+.agenda-aviso-icon svg {
+  width: 34px;
+  height: 34px;
+}
+
+.agenda-aviso-modal h3 {
+  font-size: 1.2rem;
+}
+
+.agenda-aviso-modal p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.agenda-aviso-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.agenda-aviso-textarea {
+  width: 100%;
+  min-height: 96px;
+  margin-top: 14px;
+  resize: vertical;
 }
 
 /* ======================================================
@@ -1189,7 +1264,6 @@ body.light .status-cobranca {
   display: flex;
   align-items: center;
   gap: 12px;
-
   margin-bottom: 14px;
 }
 
@@ -1201,24 +1275,18 @@ body.light .status-cobranca {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-
   height: 42px;
   padding: 0 16px;
-
   border-radius: 999px;
-
   font-family: var(--font-display);
   font-size: .85rem;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
-
   cursor: pointer;
-
   border: 1px solid rgba(212,168,67,.35);
   background: rgba(212,168,67,.08);
   color: #d4a843;
-
   transition: .2s;
 }
 
@@ -1230,11 +1298,8 @@ body.light .status-cobranca {
 .agenda-marcar-todos-check input {
   width: 16px;
   height: 16px;
-
   accent-color: #d4a843;
 }
-
-/* tema claro */
 
 body.light .agenda-marcar-todos-check {
   border-color: rgba(0,56,135,.25);
@@ -1247,7 +1312,7 @@ body.light .agenda-marcar-todos-check input {
 }
 
 /* ======================================================
-   RESPONSIVE — AGENDA
+   RESPONSIVE — TABLET
 ====================================================== */
 
 @media (max-width: 1200px) {
@@ -1261,6 +1326,12 @@ body.light .agenda-marcar-todos-check input {
   }
 }
 
+@media (max-width: 980px) {
+  .agenda-livres-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .agenda-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1270,6 +1341,23 @@ body.light .agenda-marcar-todos-check input {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 760px) {
+  .agenda-config-box {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 8px;
+  }
+
+  .agenda-config-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ======================================================
+   RESPONSIVE — MOBILE
+====================================================== */
 
 @media (max-width: 768px) {
   html,
@@ -1285,8 +1373,6 @@ body.light .agenda-marcar-todos-check input {
     padding: 18px 12px 90px;
     overflow-x: hidden;
   }
-
-  /* --- TOPBAR PADRÃO DASHBOARD / CAIXA --- */
 
   .topbar {
     width: 100%;
@@ -1349,8 +1435,6 @@ body.light .agenda-marcar-todos-check input {
     flex: 0 0 38px;
   }
 
-  /* --- HERO --- */
-
   .agenda-hero {
     flex-direction: column;
     align-items: stretch;
@@ -1371,27 +1455,22 @@ body.light .agenda-marcar-todos-check input {
     overflow: hidden;
   }
 
-.agenda-hero .btn-primary {
-  width: 100%;
-  max-width: 300px;
-  min-height: 44px;
-  height: 44px;
-
-  margin: 0 auto;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  padding: 0 18px;
-
-  font-size: .88rem;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-  /* --- STATS COMPACTOS --- */
+  .agenda-hero .btn-primary,
+  .agenda-hero .btn-secondary {
+    width: 100%;
+    max-width: 300px;
+    min-height: 44px;
+    height: 44px;
+    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 18px;
+    font-size: .88rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
 
   .agenda-stats {
     grid-template-columns: 1fr;
@@ -1403,12 +1482,10 @@ body.light .agenda-marcar-todos-check input {
     width: 100%;
     min-width: 0;
     padding: 12px 10px;
-
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 3px 10px;
     align-items: center;
-
     border-radius: 18px;
     overflow: hidden;
   }
@@ -1438,8 +1515,6 @@ body.light .agenda-marcar-todos-check input {
     text-overflow: ellipsis;
   }
 
-  /* --- FILTROS --- */
-
   .agenda-filtros {
     padding: 10px;
     margin-bottom: 12px;
@@ -1463,7 +1538,6 @@ body.light .agenda-marcar-todos-check input {
   }
 
   .agenda-date-actions {
-    display: flex;
     flex-direction: column;
     gap: 8px;
   }
@@ -1475,8 +1549,6 @@ body.light .agenda-marcar-todos-check input {
     border-radius: 999px;
     font-size: .78rem;
   }
-
-  /* --- COLUNAS --- */
 
   .agenda-grid {
     grid-template-columns: 1fr;
@@ -1510,13 +1582,16 @@ body.light .agenda-marcar-todos-check input {
     padding-right: 3px;
   }
 
-  /* --- CARDS INTERNOS --- */
-
   .agenda-card {
     min-width: 0;
     min-height: auto;
     padding: 12px 10px;
     border-radius: 14px;
+  }
+
+  #agendaFuturos .agenda-card,
+  #agendaAndamento .agenda-card {
+    padding-right: 88px;
   }
 
   .agenda-card:hover {
@@ -1554,14 +1629,24 @@ body.light .agenda-marcar-todos-check input {
     padding-top: 8px;
   }
 
-  /* --- FINALIZADOS --- */
+  .agenda-card-actions {
+    top: 10px;
+    right: 10px;
+    gap: 5px;
+  }
+
+  .btn-cancelar-jogo,
+  .btn-apagar-jogo {
+    width: 32px;
+    height: 32px;
+  }
 
   #agendaFinalizados .agenda-card {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       "horario status"
       "local status"
-      "nome trash"
+      "nome actions"
       "valores valores";
     column-gap: 10px;
     row-gap: 5px;
@@ -1578,121 +1663,96 @@ body.light .agenda-marcar-todos-check input {
     border-top: 1px solid var(--border);
   }
 
-  #agendaFinalizados .btn-remover-jogo {
-    width: 34px;
-    height: 34px;
+  #agendaFinalizados .agenda-card-actions {
+    justify-self: end;
+    align-self: center;
   }
 
-  /* --- MODAL --- */
-#modalReserva {
-  padding: 0;
-  align-items: flex-end;
-  justify-content: center;
-}
+  #modalReserva {
+    padding: 0;
+    align-items: flex-end;
+    justify-content: center;
+  }
 
-.agenda-modal-card {
-  width: 100%;
-  max-width: 100% !important;
-  height: auto;
-  max-height: 92dvh;
+  .agenda-modal-card {
+    width: 100%;
+    max-width: 100% !important;
+    height: auto;
+    max-height: 92dvh;
+    border-radius: 18px 18px 0 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 
-  border-radius: 18px 18px 0 0;
-  overflow: hidden;
+  .agenda-modal-card .modal-header {
+    position: relative;
+    flex-shrink: 0;
+    padding: 18px 18px 14px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
 
-  display: flex;
-  flex-direction: column;
-}
+  .agenda-modal-card .modal-header h3 {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
 
-.agenda-modal-card .modal-header {
-  position: relative;
-  flex-shrink: 0;
+  .agenda-modal-subtitle {
+    max-width: calc(100% - 48px);
+    font-size: .8rem;
+    line-height: 1.35;
+  }
 
-  padding: 18px 18px 14px;
+  #btnFecharModalReserva {
+    top: 18px;
+    right: 18px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+  }
 
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-}
+  .agenda-modal-body {
+    flex: 1;
+    min-height: 0;
+    padding: 16px 18px;
+    gap: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
 
-.agenda-modal-card .modal-header h3 {
-  font-size: 1rem;
-  line-height: 1.15;
-}
+  .agenda-modal-card .modal-footer {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+  }
 
-.agenda-modal-subtitle {
-  max-width: calc(100% - 48px);
-  font-size: .8rem;
-  line-height: 1.35;
-}
-
-#btnFecharModalReserva {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-
-  width: 34px;
-  height: 34px;
-  padding: 0;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 999px;
-}
-
-.agenda-modal-body {
-  flex: 1;
-  min-height: 0;
-
-  padding: 16px 18px;
-  gap: 12px;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-}
-
-.agenda-modal-card .modal-footer {
-  flex-shrink: 0;
-
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: stretch;
-  gap: 8px;
-
-  padding: 14px 18px;
-
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-}
-
-.agenda-modal-card .modal-footer button {
-  width: 100%;
-  max-width: 220px;
-
-  min-height: 44px;
-  height: 44px;
-
-  margin: 0 auto;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  padding: 0 18px;
-
-  border-radius: 999px;
-
-  font-size: .84rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.agenda-modal-card .modal-footer .btn-primary,
-.agenda-modal-card .modal-footer .btn-secondary {
-  background-size: 160% 160%;
-}
+  .agenda-modal-card .modal-footer button {
+    width: 100%;
+    max-width: 220px;
+    min-height: 44px;
+    height: 44px;
+    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: .84rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
 
   .form-row {
     grid-template-columns: 1fr;
@@ -1710,27 +1770,21 @@ body.light .agenda-marcar-todos-check input {
     gap: 8px;
   }
 
-#btnAdicionarJogador {
-  width: 100%;
-  max-width: 220px;
-
-  min-height: 42px;
-  height: 42px;
-
-  margin: 0 auto;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  padding: 0 16px;
-
-  border-radius: 999px;
-
-  font-size: .84rem;
-  white-space: nowrap;
-}
+  #btnAdicionarJogador {
+    width: 100%;
+    max-width: 220px;
+    min-height: 42px;
+    height: 42px;
+    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: .84rem;
+    white-space: nowrap;
+  }
 
   .agenda-jogadores-lista {
     max-height: 260px;
@@ -1757,6 +1811,52 @@ body.light .agenda-marcar-todos-check input {
     min-height: 90px;
   }
 
+  #modalHorariosFixos {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .agenda-horarios-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .agenda-horarios-modal .modal-header {
+    padding: 18px 18px 14px;
+  }
+
+  .agenda-horarios-body {
+    padding: 16px 18px;
+  }
+
+  .agenda-horarios-data-actions {
+    align-items: stretch;
+  }
+
+  .agenda-horarios-data-actions .input,
+  .agenda-horarios-data-actions .agenda-date-btn,
+  .agenda-config-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agenda-horarios-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .agenda-horarios-tab {
+    width: auto;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .agenda-livres-grid {
+    grid-template-columns: 1fr;
+  }
+
   .agenda-aviso-modal {
     width: 100%;
     max-width: 100%;
@@ -1773,6 +1873,12 @@ body.light .agenda-marcar-todos-check input {
     min-height: 42px;
     justify-content: center;
     border-radius: 999px;
+  }
+}
+
+@media (max-width: 560px) {
+  .agenda-config-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1813,12 +1919,13 @@ body.light .agenda-marcar-todos-check input {
     font-size: .74rem;
   }
 
-.agenda-hero .btn-primary {
-  max-width: 280px;
-  min-height: 42px;
-  height: 42px;
-  font-size: .82rem;
-}
+  .agenda-hero .btn-primary,
+  .agenda-hero .btn-secondary {
+    max-width: 280px;
+    min-height: 42px;
+    height: 42px;
+    font-size: .82rem;
+  }
 
   .agenda-stat-card {
     padding: 11px 9px;

@@ -1,3 +1,4 @@
+BACKUP CAIXA JS PDV
 // ======================================================
 // CRV PDV - CAIXA / PDV
 // Versão operacional Supabase
@@ -85,15 +86,6 @@ function jogadorEmComandaCaixa(jogador) {
 
 function jogadorPendenteCaixa(jogador) {
   return !jogadorPagoCaixa(jogador) && !jogadorEmComandaCaixa(jogador);
-}
-
-// Mensalista isento: cobrar_no_jogo === false E mensalista === true
-// NÃO entram na cobrança individual do jogo.
-function jogadorMensalistaIsentoCaixa(jogador) {
-  return (
-    jogador.mensalista === true &&
-    jogador.cobrar_no_jogo === false
-  );
 }
 
 
@@ -3494,10 +3486,7 @@ async function gerarOcorrenciasMensaisCaixa(dataAlvo) {
             pago: false,
             status_pagamento: STATUS_JOGADOR_CAIXA.PENDENTE,
             pago_em: null,
-            removido: false,
-            origem_jogador: jogador.origem_jogador || "mensalista",
-            mensalista: jogador.mensalista !== undefined ? jogador.mensalista : true,
-            cobrar_no_jogo: jogador.cobrar_no_jogo !== undefined ? jogador.cobrar_no_jogo : false
+            removido: false
           }))
         );
     }
@@ -3554,36 +3543,6 @@ async function carregarJogosCaixa() {
 
     jogosCaixa = Array.isArray(jogos) ? jogos : [];
     jogadoresCaixaPorAgenda = agruparJogadoresCaixa(jogadores);
-    // Buscar mensalidades do mês atual para recalcular cobrar_no_jogo
-const competenciaHoje = obterHojeISOCaixa().slice(0, 7); // "2026-06"
-const { data: mensalidadesCaixa } = await sb
-  .from('agenda_mensalidades')
-  .select('agenda_origem_id, competencia, status')
-  .eq('empresa_id', obterEmpresaId())
-  .eq('competencia', competenciaHoje);
-
-// Recalcular cobrar_no_jogo para cada jogador mensalista
-if (mensalidadesCaixa?.length) {
-  Object.keys(jogadoresCaixaPorAgenda).forEach(agendaId => {
-    const jogo = jogosCaixa.find(j => String(j.id) === String(agendaId));
-    if (!jogo) return;
-    const origemId = jogo.recorrencia_origem_id || jogo.id;
-
-    jogadoresCaixaPorAgenda[agendaId] = jogadoresCaixaPorAgenda[agendaId].map(j => {
-      if (!j.mensalista) return j; // avulsos não mudam
-      const mensalidade = mensalidadesCaixa.find(m =>
-        String(m.agenda_origem_id) === String(origemId) &&
-        String(m.competencia) === String(competenciaHoje)
-      );
-      // Pago = isento. Pendente ou sem mensalidade = cobrar
-      const mensalidadePaga = mensalidade?.status === 'pago';
-      return {
-        ...j,
-        cobrar_no_jogo: !mensalidadePaga
-      };
-    });
-  });
-}
     vinculosComandaJogadorCaixa = {};
 
     await crvOfflineDB.salvarCache("caixa_jogos", jogosCaixa);
@@ -3796,7 +3755,7 @@ if (!jogosCaixaFiltrados.length) {
       .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
 
     const pendente = jogadores
-      .filter(jogador => !jogador.pago && !jogadorMensalistaIsentoCaixa(jogador))
+      .filter(jogador => !jogador.pago)
       .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
 
     const btn = document.createElement("button");
@@ -3973,11 +3932,11 @@ if (!jogo) {
   const lista = document.getElementById("jogoCaixaJogadores");
 
   const recebido = jogadores
-    .filter(jogador => jogadorPagoCaixa(jogador) && !jogadorMensalistaIsentoCaixa(jogador))
+    .filter(jogador => jogadorPagoCaixa(jogador))
     .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
 
   const pendente = jogadores
-    .filter(jogador => jogadorPendenteCaixa(jogador) && !jogadorMensalistaIsentoCaixa(jogador))
+    .filter(jogador => jogadorPendenteCaixa(jogador))
     .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
 
   if (titulo) {
@@ -4035,18 +3994,6 @@ if (btnRateio) {
       `;
     } else {
       lista.innerHTML = jogadores.map(jogador => {
-        // Mensalista isento: exibe como linha informativa sem cobrança
-        if (jogadorMensalistaIsentoCaixa(jogador)) {
-          return `
-            <div class="jogo-caixa-jogador-row mensalista-isento" data-jogador-id="${jogador.id}" style="opacity:.6;pointer-events:none;">
-              <span class="jogo-caixa-jogador-nome" style="grid-column:1/-1;font-style:italic;">
-                <i data-lucide="user-check" width="13" height="13" style="display:inline;margin-right:4px;"></i>
-                ${jogador.nome || "Jogador"} &mdash; <small>mensalista (isento de cobran&ccedil;a individual)</small>
-              </span>
-            </div>
-          `;
-        }
-
         const statusPagamento = statusPagamentoJogadorCaixa(jogador);
         const pago = jogadorPagoCaixa(jogador);
         const emComanda = jogadorEmComandaCaixa(jogador);
@@ -4196,9 +4143,7 @@ function aplicarRateioJogoCaixa() {
   }
 
   const totalCentavos = Math.round(totalParaRatear * 100);
-    // Rateio somente entre jogadores cobráveis (exclui mensalistas isentos)
-    const jogadoresCobrarveisRateio = jogadoresValidos.filter(j => !jogadorMensalistaIsentoCaixa(j));
-    const qtd = jogadoresCobrarveisRateio.length;
+    const qtd = jogadoresValidos.length;
 
   const baseCentavos = Math.floor(totalCentavos / qtd);
   let restoCentavos = totalCentavos - (baseCentavos * qtd);
@@ -4398,7 +4343,6 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
         total: valorCobrado,
         origem: "agenda",
         origem_id: jogo.id,
-        agenda_id: jogo.id,
         agenda_jogador_id: jogador.id,
         operador_id: obterOperadorAtualId()
       }
@@ -4509,12 +4453,9 @@ async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
 
   const lista = jogadores || [];
 
-  // Mensalistas isentos não entram na contagem de cobrança
-  const listaCobravel = lista.filter(j => !jogadorMensalistaIsentoCaixa(j));
-
-  const pagos = listaCobravel.filter(jogador => jogadorPagoCaixa(jogador));
-  const emComanda = listaCobravel.filter(jogador => jogadorEmComandaCaixa(jogador));
-  const pendentes = listaCobravel.filter(jogador => jogadorPendenteCaixa(jogador));
+  const pagos = lista.filter(jogador => jogadorPagoCaixa(jogador));
+  const emComanda = lista.filter(jogador => jogadorEmComandaCaixa(jogador));
+  const pendentes = lista.filter(jogador => jogadorPendenteCaixa(jogador));
 
   const totalPago = pagos.reduce((acc, jogador) => {
     return acc + Number(jogador.valor || 0);
@@ -4524,9 +4465,8 @@ async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
     return acc + Number(jogador.valor || 0);
   }, 0);
 
-  // Jogo fecha quando todos os cobráveis pagaram (mensalistas isentos ignorados)
   const statusJogo =
-    listaCobravel.length > 0 &&
+    lista.length > 0 &&
     pendentes.length === 0 &&
     (totalPago > 0 || emComanda.length > 0)
       ? "fechado"
@@ -4677,18 +4617,15 @@ async function confirmarPagamentoJogoCaixa() {
 
 const totalSelecionado = atualizarTotalSelecionadoJogoCaixa();
 
-// Mensalistas isentos não entram na contagem de cobrança
-const jogadoresCobrarveis = jogadores.filter(j => !jogadorMensalistaIsentoCaixa(j));
-
-const jogadoresEmComanda = jogadoresCobrarveis.filter(jogador => {
+const jogadoresEmComanda = jogadores.filter(jogador => {
   return jogadorEmComandaCaixa(jogador);
 }).length;
 
 const jogadoresPendentesAposPagamento =
-  jogadoresCobrarveis.length -
+  jogadores.length -
   linhasSelecionadas.length -
   jogadoresEmComanda -
-  jogadoresCobrarveis.filter(jogador => jogadorPagoCaixa(jogador)).length;
+  jogadores.filter(jogador => jogadorPagoCaixa(jogador)).length;
 
 const pagamentoParcial =
   jogadoresPendentesAposPagamento > 0 || jogadoresEmComanda > 0;
@@ -4754,12 +4691,10 @@ const confirmar = await abrirConfirmacaoCaixa({
     renderHistorico();
     atualizarInfobar();
 
-const jogoIdFinalizado = jogoSelecionadoCaixa.id;
+    fecharModalFinalizarJogoCaixa();
+    fecharModalSelecionarJogo();
 
-fecharModalFinalizarJogoCaixa();
-fecharModalSelecionarJogo();
-
-const jogadoresAtualizados = jogadoresCaixaPorAgenda[jogoIdFinalizado] || [];
+const jogadoresAtualizados = jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [];
 
 const pendentesAgora = jogadoresAtualizados.filter(jogador =>
   jogadorPendenteCaixa(jogador)

@@ -132,6 +132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderRelatorio();
 
   document.getElementById("btnExportPDF")?.addEventListener("click", exportarPDF);
+  document.getElementById("btnExportExcel")?.addEventListener("click", exportarExcel);
 });
 
 async function aguardarContextoRelatorios() {
@@ -304,7 +305,18 @@ produtos = Array.isArray(produtosSupabase)
         ? caixas
         : [];
 
-    agendaFechadaData = [];
+    if (empresaUsaAgendaEsportiva()) {
+      const { data: jogosAgenda } = await sb
+        .from("agenda")
+        .select("id, tipo_jogo, local_recurso, hora_inicio, hora_fim, data_agendamento, cliente_nome, total_pago_jogadores, total_pendente_jogadores, total_jogadores, status_jogo")
+        .eq("empresa_id", empresaId)
+        .in("status_jogo", ["fechado", "pago", "cobranca"])
+        .order("data_agendamento", { ascending: false })
+        .limit(200);
+      agendaFechadaData = Array.isArray(jogosAgenda) ? jogosAgenda : [];
+    } else {
+      agendaFechadaData = [];
+    }
 
     nomeFantasiaRelatorio =
       limparNomeArquivo(
@@ -405,11 +417,15 @@ function getIntervaloPeriodo() {
 function dataVendaRelatorio(data) {
   if (!data) return null;
 
-  return new Date(
-    String(data).endsWith("Z")
-      ? data
-      : `${data}Z`
-  );
+  const valor = String(data).trim();
+
+  // Se já vier ISO completo com timezone, respeita
+  if (/z$/i.test(valor) || /[+-]\d{2}:\d{2}$/.test(valor)) {
+    return new Date(valor);
+  }
+
+  // Se vier sem timezone, trata como horário local do sistema
+  return new Date(valor.replace(" ", "T"));
 }
 
 function formatarDataVendaRelatorio(data) {
@@ -437,26 +453,16 @@ function getVendasFiltradas() {
 
   return vendasData
     .filter(venda => {
-      if (!venda.data) return false;
-
-      const dataVenda = new Date(
-        String(venda.data).endsWith("Z")
-          ? venda.data
-          : `${venda.data}Z`
-      );
+      const dataVenda = dataVendaRelatorio(venda.data);
+      if (!dataVenda || Number.isNaN(dataVenda.getTime())) return false;
 
       return dataVenda >= inicio && dataVenda <= fim;
     })
     .sort((a, b) => {
-      const dataA = new Date(
-        String(a.data).endsWith("Z") ? a.data : `${a.data}Z`
-      );
+      const dataA = dataVendaRelatorio(a.data);
+      const dataB = dataVendaRelatorio(b.data);
 
-      const dataB = new Date(
-        String(b.data).endsWith("Z") ? b.data : `${b.data}Z`
-      );
-
-      return dataB - dataA;
+      return (dataB?.getTime() || 0) - (dataA?.getTime() || 0);
     });
 }
 
@@ -503,17 +509,12 @@ function renderComparativoPeriodo(faturamentoAtual) {
   const inicioAnterior = new Date(inicio.getTime() - duracao - 1);
   const fimAnterior = new Date(inicio.getTime() - 1);
 
-  const vendasAnterior = vendasData.filter(venda => {
-    if (!venda.data) return false;
+const vendasAnterior = vendasData.filter(venda => {
+  const dataVenda = dataVendaRelatorio(venda.data);
+  if (!dataVenda || Number.isNaN(dataVenda.getTime())) return false;
 
-    const dataVenda = new Date(
-      String(venda.data).endsWith("Z")
-        ? venda.data
-        : `${venda.data}Z`
-    );
-
-    return dataVenda >= inicioAnterior && dataVenda <= fimAnterior;
-  });
+  return dataVenda >= inicioAnterior && dataVenda <= fimAnterior;
+});
 
   const faturamentoAnterior = vendasAnterior.reduce((acc, venda) => {
     return acc + Number(venda.total || 0);
@@ -594,14 +595,17 @@ function renderGraficoHoras(vendas) {
   const horas = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}h`);
   const dados = Array(14).fill(0);
 
-  vendas.forEach(venda => {
-    const hora = new Date(venda.data).getHours();
-    const index = hora - 7;
+vendas.forEach(venda => {
+  const dataVenda = dataVendaRelatorio(venda.data);
+  if (!dataVenda || Number.isNaN(dataVenda.getTime())) return;
 
-    if (index >= 0 && index < 14) {
-      dados[index] += Number(venda.total || 0);
-    }
-  });
+  const hora = dataVenda.getHours();
+  const index = hora - 7;
+
+  if (index >= 0 && index < 14) {
+    dados[index] += Number(venda.total || 0);
+  }
+});
 
   const ctx = document.getElementById("chartHoras")?.getContext("2d");
   if (!ctx) return;
@@ -1019,6 +1023,7 @@ function montarRecebimentosJogosAgrupados(vendas) {
       const jogoInfo = quebrarDescricaoJogoRelatorio(descricaoLimpa);
 
       mapa[chave] = {
+        chave: chave,               // ← ADICIONAR: necessário para cruzar com agendaFechadaData
         responsavel: obterResponsavelJogoRelatorio(venda),
         descricao: descricaoLimpa,
         nome: jogoInfo.nome,
@@ -1029,7 +1034,8 @@ function montarRecebimentosJogosAgrupados(vendas) {
         totalDireto: 0,
         totalComanda: 0,
         qtdDireto: 0,
-        qtdComanda: 0
+        qtdComanda: 0,
+        qtdMensalistas: 0           // ← ADICIONAR: mensalistas isentos participantes
       };
     }
 
@@ -1077,6 +1083,16 @@ function montarRecebimentosJogosAgrupados(vendas) {
           ? "MISTO"
           : [...item.formas][0] || "—";
 
+      // Cruzar com agendaFechadaData para contar mensalistas isentos
+      const jogoAgenda = agendaFechadaData.find(j =>
+        String(j.id) === String(item.chave)
+      );
+      if (jogoAgenda) {
+        const totalJogadores = Number(jogoAgenda.total_jogadores || 0);
+        const cobrados = item.qtdDireto + item.qtdComanda;
+        item.qtdMensalistas = Math.max(0, totalJogadores - cobrados);
+      }
+
       return item;
     })
     .filter(item => Number(item.total || 0) > 0);
@@ -1085,7 +1101,7 @@ function montarRecebimentosJogosAgrupados(vendas) {
 // ======================================================
 // EXPORTAR EXCEL COMPATÍVEL
 // ======================================================
-function exportarCSV() {
+function exportarExcel() {
   const vendas = getVendasFiltradas();
 
   if (!vendas.length) {
@@ -1093,85 +1109,254 @@ function exportarCSV() {
     return;
   }
 
-  const linhas = [
-    ["RELATÓRIO FINANCEIRO - CRV PDV"],
-    [`Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
-    [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
-    [],
-    ["Data", "Hora", "Pagamento", "Subtotal", "Desconto", "Total", "Lucro bruto", "Margem"]
-  ];
+  if (typeof XLSX === "undefined") {
+    mostrarModalAviso("Biblioteca de Excel não carregada.");
+    return;
+  }
 
-  vendas.forEach(v => {
-    const total = Number(v.total || 0);
-    const lucro = Number(v.lucro_total || 0);
-    const margem = total > 0 ? (lucro / total) * 100 : 0;
-
-    linhas.push([
-      formatarDataVendaRelatorio(v.data),
-      formatarHoraVendaRelatorio(v.data),
-      v.forma_pagamento || "—",
-      numeroExcel(v.subtotal),
-      numeroExcel(v.desconto),
-      numeroExcel(v.total),
-      numeroExcel(lucro),
-      `${margem.toFixed(1)}%`
-    ]);
-  });
+  const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+  const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
+  const qtd = vendas.length;
+  const ticket = qtd > 0 ? faturamento / qtd : 0;
+  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
 
   const rankingVendidos = montarRankingProdutos(vendas)
     .sort((a, b) => b.qtd - a.qtd);
 
-  if (rankingVendidos.length) {
-    linhas.push([]);
-    linhas.push(["PRODUTOS MAIS VENDIDOS"]);
-    linhas.push(["Produto", "Quantidade", "Total vendido", "Lucro"]);
-
-    rankingVendidos.forEach(produto => {
-      linhas.push([
-        produto.nome,
-        produto.qtd,
-        numeroExcel(produto.total),
-        numeroExcel(produto.lucro)
-      ]);
-    });
-  }
+  const rankingLucro = montarRankingProdutos(vendas)
+    .sort((a, b) => b.lucro - a.lucro);
 
   const jogosAgrupados = montarRecebimentosJogosAgrupados(vendas);
 
-  if (jogosAgrupados.length) {
-    linhas.push([]);
-    linhas.push(["RECEBIMENTOS DE JOGOS"]);
-    linhas.push(["Data", "Tipo", "Jogo", "Pagamento", "Direto", "Comanda", "Total"]);
+  const wb = XLSX.utils.book_new();
 
-jogosAgrupados.forEach(jogo => {
-  linhas.push([
-    formatarDataVendaRelatorio(jogo.data),
-    jogo.tipo,
-    jogo.nome,
-    jogo.forma,
-    `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalDireto)}`,
-    `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${numeroExcel(jogo.totalComanda)}`,
-    numeroExcel(jogo.total)
-  ]);
-});
-  }
+  // =========================
+  // ABA RESUMO
+  // =========================
+  const resumo = [
+    ["RELATÓRIO FINANCEIRO - CRV PDV"],
+    [`Empresa: ${nomeFantasiaRelatorio}`],
+    [`Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
+    [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
+    [],
+    ["Indicador", "Valor"],
+    ["Faturamento", Number(faturamento || 0)],
+    ["Lucro bruto", Number(lucro || 0)],
+    ["Total de vendas", Number(qtd || 0)],
+    ["Ticket médio", Number(ticket || 0)],
+    ["Margem", Number(margem || 0) / 100]
+  ];
 
-  const csv = linhas
-    .map(linha => linha.map(campo => `"${String(campo ?? "").replace(/"/g, '""')}"`).join(";"))
-    .join("\n");
+  const wsResumo = XLSX.utils.aoa_to_sheet(resumo);
+  wsResumo["!cols"] = [{ wch: 24 }, { wch: 18 }];
+  aplicarEstilosBasicosExcel(wsResumo, {
+    titulo: "A1",
+    moedaCols: ["B7", "B8", "B10"],
+    percentCols: ["B11"]
+  });
+  XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo");
 
-  const blob = new Blob(["\uFEFF" + csv], {
-    type: "text/csv;charset=utf-8;"
+  // =========================
+  // ABA VENDAS
+  // =========================
+  const vendasLinhas = [
+    ["Data", "Hora", "Pagamento", "Subtotal", "Desconto", "Total", "Lucro bruto", "Margem", "Origem", "Descrição"]
+  ];
+
+  vendas.forEach(v => {
+    const total = Number(v.total || 0);
+    const lucroVenda = Number(v.lucro_total || 0);
+    const margemVenda = total > 0 ? (lucroVenda / total) : 0;
+
+    vendasLinhas.push([
+      formatarDataVendaRelatorio(v.data),
+      formatarHoraVendaRelatorio(v.data),
+      labelFormaPagamentoRelatorio(v.forma_pagamento),
+      Number(v.subtotal || 0),
+      Number(v.desconto || 0),
+      Number(v.total || 0),
+      lucroVenda,
+      margemVenda,
+      v.origem || "venda",
+      v.descricao || "—"
+    ]);
   });
 
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `relatorio_financeiro_${nomeFantasiaRelatorio}_crv_pdv_${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
+  const wsVendas = XLSX.utils.aoa_to_sheet(vendasLinhas);
+  wsVendas["!cols"] = [
+    { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 50 }
+  ];
+  wsVendas["!autofilter"] = { ref: `A1:J${vendasLinhas.length}` };
+  aplicarEstilosBasicosExcel(wsVendas, {
+    headerRow: 1,
+    moedaColunasPorIndice: [3, 4, 5, 6],
+    percentualColunasPorIndice: [7],
+    totalLinhas: vendasLinhas.length
+  });
+  XLSX.utils.book_append_sheet(wb, wsVendas, "Vendas");
+
+  // =========================
+  // ABA PRODUTOS
+  // =========================
+  const produtosLinhas = [
+    ["Produto", "Quantidade", "Total vendido", "Lucro"]
+  ];
+
+  rankingVendidos.forEach(produto => {
+    produtosLinhas.push([
+      produto.nome,
+      Number(produto.qtd || 0),
+      Number(produto.total || 0),
+      Number(produto.lucro || 0)
+    ]);
+  });
+
+  const wsProdutos = XLSX.utils.aoa_to_sheet(produtosLinhas);
+  wsProdutos["!cols"] = [{ wch: 36 }, { wch: 14 }, { wch: 18 }, { wch: 18 }];
+  wsProdutos["!autofilter"] = { ref: `A1:D${produtosLinhas.length}` };
+  aplicarEstilosBasicosExcel(wsProdutos, {
+    headerRow: 1,
+    moedaColunasPorIndice: [2, 3],
+    totalLinhas: produtosLinhas.length
+  });
+  XLSX.utils.book_append_sheet(wb, wsProdutos, "Produtos");
+
+  // =========================
+  // ABA PRODUTOS LUCRO
+  // =========================
+  const produtosLucroLinhas = [
+    ["Produto", "Quantidade", "Faturamento", "Lucro"]
+  ];
+
+  rankingLucro.forEach(produto => {
+    produtosLucroLinhas.push([
+      produto.nome,
+      Number(produto.qtd || 0),
+      Number(produto.total || 0),
+      Number(produto.lucro || 0)
+    ]);
+  });
+
+  const wsProdutosLucro = XLSX.utils.aoa_to_sheet(produtosLucroLinhas);
+  wsProdutosLucro["!cols"] = [{ wch: 36 }, { wch: 14 }, { wch: 18 }, { wch: 18 }];
+  wsProdutosLucro["!autofilter"] = { ref: `A1:D${produtosLucroLinhas.length}` };
+  aplicarEstilosBasicosExcel(wsProdutosLucro, {
+    headerRow: 1,
+    moedaColunasPorIndice: [2, 3],
+    totalLinhas: produtosLucroLinhas.length
+  });
+  XLSX.utils.book_append_sheet(wb, wsProdutosLucro, "Lucro Produtos");
+
+  // =========================
+  // ABA JOGOS
+  // =========================
+  if (jogosAgrupados.length) {
+    const jogosLinhas = [
+      ["Data", "Tipo", "Jogo", "Pagamento", "Direto", "Comanda", "Mensalistas", "Total"]
+    ];
+
+    jogosAgrupados.forEach(jogo => {
+      jogosLinhas.push([
+        formatarDataVendaRelatorio(jogo.data),
+        jogo.tipo,
+        jogo.nome,
+        jogo.forma,
+        `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${fmt(jogo.totalDireto)}`,
+        `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${fmt(jogo.totalComanda)}`,
+        jogo.qtdMensalistas > 0 ? jogo.qtdMensalistas : 0,
+        Number(jogo.total || 0)
+      ]);
+    });
+
+    const wsJogos = XLSX.utils.aoa_to_sheet(jogosLinhas);
+    wsJogos["!cols"] = [
+      { wch: 12 }, { wch: 12 }, { wch: 34 }, { wch: 14 },
+      { wch: 28 }, { wch: 28 }, { wch: 14 }, { wch: 16 }
+    ];
+    wsJogos["!autofilter"] = { ref: `A1:H${jogosLinhas.length}` };
+    aplicarEstilosBasicosExcel(wsJogos, {
+      headerRow: 1,
+      moedaColunasPorIndice: [7],
+      totalLinhas: jogosLinhas.length
+    });
+    XLSX.utils.book_append_sheet(wb, wsJogos, "Jogos");
+  }
+
+  // =========================
+  // ABA ESTOQUE BAIXO
+  // =========================
+  if (produtosData.length) {
+    const estoqueLinhas = [
+      ["Produto", "Categoria", "Estoque"]
+    ];
+
+    produtosData.forEach(produto => {
+      estoqueLinhas.push([
+        produto.nome || "Produto",
+        produto.categoria || "Sem categoria",
+        Number(produto.estoque || 0)
+      ]);
+    });
+
+    const wsEstoque = XLSX.utils.aoa_to_sheet(estoqueLinhas);
+    wsEstoque["!cols"] = [{ wch: 34 }, { wch: 24 }, { wch: 12 }];
+    wsEstoque["!autofilter"] = { ref: `A1:C${estoqueLinhas.length}` };
+    aplicarEstilosBasicosExcel(wsEstoque, {
+      headerRow: 1,
+      totalLinhas: estoqueLinhas.length
+    });
+    XLSX.utils.book_append_sheet(wb, wsEstoque, "Estoque Baixo");
+  }
+
+  XLSX.writeFile(
+    wb,
+    `relatorio_financeiro_${nomeFantasiaRelatorio}_crv_pdv_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
 }
 
-function numeroExcel(valor) {
-  return Number(valor || 0).toFixed(2).replace(".", ",");
+function aplicarEstilosBasicosExcel(ws, config = {}) {
+  const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+  const moedaColunasPorIndice = config.moedaColunasPorIndice || [];
+  const percentualColunasPorIndice = config.percentualColunasPorIndice || [];
+
+  for (let row = range.s.r; row <= range.e.r; row++) {
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const endereco = XLSX.utils.encode_cell({ r: row, c: col });
+      const cell = ws[endereco];
+      if (!cell) continue;
+
+      if (row === 0) {
+        cell.s = {
+          font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "1F4E78" } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      }
+
+      if (config.headerRow && row === config.headerRow - 1) {
+        cell.s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "4472C4" } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true }
+        };
+      }
+
+      if (row > 0 && row % 2 === 1 && !cell.s) {
+        cell.s = {
+          fill: { fgColor: { rgb: "F8F9FA" } }
+        };
+      }
+
+      if (moedaColunasPorIndice.includes(col) && typeof cell.v === "number") {
+        cell.z = '"R$" #,##0.00';
+      }
+
+      if (percentualColunasPorIndice.includes(col) && typeof cell.v === "number") {
+        cell.z = '0.0%';
+      }
+    }
+  }
 }
 
 // ======================================================

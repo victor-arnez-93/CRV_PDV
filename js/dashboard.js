@@ -492,24 +492,23 @@ function initChart(vendas) {
       weekday: "short"
     }).replace(".", ""));
 
-    const totalDia = vendas
-      .filter(v => {
-        const dataVenda = obterDataVenda(v);
-        if (!dataVenda) return false;
+const totalDia = vendas
+  .filter(v => {
+    const dataVenda = obterDataVenda(v);
+    if (!dataVenda) return false;
 
-        const dataConvertida = new Date(dataVenda);
+    const dataConvertida = criarDataVendaBrasil(dataVenda);
+    if (!dataConvertida) return false;
 
-        if (Number.isNaN(dataConvertida.getTime())) {
-          return false;
-        }
+    const partesBrasil = obterPartesDataBrasil(dataConvertida);
 
-        return (
-          dataConvertida.getDate() === dia &&
-          dataConvertida.getMonth() === mes &&
-          dataConvertida.getFullYear() === ano
-        );
-      })
-      .reduce((acc, v) => acc + Number(v.total || 0), 0);
+    return (
+      partesBrasil.dia === String(dia).padStart(2, "0") &&
+      partesBrasil.mes === String(mes + 1).padStart(2, "0") &&
+      partesBrasil.ano === String(ano)
+    );
+  })
+  .reduce((acc, v) => acc + Number(v.total || 0), 0);
 
     valores.push(totalDia);
   }
