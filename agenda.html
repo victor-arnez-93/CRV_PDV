@@ -146,19 +146,14 @@
     </p>
   </div>
 
-    <div class="agenda-hero-actions">
+  <div class="agenda-hero-actions">
 
-    <button class="btn-secondary" id="btnHorariosFixos" type="button">
-      <i data-lucide="calendar-search" width="16" height="16"></i>
-      <span>Ver agenda</span>
-    </button>
+  <button class="btn-primary" id="btnNovaReserva">
+    <i data-lucide="plus" width="16" height="16"></i>
+    <span>Novo Horário</span>
+  </button>
 
-    <button class="btn-primary" id="btnNovaReserva">
-      <i data-lucide="plus" width="16" height="16"></i>
-      <span>Novo Horário</span>
-    </button>
-
-  </div>
+</div>
 
 </section>
 
@@ -190,6 +185,75 @@
         </div>
 
       </section>
+
+<section class="agenda-toggle-wrap">
+<button
+    class="btn-secondary agenda-toggle-btn"
+    id="btnAgendaInline"
+    type="button">
+
+<i data-lucide="calendar-search" width="16"></i>
+
+<span>Agenda</span>
+
+<i
+    data-lucide="chevron-down"
+    width="18"
+    class="agenda-toggle-icon">
+</i>
+</section>
+
+      <section class="card agenda-inline-panel" id="agendaInlinePanel" style="display:none;">
+
+  <div class="agenda-inline-toolbar">
+
+    <input
+      class="input"
+      id="buscaAgendaInline"
+      placeholder="Buscar responsável, jogador, campo, tipo ou horário..."
+    >
+
+    <select class="input" id="tipoAgendaInline">
+      <option value="todos">Todos</option>
+      <option value="fechados">Fechados</option>
+      <option value="livres">Apenas livres</option>
+      <option value="mensalista">Mensalistas</option>
+      <option value="evento">Eventos</option>
+      <option value="campeonato">Campeonatos</option>
+    </select>
+
+    <select class="input" id="campoAgendaInline">
+      <option value="">Todos os campos</option>
+    </select>
+
+  </div>
+
+  <div class="agenda-inline-table-wrap">
+    <table class="agenda-inline-table">
+      <thead>
+        <tr>
+          <th>Horário</th>
+          <th>Campo</th>
+          <th>Responsável</th>
+          <th>Tipo</th>
+          <th>Status</th>
+          <th>Jogadores</th>
+          <th>Pagamento</th>
+          <th class="right">Ações</th>
+        </tr>
+      </thead>
+
+      <tbody id="agendaInlineTabela">
+        <tr>
+          <td colspan="8" class="agenda-inline-empty">
+            Abra a agenda para consultar horários.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
 
       <!-- FILTROS -->
       <section class="card agenda-filtros">
@@ -361,7 +425,6 @@
           <select class="input" id="tipoJogo">
             <option value="avulso">Avulso</option>
             <option value="mensalista">Mensalista</option>
-            <option value="misto">Misto</option>
             <option value="evento">Evento</option>
             <option value="campeonato">Campeonato</option>
           </select>
@@ -380,19 +443,11 @@
 
       </div>
 
-      <div class="form-row">
+<div class="form-row">
 
   <div class="input-group">
     <label class="input-label">Valor previsto do jogo</label>
     <input class="input" id="valorPrevisto" placeholder="Ex: 250,00">
-  </div>
-
-  <div class="input-group">
-    <label class="input-label">Recorrência</label>
-    <select class="input" id="recorrenciaJogo">
-      <option value="avulso">Avulso</option>
-      <option value="mensal">Mensal</option>
-    </select>
   </div>
 
 </div>
@@ -415,20 +470,6 @@
       placeholder="Ex: 10"
     >
   </div>
-
-</div>
-
-      <div class="agenda-recorrencia-opcoes">
-
-  <label class="agenda-times-check">
-    <input type="checkbox" id="permiteAvulsos">
-    <span>Permitir jogadores avulsos neste horário</span>
-  </label>
-
-  <label class="agenda-times-check">
-    <input type="checkbox" id="permiteTimeAvulso">
-    <span>Permitir time avulso adversário</span>
-  </label>
 
 </div>
 

@@ -43,6 +43,7 @@ let jogadoresSelecionadosTemporariosJogoCaixa = {};
 let vinculosComandaJogadorCaixa = {};
 let qtdComandasAbertasCaixa = 0;
 let qtdJogosAbertosCaixa = 0;
+let recebimentoAgendaCaixa = null;
 const STATUS_JOGADOR_CAIXA = {
   PENDENTE: "pendente",
   EM_COBRANCA: "em_cobranca",
@@ -481,11 +482,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupModalSelecionarJogo();
   setupModalTodosProdutosCaixa();
 
-  caixaInicializado = true;
+caixaInicializado = true;
 
-  iniciarAvisosFimDeJogoCaixa();
+iniciarAvisosFimDeJogoCaixa();
 
-  logCaixa("Tela pronta para operação.", "success");
+await processarRecebimentoAgendaAoAbrirCaixa();
+
+logCaixa("Tela pronta para operação.", "success");
 });
 
 async function inicializarCaixa() {
@@ -2086,6 +2089,147 @@ async function validarCarrinhoComEstoque() {
   return true;
 }
 
+function obterRecebimentoAgendaStorage() {
+  try {
+    const bruto =
+      sessionStorage.getItem("crv_recebimento_agenda_caixa");
+
+    if (!bruto) return null;
+
+    const dados = JSON.parse(bruto);
+
+    if (
+      dados?.tipo !== "agenda_mensalidade" ||
+      !dados.mensalidade_id ||
+      !dados.valor
+    ) {
+      return null;
+    }
+
+    return dados;
+
+  } catch (err) {
+    console.warn("[CAIXA][RECEBIMENTO AGENDA]", err);
+    return null;
+  }
+}
+
+function formatarCompetenciaCaixa(comp) {
+  if (!comp) return "-";
+
+  const [ano, mes] =
+    String(comp).split("-").map(Number);
+
+  const meses = [
+    "",
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro"
+  ];
+
+  return `${meses[mes]} de ${ano}`;
+}
+
+async function processarRecebimentoAgendaAoAbrirCaixa() {
+  const recebimento =
+    obterRecebimentoAgendaStorage();
+
+  if (!recebimento) return;
+
+  if (!caixa || caixa.status !== "aberto") {
+    await alertaCaixa(
+      "Abra o caixa",
+      "Existe uma mensalidade enviada pela Agenda para receber. Abra o caixa primeiro e depois volte para receber."
+    );
+
+    return;
+  }
+
+  recebimentoAgendaCaixa = recebimento;
+
+  modoPDV = "venda";
+  comandaAtiva = null;
+  comandaOculta = false;
+  jogoSelecionadoCaixa = null;
+
+  carrinho = [
+    {
+      id: `agenda-mensalidade-${recebimento.mensalidade_id}`,
+      nome: recebimento.descricao,
+      preco: Number(recebimento.valor || 0),
+      preco_custo: 0,
+      quantidade: 1,
+      produto_manual: true,
+
+      origem: "agenda_mensalidade",
+      origem_id: recebimento.mensalidade_id,
+      agenda_id: recebimento.agenda_id,
+      mensalidade_id: recebimento.mensalidade_id
+    }
+  ];
+
+  atualizarInterfaceModoPDV();
+  renderCarrinho();
+
+  await abrirConfirmacaoCaixa({
+    titulo: "Receber mensalidade",
+    mensagem: `
+      <strong>${recebimento.cliente_nome || "Mensalista"}</strong><br>
+      ${recebimento.local_recurso || "Quadra/Campo"}
+      ${recebimento.hora_inicio ? ` · ${formatarHoraCaixa(recebimento.hora_inicio)} às ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
+      Mensalidade referente a
+      <strong>${formatarCompetenciaCaixa(recebimento.competencia)}</strong><br><br>
+      Valor:
+      <strong>${fmt(recebimento.valor)}</strong><br><br>
+      Escolha a forma de pagamento no Caixa e finalize a venda.
+    `,
+    textoConfirmar: "Ir para pagamento",
+    mostrarCancelar: false
+  });
+
+  const primeiroPagamento =
+    document.querySelector(".pay-btn");
+
+  if (primeiroPagamento) {
+    primeiroPagamento.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+}
+
+async function atualizarMensalidadeAgendaAposVenda(vendaId) {
+  const recebimento =
+    recebimentoAgendaCaixa || obterRecebimentoAgendaStorage();
+
+  if (!recebimento?.mensalidade_id) return;
+
+  const { error } = await sb
+    .from("agenda_mensalidades")
+    .update({
+      status: "pago",
+      forma_pagamento: metodoPagamento,
+      pago_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString()
+    })
+    .eq("id", recebimento.mensalidade_id)
+    .eq("empresa_id", obterEmpresaId());
+
+  if (error) throw error;
+
+  sessionStorage.removeItem("crv_recebimento_agenda_caixa");
+  recebimentoAgendaCaixa = null;
+}
+
 // ======================================================
 // FINALIZAR VENDA
 // ======================================================
@@ -2286,7 +2430,12 @@ if (!sistemaOnline()) {
 
     await validarCarrinhoComEstoque();
 
-    const empresaId = obterEmpresaId();
+const empresaId = obterEmpresaId();
+
+const itemMensalidadeAgenda =
+  carrinho.find(item => {
+    return String(item.origem || "") === "agenda_mensalidade";
+  }) || null;
 
 const vendaPayload = {
   empresa_id: empresaId,
@@ -2297,9 +2446,23 @@ const vendaPayload = {
   total: total,
   forma_pagamento: metodoPagamento,
   troco: troco,
-  origem: "pdv",
-  origem_id: null,
-  descricao: "Venda rápida",
+
+  origem: itemMensalidadeAgenda
+    ? "agenda_mensalidade"
+    : "pdv",
+
+  origem_id: itemMensalidadeAgenda
+    ? itemMensalidadeAgenda.mensalidade_id
+    : null,
+
+  agenda_id: itemMensalidadeAgenda
+    ? itemMensalidadeAgenda.agenda_id
+    : null,
+
+  descricao: itemMensalidadeAgenda
+    ? itemMensalidadeAgenda.nome
+    : "Venda rápida",
+
   data: new Date().toISOString(),
   operador_id: obterOperadorAtualId(),
   venda_manual: carrinho.some(item => item.produto_manual === true)
@@ -2327,17 +2490,22 @@ const vendaPayload = {
       const lucroTotal =
         lucroUnitario * quantidade;
 
-      return {
-        empresa_id: empresaId,
-        venda_id: vendaData.id,
-        produto_id: item.produto_manual ? null : item.id,
-        nome: item.nome,
-        preco: precoVenda,
-        preco_custo: precoCusto,
-        lucro_unitario: lucroUnitario,
-        lucro_total: lucroTotal,
-        quantidade: quantidade
-      };
+return {
+  empresa_id: empresaId,
+  venda_id: vendaData.id,
+  produto_id: item.produto_manual ? null : item.id,
+  nome: item.nome,
+  preco: precoVenda,
+  preco_custo: precoCusto,
+  lucro_unitario: lucroUnitario,
+  lucro_total: lucroTotal,
+  quantidade: quantidade,
+
+  origem: item.origem || "pdv",
+  origem_id: item.origem_id || null,
+  agenda_id: item.agenda_id || null,
+  agenda_jogador_id: item.agenda_jogador_id || null
+};
     });
 
     const { error: itensError } = await sb
@@ -2345,6 +2513,10 @@ const vendaPayload = {
       .insert(itensPayload);
 
     if (itensError) throw itensError;
+
+    if (itemMensalidadeAgenda) {
+  await atualizarMensalidadeAgendaAposVenda(vendaData.id);
+}
 
     await baixarEstoqueProdutos();
 
