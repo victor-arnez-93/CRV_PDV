@@ -411,6 +411,16 @@ document
 
   });
 
+  document
+  .getElementById("btnConfigGradeInline")
+  ?.addEventListener("click", () => {
+    abrirModalHorariosFixos();
+
+    setTimeout(() => {
+      document.getElementById("btnConfigHorarios")?.click();
+    }, 80);
+  });
+
 [
   "configHoraAbertura",
   "configHoraFechamento",
@@ -4164,14 +4174,19 @@ function criarLinhasLivresAgendaInline() {
 
       if (ocupado) return;
 
-      const textoBusca =
-        normalizarBuscaAgendaInline([
-          inicio,
-          fim,
-          local,
-          "livre",
-          duracao === 90 ? "1h30" : "1h"
-        ].join(" "));
+const horaCompacta =
+  `${inicio} ${fim} ${inicio.replace(":", "")} ${fim.replace(":", "")}`;
+
+const textoBusca =
+  normalizarBuscaAgendaInline([
+    inicio,
+    fim,
+    horaCompacta,
+    local,
+    "livre",
+    duracao === 90 ? "1h30" : "1h",
+    duracao === 90 ? "90 minutos" : "60 minutos"
+  ].join(" "));
 
       if (busca && !textoBusca.includes(busca)) return;
 
