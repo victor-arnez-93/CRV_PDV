@@ -23,6 +23,19 @@
     }
   }
 
+async function aguardarEmpresaCRV(timeoutMs = 10000) {
+  const inicio = Date.now();
+
+  while (Date.now() - inicio < timeoutMs) {
+    if (window.APP_EMPRESA_ID && window.APP_USER) {
+      return true;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+
+  return false;
+}
 
   // ==========================================
   // 🔍 VERIFICAR SESSÃO
@@ -35,6 +48,8 @@ async function verificarSessao() {
 
     if (data?.session) {
       USER = data.session.user;
+
+      window.USER = USER;
 
       await sb.rpc("garantir_empresa_usuario", {
         p_nome: USER.user_metadata?.nome || USER.email,
@@ -243,8 +258,11 @@ window.auth = {
   enviarRecuperacaoSenha,
   logout,
   verificarSessao,
-  protegerPagina
+  protegerPagina,
+  aguardarEmpresaCRV
 };
+
+window.aguardarEmpresaCRV = aguardarEmpresaCRV;
 
   // ==========================================
   // 🔒 PROTEÇÃO AUTOMÁTICA DE ROTAS

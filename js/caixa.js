@@ -97,6 +97,28 @@ function jogadorMensalistaIsentoCaixa(jogador) {
   );
 }
 
+function jogadoresCobraveisCaixa(lista = []) {
+  return (lista || []).filter(jogador => {
+    return (
+      jogador.removido !== true &&
+      !jogadorMensalistaIsentoCaixa(jogador)
+    );
+  });
+}
+
+function jogoQuitadoCaixa(jogo) {
+  const jogadores = jogadoresCobraveisCaixa(
+    jogadoresCaixaPorAgenda[jogo.id] || []
+  );
+
+  if (!jogadores.length) return false;
+
+  const pendentes = jogadores.filter(jogadorPendenteCaixa).length;
+  const emComanda = jogadores.filter(jogadorEmComandaCaixa).length;
+  const pagos = jogadores.filter(jogadorPagoCaixa).length;
+
+  return pagos > 0 && pendentes === 0 && emComanda === 0;
+}
 
 // ===== FORMATADORES =====
 const fmt = valor => {
@@ -2941,11 +2963,11 @@ function renderHistorico() {
     .filter(venda => {
       const origem = String(venda.origem || "").toLowerCase();
 
-      if (origem !== "agenda") {
-        return true;
-      }
+if (origem !== "agenda") {
+  return true;
+}
 
-      return venda._status_jogo === "fechado";
+return Number(venda.total || 0) > 0;
     })
     .forEach(venda => {
     const origem = String(venda.origem || "pdv").toLowerCase();
@@ -3122,6 +3144,8 @@ async function atualizarBadgesModosCaixa() {
   if (!sistemaOnline()) return;
 
   try {
+    await carregarJogosCaixa();
+
     const empresaId = obterEmpresaId();
 
     const { data: comandasAbertas, error: erroComandas } = await sb
@@ -3132,19 +3156,13 @@ async function atualizarBadgesModosCaixa() {
 
     if (erroComandas) throw erroComandas;
 
-const { data: jogos, error: erroJogos } = await sb
-  .from("agenda")
-  .select("*")
-  .eq("empresa_id", empresaId)
-  .neq("status_jogo", "cancelado")
-  .neq("status_jogo", "fechado");
-
-    if (erroJogos) throw erroJogos;
-
     qtdComandasAbertasCaixa = comandasAbertas?.length || 0;
 
-    qtdJogosAbertosCaixa = (jogos || []).filter(jogo => {
+    qtdJogosAbertosCaixa = (jogosCaixa || []).filter(jogo => {
+      if (jogoQuitadoCaixa(jogo)) return false;
+
       const status = calcularStatusJogoCaixa(jogo);
+
       return status === "andamento" || status === "cobranca";
     }).length;
 
@@ -3545,12 +3563,15 @@ async function sincronizarJogosPendentesCaixa() {
       await atualizarVendaAgendaPeloCaixa(jogo);
     }
 
-    await carregarDadosSupabase();
-    await verificarJogosPendentesSincronizacaoCaixa();
+await carregarDadosSupabase();
+await carregarJogosCaixa();
+await verificarJogosPendentesSincronizacaoCaixa();
+await atualizarBadgesModosCaixa();
 
-    renderEstado();
-    renderHistorico();
-    atualizarInfobar();
+renderEstado();
+renderHistorico();
+renderJogosAtivosNoCaixa();
+atualizarInfobar();
 
     await alertaCaixa(
       "Sincronização concluída",
@@ -3937,7 +3958,8 @@ async function carregarJogosCaixa() {
         .from("agenda_jogadores")
         .select("*")
         .eq("empresa_id", obterEmpresaId())
-        .in("agenda_id", idsAgenda);
+        .in("agenda_id", idsAgenda)
+        .neq("removido", true);
 
       if (erroJogadores) throw erroJogadores;
 
@@ -4873,7 +4895,7 @@ async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
   const lista = jogadores || [];
 
   // Mensalistas isentos não entram na contagem de cobrança
-  const listaCobravel = lista.filter(j => !jogadorMensalistaIsentoCaixa(j));
+  const listaCobravel = jogadoresCobraveisCaixa(lista);
 
   const pagos = listaCobravel.filter(jogador => jogadorPagoCaixa(jogador));
   const emComanda = listaCobravel.filter(jogador => jogadorEmComandaCaixa(jogador));
@@ -4976,10 +4998,13 @@ async function confirmarPagamentoJogoCaixa() {
 
       await carregarDadosSupabase();
       await carregarJogosCaixa();
+      await atualizarBadgesModosCaixa();
+      renderJogosAtivosNoCaixa();
       await verificarJogosPendentesSincronizacaoCaixa();
 
       renderEstado();
       renderHistorico();
+      renderJogosAtivosNoCaixa();
       atualizarInfobar();
 
       fecharModalFinalizarJogoCaixa();
@@ -5173,7 +5198,7 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
 
   if (erroJogadores) throw erroJogadores;
 
-  const jogadores = jogadoresAtualizados || [];
+  const jogadores = jogadoresCobraveisCaixa(jogadoresAtualizados || []);
 
   const pagosDiretos = jogadores.filter(jogador => {
     return (
@@ -5257,13 +5282,15 @@ async function atualizarVendaAgendaPeloCaixa(jogo) {
       ? formasUnicas[0]
       : "misto";
 
-  const { data: vendaExistente, error: erroBuscaVenda } = await sb
-    .from("vendas")
-    .select("id")
-    .eq("empresa_id", obterEmpresaId())
-    .eq("origem", "agenda")
-    .eq("origem_id", jogo.id)
-    .maybeSingle();
+const { data: vendaExistente, error: erroBuscaVenda } = await sb
+  .from("vendas")
+  .select("id")
+  .eq("empresa_id", obterEmpresaId())
+  .eq("agenda_id", jogo.id)
+  .in("origem", ["agenda", "agenda_avulso"])
+  .order("data", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
   if (erroBuscaVenda) throw erroBuscaVenda;
 
@@ -5539,14 +5566,16 @@ function renderJogosAtivosNoCaixa() {
     return;
   }
 
-  const jogosAtivos = jogosCaixa.filter(jogo => {
-    const status = calcularStatusJogoCaixa(jogo);
+const jogosAtivos = jogosCaixa.filter(jogo => {
+  if (jogoQuitadoCaixa(jogo)) return false;
 
-    return (
-      status === "andamento" ||
-      status === "cobranca"
-    );
-  });
+  const status = calcularStatusJogoCaixa(jogo);
+
+  return (
+    status === "andamento" ||
+    status === "cobranca"
+  );
+});
 
   box.style.display = "block";
 
@@ -5608,20 +5637,20 @@ function renderJogosAtivosNoCaixa() {
 
         const status = calcularStatusJogoCaixa(jogo);
 
-        const jogadores =
-          jogadoresCaixaPorAgenda[jogo.id] || [];
+const jogadores =
+  jogadoresCobraveisCaixa(jogadoresCaixaPorAgenda[jogo.id] || []);
 
-        const pagos = jogadores.filter(jogador =>
-          jogadorPagoCaixa(jogador)
-        );
+const pagos = jogadores.filter(jogador =>
+  jogadorPagoCaixa(jogador)
+);
 
-        const emComanda = jogadores.filter(jogador =>
-          jogadorEmComandaCaixa(jogador)
-        );
+const emComanda = jogadores.filter(jogador =>
+  jogadorEmComandaCaixa(jogador)
+);
 
-        const pendentes = jogadores.filter(jogador =>
-          jogadorPendenteCaixa(jogador)
-        );
+const pendentes = jogadores.filter(jogador =>
+  jogadorPendenteCaixa(jogador)
+);
 
         const valorPendente =
           pendentes.reduce((acc, j) => {

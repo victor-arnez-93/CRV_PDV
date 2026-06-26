@@ -987,6 +987,18 @@ function quebrarDescricaoJogoRelatorio(descricao) {
   };
 }
 
+function extrairResumoJogoDescricaoRelatorio(descricao) {
+  const texto = String(descricao || "");
+
+  const diretoMatch = texto.match(/Direto:\s*(\d+)\s*jogador/i);
+  const comandaMatch = texto.match(/Comanda:\s*(\d+)\s*jogador/i);
+
+  return {
+    qtdDireto: diretoMatch ? Number(diretoMatch[1]) : null,
+    qtdComanda: comandaMatch ? Number(comandaMatch[1]) : null
+  };
+}
+
 function montarRecebimentosJogosAgrupados(vendas) {
   const mapa = {};
 
@@ -1049,16 +1061,28 @@ function montarRecebimentosJogosAgrupados(vendas) {
       );
     }
 
-    if (vendaDiretaJogo) {
-      const qtdDireto =
-        itensJogo.length ||
-        (Number(venda.total || 0) > 0 ? 1 : 0);
+if (vendaDiretaJogo) {
+  const resumoDescricao =
+    extrairResumoJogoDescricaoRelatorio(venda.descricao);
 
-      mapa[chave].totalDireto += Number(venda.total || 0);
-      mapa[chave].qtdDireto += qtdDireto;
-    }
+  const qtdDireto =
+    resumoDescricao.qtdDireto !== null
+      ? resumoDescricao.qtdDireto
+      : itensJogo.filter(item => {
+          return String(item.origem || "").toLowerCase() === "agenda";
+        }).length || (Number(venda.total || 0) > 0 ? 1 : 0);
 
-    if (vendaComandaComJogo) {
+  const qtdComandaDescricao =
+    resumoDescricao.qtdComanda !== null
+      ? resumoDescricao.qtdComanda
+      : 0;
+
+  mapa[chave].totalDireto += Number(venda.total || 0);
+  mapa[chave].qtdDireto += qtdDireto;
+  mapa[chave].qtdComanda += qtdComandaDescricao;
+}
+
+    if (vendaComandaComJogo && origemVenda !== "agenda") {
       const totalItensComanda =
         itensJogo.reduce((acc, item) => {
           return acc + (

@@ -151,11 +151,30 @@ function limparDescricaoJogoVendas(descricao) {
   let texto = String(descricao || "Pagamento de jogo").trim();
 
   texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
-  texto = texto.replace(/\s*\|\s*Direto\s*R\$\s*[\d.,]+/gi, "");
-  texto = texto.replace(/\s*\|\s*Comanda\s*R\$\s*[\d.,]+/gi, "");
-  texto = texto.replace(/\s*·\s*Comanda:\s*.*/gi, "");
+texto = texto.replace(/\s*\|\s*Direto\s*R\$\s*[\d.,]+/gi, "");
+texto = texto.replace(/\s*\|\s*Comanda\s*R\$\s*[\d.,]+/gi, "");
+
+// NOVO
+texto = texto.replace(/\s*\|\s*Direto:\s*\d+\s*jogadores?/gi, "");
+texto = texto.replace(/\s*\|\s*Comanda:\s*\d+\s*jogadores?/gi, "");
+
+texto = texto.replace(/\s*·\s*Comanda:\s*.*/gi, "");
 
   return texto.trim() || "Pagamento de jogo";
+}
+
+function extrairMetaJogoVendas(descricao) {
+  const texto = String(descricao || "");
+
+  const direto = texto.match(/Direto:\s*(\d+)\s*jogador/i);
+  const comanda = texto.match(/Comanda:\s*(\d+)\s*jogador/i);
+
+  const partes = [];
+
+  if (direto) partes.push(`Direto: ${direto[1]} jogador${Number(direto[1]) !== 1 ? "es" : ""}`);
+  if (comanda) partes.push(`Comanda: ${comanda[1]} jogador${Number(comanda[1]) !== 1 ? "es" : ""}`);
+
+  return partes.join(" • ");
 }
 
 function obterDataVenda(venda) {
@@ -722,7 +741,13 @@ function renderTabela() {
           ? limparDescricaoJogoVendas(v.descricao || v.itens.find(itemEhJogoVendas)?.nome)
           : v.itens[0]?.nome || (v.offline ? "Venda offline" : "Venda")
     };
-    const maisItens = v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '';
+    const metaJogo = vendaTemJogoVendas(v)
+  ? extrairMetaJogoVendas(v.descricao)
+  : "";
+
+const maisItens =
+  metaJogo ||
+  (v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '');
 
     return `
       <tr onclick="verDetalhe('${v.id}')">
@@ -780,13 +805,21 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
   }</span>
 </div>
 
-<div class="detalhe-row">
+<div class="detalhe-row detalhe-row-descricao">
   <span>Descrição</span>
-  <span>${
-    vendaTemJogoVendas(venda)
-      ? limparDescricaoJogoVendas(venda.descricao || venda.itens.find(itemEhJogoVendas)?.nome)
-      : venda.descricao || "Venda em comanda"
-  }</span>
+  <span>
+    ${
+      vendaTemJogoVendas(venda)
+        ? limparDescricaoJogoVendas(venda.descricao || venda.itens.find(itemEhJogoVendas)?.nome)
+        : venda.descricao || "Venda em comanda"
+    }
+
+    ${
+      vendaTemJogoVendas(venda) && extrairMetaJogoVendas(venda.descricao)
+        ? `<small>${extrairMetaJogoVendas(venda.descricao)}</small>`
+        : ""
+    }
+  </span>
 </div>
 ` : ""}
 

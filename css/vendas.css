@@ -413,6 +413,53 @@
   border-radius: 999px;
 }
 
+/* AJUSTE — VENDAS DE JOGOS EM DUAS LINHAS */
+
+.venda-itens {
+  min-width: 0;
+}
+
+.venda-item-nome {
+  display: block;
+  max-width: 100%;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.venda-item-more {
+  display: block;
+  margin-top: 3px;
+  font-size: .72rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.detalhe-row-descricao {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.detalhe-row-descricao > span:first-child {
+  flex: 0 0 90px;
+}
+
+.detalhe-row-descricao > span:last-child {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  line-height: 1.35;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.detalhe-row-descricao small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: .78rem;
+  line-height: 1.25;
+}
+
 /* ======================================================
    RESPONSIVE — VENDAS
 ====================================================== */

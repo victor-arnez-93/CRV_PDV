@@ -459,9 +459,16 @@ function inicializarEventosAgenda() {
     .getElementById("filtroStatus")
     ?.addEventListener("change", aplicarFiltrosAgenda);
 
-  document
-    .getElementById("tipoJogo")
-    ?.addEventListener("change", alternarCamposMensais);
+document
+  .getElementById("tipoJogo")
+  ?.addEventListener("change", () => {
+    alternarCamposMensais();
+
+    document.getElementById("valorPrevisto").value = "";
+    document.getElementById("valorMensal").value = "";
+
+    aplicarValorPadraoAgendaNoModal();
+  });
 
   document
     .getElementById("usarTimesJogo")
@@ -499,14 +506,6 @@ function setupMascarasAgenda() {
   aplicarMascaraMoedaAgenda(
     document.getElementById("valorMensal")
   );
-
-  aplicarMascaraMoedaAgenda(
-  document.getElementById("configValorAvulsoPadrao")
-);
-
-aplicarMascaraMoedaAgenda(
-  document.getElementById("configValorMensalPadrao")
-);
 
   const clienteNome = document.getElementById("clienteNome");
 
@@ -709,18 +708,6 @@ function carregarConfigGradeAgenda() {
     Array.isArray(configuracaoAgenda?.duracoes_minutos)
       ? configuracaoAgenda.duracoes_minutos.join(",")
       : "60,90";
-
-      const valorAvulsoPadrao = document.getElementById("configValorAvulsoPadrao");
-    if (valorAvulsoPadrao) {
-      valorAvulsoPadrao.value =
-        valorBancoParaInputAgenda(configuracaoAgenda?.valor_avulso_padrao || 0);
-    }
-
-    const valorMensalPadrao = document.getElementById("configValorMensalPadrao");
-    if (valorMensalPadrao) {
-      valorMensalPadrao.value =
-        valorBancoParaInputAgenda(configuracaoAgenda?.valor_mensal_padrao || 0);
-    }
 }
 
 async function salvarConfigGradeAgenda() {
@@ -730,20 +717,14 @@ async function salvarConfigGradeAgenda() {
       .map(Number)
       .filter(Boolean);
 
-  const payload = {
-    empresa_id: APP_EMPRESA_ID,
-    hora_abertura: document.getElementById("configHoraAbertura")?.value || "08:00",
-    hora_fechamento: document.getElementById("configHoraFechamento")?.value || "23:45",
-    intervalo_minutos: Number(document.getElementById("configIntervaloInicio")?.value || 30),
-    duracoes_minutos: duracoes.length ? duracoes : [60, 90],
-    valor_avulso_padrao: normalizarMoedaAgenda(
-  document.getElementById("configValorAvulsoPadrao")?.value || 0
-),
-valor_mensal_padrao: normalizarMoedaAgenda(
-  document.getElementById("configValorMensalPadrao")?.value || 0
-)
-
-  };
+const payload = {
+  empresa_id: APP_EMPRESA_ID,
+  hora_abertura: document.getElementById("configHoraAbertura")?.value || "08:00",
+  hora_fechamento: document.getElementById("configHoraFechamento")?.value || "23:45",
+  intervalo_minutos: Number(document.getElementById("configIntervaloInicio")?.value || 30),
+  duracoes_minutos: duracoes.length ? duracoes : [60, 90],
+  atualizado_em: new Date().toISOString()
+};
 
   const { data, error } = await sb
     .from("agenda_configuracao")
@@ -1874,11 +1855,7 @@ document.getElementById(
   "dataAgendamento"
 ).value = hojeISOAgenda();
 
-document.getElementById("valorPrevisto").value =
-  valorBancoParaInputAgenda(configuracaoAgenda?.valor_avulso_padrao || 0);
-
-document.getElementById("valorMensal").value =
-  valorBancoParaInputAgenda(configuracaoAgenda?.valor_mensal_padrao || 0);
+aplicarValorPadraoAgendaNoModal();
 
 alternarCamposMensais();
 
@@ -4054,6 +4031,50 @@ function obterValorPadraoAgendaPorDuracao(duracaoMinutos, tipoJogo = "avulso") {
     : Number(config.valor_avulso || 0);
 }
 
+function obterDuracaoModalAgenda() {
+  const inicio =
+    document.getElementById("horaInicio")?.value || "";
+
+  const fim =
+    document.getElementById("horaFim")?.value || "";
+
+  if (!inicio || !fim) return 0;
+
+  const inicioMinutos = horaParaMinutos(inicio);
+  let fimMinutos = horaParaMinutos(fim);
+
+  if (fimMinutos <= inicioMinutos) {
+    fimMinutos += 1440;
+  }
+
+  return fimMinutos - inicioMinutos;
+}
+
+function aplicarValorPadraoAgendaNoModal() {
+  const duracao = obterDuracaoModalAgenda();
+  const tipo = document.getElementById("tipoJogo")?.value || "avulso";
+
+  if (!duracao) return;
+
+  const valor = obterValorPadraoAgendaPorDuracao(duracao, tipo);
+
+  if (tipo === "mensalista") {
+    const campoMensal = document.getElementById("valorMensal");
+
+    if (campoMensal && !campoMensal.value) {
+      campoMensal.value = valorBancoParaInputAgenda(valor);
+    }
+
+    return;
+  }
+
+  const campoAvulso = document.getElementById("valorPrevisto");
+
+  if (campoAvulso && !campoAvulso.value) {
+    campoAvulso.value = valorBancoParaInputAgenda(valor);
+  }
+}
+
 function renderizarCamposArenaInline() {
   const lista = document.getElementById("listaCamposArenaInline");
   if (!lista) return;
@@ -4968,6 +4989,8 @@ popularSelectLocalRecurso(btn.dataset.campo || "");
 
         document.getElementById("horaFim").value =
           btn.dataset.fim || "";
+          aplicarValorPadraoAgendaNoModal();
+
       });
     });
 
