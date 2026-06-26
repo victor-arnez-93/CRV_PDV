@@ -213,6 +213,81 @@ function buscarMensalidadeAgenda(jogo) {
   }) || null;
 }
 
+function jogadorPagoAgenda(jogador) {
+  return (
+    jogador.pago === true ||
+    jogador.status_pagamento === "pago_direto" ||
+    jogador.status_pagamento === "pago_em_comanda"
+  );
+}
+
+function jogadorEmComandaAgenda(jogador) {
+  return jogador.status_pagamento === "em_comanda" || !!jogador.comanda_id;
+}
+
+function jogadorPendenteAgenda(jogador) {
+  return !jogadorPagoAgenda(jogador) && !jogadorEmComandaAgenda(jogador);
+}
+
+function obterResumoPagamentoAgenda(jogo) {
+  const jogadores = (jogadoresPorAgenda[jogo.id] || [])
+    .filter(j => j.removido !== true);
+
+  const total = jogadores.length;
+  const pagos = jogadores.filter(jogadorPagoAgenda).length;
+  const comandas = jogadores.filter(jogadorEmComandaAgenda).length;
+  const pendentes = jogadores.filter(jogadorPendenteAgenda).length;
+
+  const recebido = jogadores
+    .filter(jogadorPagoAgenda)
+    .reduce((acc, j) => acc + Number(j.valor || 0), 0);
+
+  const emComanda = jogadores
+    .filter(jogadorEmComandaAgenda)
+    .reduce((acc, j) => acc + Number(j.valor || 0), 0);
+
+  const pendente = jogadores
+    .filter(jogadorPendenteAgenda)
+    .reduce((acc, j) => acc + Number(j.valor || 0), 0);
+
+  let texto = "Pagamento pendente";
+  let classe = "pendente";
+
+  if (total > 0 && pendentes === 0 && comandas === 0) {
+    texto = "Pagamento quitado";
+    classe = "pago";
+  } else if (pagos > 0 || comandas > 0) {
+    texto = "Pagamento parcial";
+    classe = "parcial";
+  }
+
+  return {
+    total,
+    pagos,
+    comandas,
+    pendentes,
+    recebido,
+    emComanda,
+    pendente,
+    texto,
+    classe
+  };
+}
+
+function ordenarJogadoresAgenda(jogadores, responsavel = "") {
+  const normalizar = valor => normalizarBuscaAgendaInline(valor || "");
+
+  return [...jogadores].sort((a, b) => {
+    const aResp = normalizar(a.nome) === normalizar(responsavel);
+    const bResp = normalizar(b.nome) === normalizar(responsavel);
+
+    if (aResp && !bResp) return -1;
+    if (!aResp && bResp) return 1;
+
+    return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+  });
+}
+
 // ======================================================
 // ESTADO
 // ======================================================
@@ -223,6 +298,7 @@ let excecoesAgenda = [];
 
 let camposArena = [];
 let configuracaoAgenda = null;
+let valoresPadraoAgenda = [];
 
 let agendaAtualId = null;
 let modoModalAgenda = "novo";
@@ -309,6 +385,10 @@ function inicializarEventosAgenda() {
   document
     .getElementById("btnAdicionarCampoArena")
     ?.addEventListener("click", adicionarCampoArenaInline);
+
+    document
+  .getElementById("btnAdicionarValorAgenda")
+  ?.addEventListener("click", adicionarValorPadraoAgendaInline);
 
     document
   .getElementById("btnSalvarConfigAgendaInline")
@@ -419,6 +499,14 @@ function setupMascarasAgenda() {
   aplicarMascaraMoedaAgenda(
     document.getElementById("valorMensal")
   );
+
+  aplicarMascaraMoedaAgenda(
+  document.getElementById("configValorAvulsoPadrao")
+);
+
+aplicarMascaraMoedaAgenda(
+  document.getElementById("configValorMensalPadrao")
+);
 
   const clienteNome = document.getElementById("clienteNome");
 
@@ -621,6 +709,18 @@ function carregarConfigGradeAgenda() {
     Array.isArray(configuracaoAgenda?.duracoes_minutos)
       ? configuracaoAgenda.duracoes_minutos.join(",")
       : "60,90";
+
+      const valorAvulsoPadrao = document.getElementById("configValorAvulsoPadrao");
+    if (valorAvulsoPadrao) {
+      valorAvulsoPadrao.value =
+        valorBancoParaInputAgenda(configuracaoAgenda?.valor_avulso_padrao || 0);
+    }
+
+    const valorMensalPadrao = document.getElementById("configValorMensalPadrao");
+    if (valorMensalPadrao) {
+      valorMensalPadrao.value =
+        valorBancoParaInputAgenda(configuracaoAgenda?.valor_mensal_padrao || 0);
+    }
 }
 
 async function salvarConfigGradeAgenda() {
@@ -635,7 +735,14 @@ async function salvarConfigGradeAgenda() {
     hora_abertura: document.getElementById("configHoraAbertura")?.value || "08:00",
     hora_fechamento: document.getElementById("configHoraFechamento")?.value || "23:45",
     intervalo_minutos: Number(document.getElementById("configIntervaloInicio")?.value || 30),
-    duracoes_minutos: duracoes.length ? duracoes : [60, 90]
+    duracoes_minutos: duracoes.length ? duracoes : [60, 90],
+    valor_avulso_padrao: normalizarMoedaAgenda(
+  document.getElementById("configValorAvulsoPadrao")?.value || 0
+),
+valor_mensal_padrao: normalizarMoedaAgenda(
+  document.getElementById("configValorMensalPadrao")?.value || 0
+)
+
   };
 
   const { data, error } = await sb
@@ -1057,12 +1164,27 @@ const {
   .eq("empresa_id", APP_EMPRESA_ID)
   .maybeSingle();
 
+  const {
+  data: valoresPadrao,
+  error: valoresPadraoError
+} = await sb
+  .from("agenda_valores_padrao")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .eq("ativo", true)
+  .order("ordem", { ascending: true })
+  .order("duracao", { ascending: true });
+
 if (camposError) {
   throw camposError;
 }
 
 if (configAgendaError) {
   throw configAgendaError;
+}
+
+if (valoresPadraoError) {
+  throw valoresPadraoError;
 }
 
 if (excecoesError) {
@@ -1082,6 +1204,7 @@ mensalidadesAgenda = mensalidades || [];
 excecoesAgenda = excecoes || [];
 camposArena = campos || [];
 configuracaoAgenda = configAgenda || null;
+valoresPadraoAgenda = valoresPadrao || [];
 
 jogadoresPorAgenda = agruparJogadores(
   jogadores || []
@@ -1568,17 +1691,10 @@ function criarCardJogo(jogo) {
     (jogadoresPorAgenda[jogo.id] || [])
       .filter(j => j.removido !== true);
 
-  const recebido =
-    jogadores
-      .filter(j => j.pago)
-      .reduce((acc, j) =>
-        acc + Number(j.valor || 0), 0);
+const resumoPagamento = obterResumoPagamentoAgenda(jogo);
 
-  const pendente =
-    jogadores
-      .filter(j => !j.pago)
-      .reduce((acc, j) =>
-        acc + Number(j.valor || 0), 0);
+const recebido = resumoPagamento.recebido;
+const pendente = resumoPagamento.pendente + resumoPagamento.emComanda;
 
         const mensalidade =
   buscarMensalidadeAgenda(jogo);
@@ -1665,10 +1781,10 @@ const textoCicloMensal =
             `
         )
       : (
-          pendente > 0
+          resumoPagamento.classe !== "pago"
             ? `
               <div class="agenda-card-cobranca-status pendente">
-                ⚠ Pagamento pendente
+                ⚠ ${resumoPagamento.texto}
               </div>
             `
             : `
@@ -1757,6 +1873,12 @@ document.getElementById(
 document.getElementById(
   "dataAgendamento"
 ).value = hojeISOAgenda();
+
+document.getElementById("valorPrevisto").value =
+  valorBancoParaInputAgenda(configuracaoAgenda?.valor_avulso_padrao || 0);
+
+document.getElementById("valorMensal").value =
+  valorBancoParaInputAgenda(configuracaoAgenda?.valor_mensal_padrao || 0);
 
 alternarCamposMensais();
 
@@ -1884,12 +2006,15 @@ alternarCamposMensais();
 
   alternarTimesJogo();
 
-  const jogadores =
-    jogadoresPorAgenda[jogo.id] || [];
+const jogadores =
+  ordenarJogadoresAgenda(
+    jogadoresPorAgenda[jogo.id] || [],
+    jogo.cliente_nome
+  );
 
-  jogadores.forEach(j => {
-    adicionarLinhaJogador(j);
-  });
+jogadores.forEach(j => {
+  adicionarLinhaJogador(j);
+});
 
   aplicarModoModal();
 
@@ -2150,7 +2275,6 @@ alternarTimesJogo();
 // ======================================================
 // FEEDBACK
 // ======================================================
-
 function mostrarErro(msg) {
 
   const el =
@@ -2158,10 +2282,19 @@ function mostrarErro(msg) {
       "feedbackReserva"
     );
 
+  if (!el) return;
+
   el.textContent = msg;
 
   el.className =
     "agenda-feedback erro";
+
+  el.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+
+  el.focus?.();
 
 }
 
@@ -3609,14 +3742,316 @@ function alternarConfigGradeInline() {
   painel.style.display = aberto ? "none" : "block";
   botao.classList.toggle("aberto", !aberto);
 
-  if (!aberto) {
-    carregarConfigGradeAgenda();
-    renderizarCamposArenaInline();
-  }
+if (!aberto) {
+  carregarConfigGradeAgenda();
+  renderizarValoresPadraoAgendaInline();
+  renderizarCamposArenaInline();
+}
 
   if (window.lucide) {
     lucide.createIcons();
   }
+}
+
+function duracaoMinutosParaTextoAgenda(minutos) {
+  const total = Number(minutos || 0);
+
+  if (total <= 0) return "";
+
+  const horas = Math.floor(total / 60);
+  const mins = total % 60;
+
+  if (horas > 0 && mins > 0) return `${horas}h${String(mins).padStart(2, "0")}`;
+  if (horas > 0) return `${horas}h`;
+
+  return `${mins}min`;
+}
+
+function duracaoTextoParaMinutosAgenda(texto) {
+  const valor = String(texto || "").toLowerCase().trim();
+
+  if (!valor) return 0;
+
+  const horasMatch = valor.match(/(\d+)\s*h/);
+  const minMatch = valor.match(/h\s*(\d+)/) || valor.match(/(\d+)\s*min/);
+
+  const horas = horasMatch ? Number(horasMatch[1]) : 0;
+  const minutos = minMatch ? Number(minMatch[1]) : 0;
+
+  if (!horas && !minutos && /^\d+$/.test(valor)) {
+    return Number(valor);
+  }
+
+  return (horas * 60) + minutos;
+}
+
+function renderizarValoresPadraoAgendaInline() {
+  const lista = document.getElementById("listaValoresAgendaInline");
+  if (!lista) return;
+
+  if (!valoresPadraoAgenda.length) {
+    valoresPadraoAgenda = [
+      {
+        duracao: "1h",
+        valor_avulso: 0,
+        valor_mensal: 0,
+        ordem: 1,
+        novo: true
+      },
+      {
+        duracao: "1h30",
+        valor_avulso: 0,
+        valor_mensal: 0,
+        ordem: 2,
+        novo: true
+      }
+    ];
+  }
+
+  lista.innerHTML = valoresPadraoAgenda.map((item, index) => `
+    <div
+      class="agenda-valor-inline-item"
+      data-id="${item.id || ""}"
+      data-novo="${item.novo === true ? "true" : "false"}"
+    >
+      <input
+        class="input agenda-valor-duracao"
+        value="${item.duracao || ""}"
+        placeholder="Ex: 1h30"
+      >
+
+      <input
+        class="input agenda-valor-avulso"
+        value="${valorBancoParaInputAgenda(item.valor_avulso || 0)}"
+        placeholder="Avulso"
+      >
+
+      <input
+        class="input agenda-valor-mensal"
+        value="${valorBancoParaInputAgenda(item.valor_mensal || 0)}"
+        placeholder="Mensal"
+      >
+
+      <button
+        type="button"
+        class="agenda-inline-action cancelar btn-remover-valor-agenda"
+        title="Remover valor"
+      >
+        <i data-lucide="trash-2" width="15" height="15"></i>
+      </button>
+    </div>
+  `).join("");
+
+  lista.querySelectorAll(".agenda-valor-avulso, .agenda-valor-mensal")
+    .forEach(input => aplicarMascaraMoedaAgenda(input));
+
+  lista.querySelectorAll(".btn-remover-valor-agenda")
+    .forEach(btn => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest(".agenda-valor-inline-item");
+        row?.remove();
+      });
+    });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function adicionarValorPadraoAgendaInline() {
+  const lista = document.getElementById("listaValoresAgendaInline");
+  if (!lista) return;
+
+  const row = document.createElement("div");
+  row.className = "agenda-valor-inline-item";
+  row.dataset.novo = "true";
+
+  row.innerHTML = `
+    <input
+      class="input agenda-valor-duracao"
+      value=""
+      placeholder="Ex: 2h"
+    >
+
+    <input
+      class="input agenda-valor-avulso"
+      value=""
+      placeholder="Avulso"
+    >
+
+    <input
+      class="input agenda-valor-mensal"
+      value=""
+      placeholder="Mensal"
+    >
+
+    <button
+      type="button"
+      class="agenda-inline-action cancelar btn-remover-valor-agenda"
+      title="Remover valor"
+    >
+      <i data-lucide="trash-2" width="15" height="15"></i>
+    </button>
+  `;
+
+  lista.appendChild(row);
+
+  aplicarMascaraMoedaAgenda(row.querySelector(".agenda-valor-avulso"));
+  aplicarMascaraMoedaAgenda(row.querySelector(".agenda-valor-mensal"));
+
+  row.querySelector(".btn-remover-valor-agenda")
+    ?.addEventListener("click", () => row.remove());
+
+  row.querySelector(".agenda-valor-duracao")?.focus();
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+async function salvarValoresPadraoAgendaInline() {
+  const linhas = [
+    ...document.querySelectorAll(".agenda-valor-inline-item")
+  ];
+
+  const duracoesUsadas = new Set();
+
+  for (let index = 0; index < linhas.length; index++) {
+    const linha = linhas[index];
+
+    const id = linha.dataset.id || null;
+
+    const duracao =
+      String(linha.querySelector(".agenda-valor-duracao")?.value || "")
+        .trim();
+
+    const valorAvulso = normalizarMoedaAgenda(
+      linha.querySelector(".agenda-valor-avulso")?.value || 0
+    );
+
+    const valorMensal = normalizarMoedaAgenda(
+      linha.querySelector(".agenda-valor-mensal")?.value || 0
+    );
+
+    if (!duracao) {
+      crvToast({
+        titulo: "Duração obrigatória",
+        mensagem: "Informe a duração do valor padrão.",
+        tipo: "warn"
+      });
+
+      linha.querySelector(".agenda-valor-duracao")?.focus();
+      return false;
+    }
+
+    const chave = normalizarBuscaAgendaInline(duracao);
+
+    if (duracoesUsadas.has(chave)) {
+      crvToast({
+        titulo: "Duração duplicada",
+        mensagem: `A duração "${duracao}" foi informada mais de uma vez.`,
+        tipo: "warn"
+      });
+
+      linha.querySelector(".agenda-valor-duracao")?.focus();
+      return false;
+    }
+
+    duracoesUsadas.add(chave);
+
+    const payload = {
+      empresa_id: APP_EMPRESA_ID,
+      duracao,
+      valor_avulso: valorAvulso,
+      valor_mensal: valorMensal,
+      ordem: index + 1,
+      ativo: true,
+      updated_at: new Date().toISOString()
+    };
+
+    const query = id
+      ? sb
+          .from("agenda_valores_padrao")
+          .update(payload)
+          .eq("id", id)
+          .eq("empresa_id", APP_EMPRESA_ID)
+      : sb
+          .from("agenda_valores_padrao")
+          .upsert([payload], {
+            onConflict: "empresa_id,duracao"
+          });
+
+    const { error } = await query;
+
+    if (error) {
+      crvToast({
+        titulo: "Erro",
+        mensagem: error.message || "Erro ao salvar valores padrão.",
+        tipo: "error"
+      });
+
+      return false;
+    }
+  }
+
+  const idsTela = linhas
+    .map(linha => linha.dataset.id)
+    .filter(Boolean)
+    .map(String);
+
+  const removidos = valoresPadraoAgenda.filter(item => {
+    return item.id && !idsTela.includes(String(item.id));
+  });
+
+  for (const item of removidos) {
+    const { error } = await sb
+      .from("agenda_valores_padrao")
+      .update({
+        ativo: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", item.id)
+      .eq("empresa_id", APP_EMPRESA_ID);
+
+    if (error) {
+      crvToast({
+        titulo: "Erro",
+        mensagem: error.message || "Erro ao remover valor padrão.",
+        tipo: "error"
+      });
+
+      return false;
+    }
+  }
+
+  const { data } = await sb
+    .from("agenda_valores_padrao")
+    .select("*")
+    .eq("empresa_id", APP_EMPRESA_ID)
+    .eq("ativo", true)
+    .order("ordem", { ascending: true })
+    .order("duracao", { ascending: true });
+
+  valoresPadraoAgenda = data || [];
+
+  renderizarValoresPadraoAgendaInline();
+
+  return true;
+}
+
+function obterValorPadraoAgendaPorDuracao(duracaoMinutos, tipoJogo = "avulso") {
+  const duracaoTexto = duracaoMinutosParaTextoAgenda(duracaoMinutos);
+  const chave = normalizarBuscaAgendaInline(duracaoTexto);
+
+  const config = valoresPadraoAgenda.find(item => {
+    return normalizarBuscaAgendaInline(item.duracao) === chave;
+  });
+
+  if (!config) return 0;
+
+  return tipoJogo === "mensalista"
+    ? Number(config.valor_mensal || 0)
+    : Number(config.valor_avulso || 0);
 }
 
 function renderizarCamposArenaInline() {
@@ -3795,6 +4230,9 @@ function desativarCampoArenaInline(id) {
 
 async function salvarConfiguracaoAgendaInlineCompleta() {
   await salvarConfigGradeAgenda();
+
+  const valoresOk = await salvarValoresPadraoAgendaInline();
+  if (!valoresOk) return;
 
   const linhas = [
     ...document.querySelectorAll(".agenda-campo-inline-item")
@@ -4256,6 +4694,9 @@ const semana = obterSemanaAgenda(dataBase);
   modal.id = "modalSemanaAgenda";
   modal.className = "modal-overlay agenda-semana-modal-overlay";
 
+const hoje = hojeISOAgenda();
+const indiceHoje = Math.max(0, dias.findIndex(dia => dia === hoje));
+
 modal.innerHTML = `
     <div class="modal card agenda-semana-modal">
       <button
@@ -4283,7 +4724,7 @@ modal.innerHTML = `
         ${dias.map((dia, index) => `
           <button
             type="button"
-            class="agenda-semana-tab ${index === 0 ? "ativo" : ""}"
+            class="agenda-semana-tab ${index === indiceHoje ? "ativo" : ""}"
             data-dia="${dia}"
           >
             ${formatarDiaSemanaCurtoAgenda(dia)}
@@ -4323,7 +4764,7 @@ modal.innerHTML = `
       });
     });
 
-  renderizarDiaSemanaAgenda(dias[0]);
+  renderizarDiaSemanaAgenda(dias[indiceHoje]);
 
   if (window.lucide) {
     lucide.createIcons();
@@ -4596,23 +5037,26 @@ function criarLinhaJogoAgendaInline(jogo) {
           ? "Campeonato"
           : "Avulso";
 
-  const pagamentoTexto =
-    ehMensal
-      ? (
-          mensalidade?.status === "pago"
-            ? "Mensalidade paga"
-            : "Mensalidade pendente"
-        )
-      : (
-          jogadores.some(j => !j.pago && Number(j.valor || 0) > 0)
-            ? "Pendente"
-            : "Sem pendência"
-        );
+const resumoPagamento =
+  obterResumoPagamentoAgenda(jogo);
 
-  const pagamentoClasse =
-    pagamentoTexto.toLowerCase().includes("pendente")
-      ? "pendente"
-      : "pago";
+const pagamentoTexto =
+  ehMensal
+    ? (
+        mensalidade?.status === "pago"
+          ? "Mensalidade paga"
+          : "Mensalidade pendente"
+      )
+    : resumoPagamento.texto;
+
+const pagamentoClasse =
+  ehMensal
+    ? (
+        mensalidade?.status === "pago"
+          ? "pago"
+          : "pendente"
+      )
+    : resumoPagamento.classe;
 
   return `
     <tr class="agenda-inline-row">

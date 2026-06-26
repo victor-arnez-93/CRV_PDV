@@ -2033,6 +2033,117 @@ body.light .agenda-alteracao-info {
 }
 
 /* ======================================================
+   CONFIGURAÇÃO GRADE — LAYOUT FINAL LIMPO
+====================================================== */
+
+.agenda-config-inline-panel {
+  padding: 24px;
+}
+
+.agenda-section-line {
+  height: 1px;
+  width: 100%;
+  margin: 28px 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212,168,67,.75),
+    transparent
+  );
+  box-shadow: 0 0 14px rgba(212,168,67,.42);
+}
+
+[data-theme="light"] .agenda-section-line {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0,56,135,.58),
+    transparent
+  );
+  box-shadow: 0 0 14px rgba(0,56,135,.22);
+}
+
+.agenda-valores-inline-box,
+.agenda-campos-inline-box {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.agenda-valores-inline-header,
+.agenda-campos-inline-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.agenda-valores-inline-header strong,
+.agenda-campos-inline-header strong {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+#btnAdicionarValorAgenda,
+#btnAdicionarCampoArena {
+  justify-self: end;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+}
+
+.agenda-valores-inline-lista,
+.agenda-campos-inline-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agenda-valor-inline-item {
+  display: grid !important;
+  grid-template-columns: minmax(180px, 280px) minmax(160px, 1fr) minmax(160px, 1fr) 54px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 10px 14px !important;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.agenda-valor-inline-item .input {
+  height: 40px !important;
+  min-height: 40px !important;
+  font-weight: 800;
+}
+
+.agenda-valor-inline-item .agenda-inline-action {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 999px !important;
+  justify-self: center;
+}
+
+.agenda-config-actions-final {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0;
+  padding-right: 0;
+}
+
+.agenda-config-actions-final #btnSalvarConfigAgendaInline {
+  min-width: 230px;
+  width: auto;
+  min-height: 42px;
+  height: 42px;
+  padding: 0 22px;
+  border-radius: 999px;
+}
+
+/* ======================================================
    RESPONSIVE — TABLET
 ====================================================== */
 
