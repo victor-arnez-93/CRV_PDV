@@ -187,29 +187,84 @@
       </section>
 
 <section class="agenda-toggle-wrap">
-<button
-    class="btn-secondary agenda-toggle-btn"
-    id="btnAgendaInline"
-    type="button">
-
-<i data-lucide="calendar-search" width="16"></i>
-
-<span>Agenda</span>
-
-<i
-    data-lucide="chevron-down"
-    width="18"
-    class="agenda-toggle-icon">
-</i>
 
   <button
-  class="btn-ghost agenda-config-inline-btn"
-  id="btnConfigGradeInline"
-  type="button"
->
-  <i data-lucide="sliders-horizontal" width="16" height="16"></i>
-  <span>Configurar grade</span>
+    class="btn-secondary agenda-toggle-btn"
+    id="btnAgendaInline"
+    type="button"
+  >
+    <i data-lucide="calendar-search" width="16" height="16"></i>
+    <span>Agenda</span>
+    <i data-lucide="chevron-down" width="18" height="18" class="agenda-toggle-icon"></i>
+  </button>
+
+  <button
+    class="btn-ghost agenda-config-inline-btn"
+    id="btnConfigGradeInline"
+    type="button"
+  >
+    <i data-lucide="sliders-horizontal" width="16" height="16"></i>
+    <span>Configurar grade</span>
+  </button>
+
+</section>
+
+      <section class="card agenda-config-inline-panel" id="agendaConfigInlinePanel" style="display:none;">
+
+  <div class="agenda-config-inline-header">
+    <div>
+      <strong>Configuração da grade</strong>
+      <small>Defina funcionamento, duração dos jogos e campos/quadras da arena.</small>
+    </div>
+  </div>
+
+  <div class="agenda-config-grid">
+
+    <div class="input-group">
+      <label class="input-label">Abertura</label>
+      <input type="time" class="input" id="configHoraAbertura" value="08:00">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Fechamento</label>
+      <input type="time" class="input" id="configHoraFechamento" value="23:45">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Intervalo</label>
+      <select class="input" id="configIntervaloInicio">
+        <option value="15">15 min</option>
+        <option value="30" selected>30 min</option>
+        <option value="60">60 min</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Duração</label>
+      <select class="input" id="configDuracoesJogo">
+        <option value="60">Somente 1h</option>
+        <option value="60,90" selected>1h e 1h30</option>
+        <option value="90">Somente 1h30</option>
+      </select>
+    </div>
+
+  </div>
+
+  <div class="agenda-campos-inline-box">
+    <div class="agenda-campos-inline-header">
+      <strong>Campos / Quadras</strong>
+      <button class="btn-ghost" id="btnAdicionarCampoArena" type="button">
+        <i data-lucide="plus" width="14" height="14"></i>
+        Novo espaço
+      </button>
+      <button class="btn-secondary" id="btnSalvarConfigAgendaInline" type="button">
+  <i data-lucide="save" width="14" height="14"></i>
+  Salvar configuração
 </button>
+    </div>
+
+    <div class="agenda-campos-inline-lista" id="listaCamposArenaInline"></div>
+  </div>
 
 </section>
 
@@ -226,7 +281,7 @@
     <select class="input" id="tipoAgendaInline">
       <option value="todos">Todos</option>
       <option value="fechados">Fechados</option>
-      <option value="livres">Apenas livres</option>
+      <option value="livres">Livres</option>
       <option value="mensalista">Mensalistas</option>
       <option value="evento">Eventos</option>
       <option value="campeonato">Campeonatos</option>
@@ -407,10 +462,19 @@
           <input type="date" class="input" id="dataAgendamento">
         </div>
 
-        <div class="input-group">
-          <label class="input-label">Quadra / Campo</label>
-          <input class="input" id="localRecurso" placeholder="Ex: Society 1">
-        </div>
+<div class="input-group">
+  <label class="input-label">Quadra / Campo</label>
+
+  <select
+    class="input"
+    id="localRecurso"
+  >
+    <option value="">
+      Selecione...
+    </option>
+  </select>
+
+</div>
 
       </div>
 
@@ -529,7 +593,7 @@
 
           <div>
             <strong>Jogadores</strong>
-            <small>Mensalistas podem ficar sem cobrança no jogo; avulsos entram na cobrança.</small>
+            <small>Mensalistas pagam uma vez por ciclo (4 jogos); avulsos são cobrados por jogo.</small>
           </div>
 
           <button class="btn-ghost" id="btnAdicionarJogador" type="button">
@@ -587,135 +651,6 @@
         <i data-lucide="save" width="15" height="15"></i>
         <span>Salvar jogo</span>
       </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- MODAL HORÁRIOS FIXOS -->
-<div class="modal-overlay" id="modalHorariosFixos" style="display:none;">
-
-  <div class="modal card agenda-horarios-modal">
-
-    <div class="modal-header">
-
-      <div>
-        <h3>Agenda</h3>
-        <p class="agenda-modal-subtitle">
-          Consulte horários fechados, livres e mensalistas ativos por data.
-        </p>
-      </div>
-
-    </div>
-
-        <button
-      class="btn-ghost"
-      id="btnFecharModalHorariosFixos"
-      style="padding:6px;"
-    >
-      <i data-lucide="x" width="16" height="16"></i>
-    </button>
-
-    <div class="modal-body agenda-horarios-body">
-
-            <div class="agenda-horarios-busca-wrap">
-        <input
-          class="input"
-          id="buscaHorariosFixos"
-          placeholder="Buscar por jogador, responsável, tipo, dia, horário ou campo..."
-        >
-      </div>
-
-      <div class="agenda-horarios-data-actions">
-
-  <input
-    type="date"
-    class="input"
-    id="dataHorariosFixos"
-  >
-
-  <button class="agenda-date-btn" type="button" id="btnHojeHorariosFixos">
-    Hoje
-  </button>
-
-  <button class="agenda-date-btn" type="button" id="btnProximoDiaHorariosFixos">
-    Próximo dia →
-  </button>
-
-<div class="agenda-config-horarios">
-
-  <button class="agenda-config-toggle" type="button" id="btnConfigHorarios">
-    <i data-lucide="sliders-horizontal" width="15" height="15"></i>
-    Configurar grade ▼
-  </button>
-
-  <div class="agenda-config-box" id="boxConfigHorarios">
-
-    <div class="agenda-config-grid">
-
-      <div class="input-group">
-        <label class="input-label">Abertura</label>
-        <input type="time" class="input" id="configHoraAbertura" value="08:00">
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Fechamento</label>
-        <input type="time" class="input" id="configHoraFechamento" value="23:45">
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Intervalo dos horários</label>
-        <select class="input" id="configIntervaloInicio">
-          <option value="15">15 min</option>
-          <option value="30" selected>30 min</option>
-          <option value="60">60 min</option>
-        </select>
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Durações</label>
-        <select class="input" id="configDuracoesJogo">
-          <option value="60">Somente 1h</option>
-          <option value="60,90" selected>1h e 1h30</option>
-          <option value="90">Somente 1h30</option>
-        </select>
-      </div>
-
-    </div>
-
-  </div>
-
-</div>
-
-</div>
-
-<div class="agenda-horarios-tabs">
-
-  <button class="agenda-horarios-tab active" data-tipo="fechados" type="button">
-    Fechados
-  </button>
-
-  <button class="agenda-horarios-tab" data-tipo="livres" type="button">
-    Livres
-  </button>
-
-  <button class="agenda-horarios-tab" data-tipo="mensalista" type="button">
-    Mensalistas
-  </button>
-
-  <button class="agenda-horarios-tab" data-tipo="evento" type="button">
-    Eventos
-  </button>
-
-  <button class="agenda-horarios-tab" data-tipo="campeonato" type="button">
-    Campeonatos
-  </button>
-
-</div>
-
-      <div class="agenda-horarios-lista" id="listaHorariosFixos"></div>
 
     </div>
 

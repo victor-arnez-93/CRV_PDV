@@ -730,11 +730,21 @@ async function carregarTipoNegocioCaixa() {
 }
 
 function caixaPermiteJogos() {
+  const tipo = String(tipoNegocioCaixa || "")
+    .toLowerCase()
+    .trim();
+
   return [
+    "arena",
     "arena_esportiva",
     "arena_beach",
-    "quadras_esportivas"
-  ].includes(String(tipoNegocioCaixa || ""));
+    "quadra",
+    "quadras",
+    "quadras_esportivas",
+    "society",
+    "beach_tennis",
+    "esportes"
+  ].includes(tipo);
 }
 
 function aplicarVisibilidadeBotaoJogos() {
@@ -2089,27 +2099,48 @@ async function validarCarrinhoComEstoque() {
   return true;
 }
 
+function limparRecebimentoAgendaStorage() {
+  sessionStorage.removeItem("crv_recebimento_agenda_caixa");
+  localStorage.removeItem("crv_recebimento_agenda_caixa");
+  recebimentoAgendaCaixa = null;
+}
+
 function obterRecebimentoAgendaStorage() {
   try {
     const bruto =
-      sessionStorage.getItem("crv_recebimento_agenda_caixa");
+      sessionStorage.getItem("crv_recebimento_agenda_caixa") ||
+      localStorage.getItem("crv_recebimento_agenda_caixa");
 
     if (!bruto) return null;
 
     const dados = JSON.parse(bruto);
 
-    if (
-      dados?.tipo !== "agenda_mensalidade" ||
-      !dados.mensalidade_id ||
-      !dados.valor
-    ) {
+    const tipo = String(dados?.tipo || "").trim();
+
+    if (!["agenda_mensalidade", "agenda_avulso"].includes(tipo)) {
+      limparRecebimentoAgendaStorage();
       return null;
+    }
+
+    if (tipo === "agenda_mensalidade") {
+      if (!dados.mensalidade_id || !dados.agenda_id || Number(dados.valor || 0) <= 0) {
+        limparRecebimentoAgendaStorage();
+        return null;
+      }
+    }
+
+    if (tipo === "agenda_avulso") {
+      if (!dados.agenda_id && !dados.origem_id) {
+        limparRecebimentoAgendaStorage();
+        return null;
+      }
     }
 
     return dados;
 
   } catch (err) {
     console.warn("[CAIXA][RECEBIMENTO AGENDA]", err);
+    limparRecebimentoAgendaStorage();
     return null;
   }
 }
@@ -2140,21 +2171,68 @@ function formatarCompetenciaCaixa(comp) {
 }
 
 async function processarRecebimentoAgendaAoAbrirCaixa() {
-  const recebimento =
-    obterRecebimentoAgendaStorage();
+  const recebimento = obterRecebimentoAgendaStorage();
 
   if (!recebimento) return;
 
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Abra o caixa",
-      "Existe uma mensalidade enviada pela Agenda para receber. Abra o caixa primeiro e depois volte para receber."
+      "Existe um recebimento enviado pela Agenda. Abra o caixa primeiro e depois volte para receber."
     );
 
     return;
   }
 
-  recebimentoAgendaCaixa = recebimento;
+  if (recebimento.tipo === "agenda_mensalidade") {
+    await prepararRecebimentoMensalidadeAgendaCaixa(recebimento);
+    return;
+  }
+
+  if (recebimento.tipo === "agenda_avulso") {
+    await prepararRecebimentoAvulsoAgendaCaixa(recebimento);
+  }
+}
+
+async function prepararRecebimentoMensalidadeAgendaCaixa(recebimento) {
+  const { data: mensalidade, error } = await sb
+    .from("agenda_mensalidades")
+    .select("*")
+    .eq("empresa_id", obterEmpresaId())
+    .eq("id", recebimento.mensalidade_id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!mensalidade) {
+    limparRecebimentoAgendaStorage();
+
+    crvToast({
+      titulo: "Mensalidade não encontrada",
+      mensagem: "O recebimento enviado pela Agenda não existe mais.",
+      tipo: "warn"
+    });
+
+    return;
+  }
+
+  if (String(mensalidade.status || "").toLowerCase() === "pago") {
+    limparRecebimentoAgendaStorage();
+
+    crvToast({
+      titulo: "Mensalidade já paga",
+      mensagem: "Este recebimento já foi baixado anteriormente.",
+      tipo: "info"
+    });
+
+    return;
+  }
+
+  recebimentoAgendaCaixa = {
+    ...recebimento,
+    valor: Number(mensalidade.valor || recebimento.valor || 0),
+    competencia: mensalidade.competencia || recebimento.competencia
+  };
 
   modoPDV = "venda";
   comandaAtiva = null;
@@ -2163,17 +2241,16 @@ async function processarRecebimentoAgendaAoAbrirCaixa() {
 
   carrinho = [
     {
-      id: `agenda-mensalidade-${recebimento.mensalidade_id}`,
-      nome: recebimento.descricao,
-      preco: Number(recebimento.valor || 0),
+      id: `agenda-mensalidade-${mensalidade.id}`,
+      nome: recebimento.descricao || `Mensalidade - ${recebimento.cliente_nome || "Mensalista"}`,
+      preco: Number(mensalidade.valor || 0),
       preco_custo: 0,
       quantidade: 1,
       produto_manual: true,
-
       origem: "agenda_mensalidade",
-      origem_id: recebimento.mensalidade_id,
-      agenda_id: recebimento.agenda_id,
-      mensalidade_id: recebimento.mensalidade_id
+      origem_id: mensalidade.id,
+      agenda_id: recebimento.agenda_id || mensalidade.agenda_origem_id,
+      mensalidade_id: mensalidade.id
     }
   ];
 
@@ -2187,24 +2264,109 @@ async function processarRecebimentoAgendaAoAbrirCaixa() {
       ${recebimento.local_recurso || "Quadra/Campo"}
       ${recebimento.hora_inicio ? ` · ${formatarHoraCaixa(recebimento.hora_inicio)} às ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
       Mensalidade referente a
-      <strong>${formatarCompetenciaCaixa(recebimento.competencia)}</strong><br><br>
+      <strong>${formatarCompetenciaCaixa(mensalidade.competencia)}</strong><br><br>
       Valor:
-      <strong>${fmt(recebimento.valor)}</strong><br><br>
+      <strong>${fmt(mensalidade.valor)}</strong><br><br>
       Escolha a forma de pagamento no Caixa e finalize a venda.
     `,
     textoConfirmar: "Ir para pagamento",
     mostrarCancelar: false
   });
 
-  const primeiroPagamento =
-    document.querySelector(".pay-btn");
+  document.querySelector(".pay-btn")?.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+}
 
-  if (primeiroPagamento) {
-    primeiroPagamento.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
+async function prepararRecebimentoAvulsoAgendaCaixa(recebimento) {
+  const agendaId = recebimento.agenda_id || recebimento.origem_id;
+
+  const { data: jogadores, error } = await sb
+    .from("agenda_jogadores")
+    .select("*")
+    .eq("empresa_id", obterEmpresaId())
+    .eq("agenda_id", agendaId)
+    .neq("removido", true);
+
+  if (error) throw error;
+
+  const jogadoresCobraveis = (jogadores || []).filter(jogador => {
+    if (jogadorPagoCaixa(jogador)) return false;
+    if (jogadorEmComandaCaixa(jogador)) return false;
+
+    return (
+      jogador.cobrar_no_jogo === true &&
+      String(jogador.origem_jogador || "").toLowerCase() === "avulso"
+    );
+  });
+
+  if (!jogadoresCobraveis.length) {
+    limparRecebimentoAgendaStorage();
+
+    crvToast({
+      titulo: "Sem cobrança pendente",
+      mensagem: "Este jogo não possui jogadores avulsos pendentes para receber.",
+      tipo: "info"
     });
+
+    return;
   }
+
+  recebimentoAgendaCaixa = recebimento;
+
+  modoPDV = "venda";
+  comandaAtiva = null;
+  comandaOculta = false;
+  jogoSelecionadoCaixa = null;
+
+  carrinho = jogadoresCobraveis.map(jogador => ({
+    id: `agenda-avulso-${jogador.id}`,
+    nome: `Jogo avulso - ${jogador.nome || "Jogador"}`,
+    preco: Number(jogador.valor || 0),
+    preco_custo: 0,
+    quantidade: 1,
+    produto_manual: true,
+    origem: "agenda_avulso",
+    origem_id: agendaId,
+    agenda_id: agendaId,
+    agenda_jogador_id: jogador.id
+  })).filter(item => Number(item.preco || 0) > 0);
+
+  if (!carrinho.length) {
+    limparRecebimentoAgendaStorage();
+
+    await alertaCaixa(
+      "Valores não informados",
+      "Os jogadores avulsos deste jogo estão sem valor de cobrança."
+    );
+
+    return;
+  }
+
+  atualizarInterfaceModoPDV();
+  renderCarrinho();
+
+  await abrirConfirmacaoCaixa({
+    titulo: "Receber jogo avulso",
+    mensagem: `
+      <strong>${recebimento.cliente_nome || "Jogo avulso"}</strong><br>
+      ${recebimento.local_recurso || "Quadra/Campo"}
+      ${recebimento.hora_inicio ? ` · ${formatarHoraCaixa(recebimento.hora_inicio)} às ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
+      Jogadores cobrados:
+      <strong>${carrinho.length}</strong><br><br>
+      Total:
+      <strong>${fmt(calcularTotalCarrinho())}</strong><br><br>
+      Escolha a forma de pagamento no Caixa e finalize a venda.
+    `,
+    textoConfirmar: "Ir para pagamento",
+    mostrarCancelar: false
+  });
+
+  document.querySelector(".pay-btn")?.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
 }
 
 async function atualizarMensalidadeAgendaAposVenda(vendaId) {
@@ -2219,6 +2381,9 @@ async function atualizarMensalidadeAgendaAposVenda(vendaId) {
       status: "pago",
       forma_pagamento: metodoPagamento,
       pago_em: new Date().toISOString(),
+      venda_id: vendaId,
+      caixa_id: caixa?.id || null,
+      agenda_id: recebimento.agenda_id || null,
       atualizado_em: new Date().toISOString()
     })
     .eq("id", recebimento.mensalidade_id)
@@ -2226,8 +2391,37 @@ async function atualizarMensalidadeAgendaAposVenda(vendaId) {
 
   if (error) throw error;
 
-  sessionStorage.removeItem("crv_recebimento_agenda_caixa");
-  recebimentoAgendaCaixa = null;
+  limparRecebimentoAgendaStorage();
+}
+
+async function atualizarJogadoresAvulsosAgendaAposVenda(vendaId) {
+  const itensAgenda = carrinho.filter(item => {
+    return String(item.origem || "") === "agenda_avulso" && item.agenda_jogador_id;
+  });
+
+  if (!itensAgenda.length) return;
+
+  const idsJogadores = itensAgenda.map(item => item.agenda_jogador_id);
+  const agendaId = itensAgenda[0].agenda_id;
+
+  const { error: erroJogadores } = await sb
+    .from("agenda_jogadores")
+    .update({
+      pago: true,
+      forma_pagamento: metodoPagamento,
+      status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_DIRETO,
+      venda_id: vendaId,
+      pago_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString()
+    })
+    .eq("empresa_id", obterEmpresaId())
+    .in("id", idsJogadores);
+
+  if (erroJogadores) throw erroJogadores;
+
+  await atualizarResumoAgendaAposComandaCaixa(agendaId);
+
+  limparRecebimentoAgendaStorage();
 }
 
 // ======================================================
@@ -2433,9 +2627,13 @@ if (!sistemaOnline()) {
 const empresaId = obterEmpresaId();
 
 const itemMensalidadeAgenda =
-  carrinho.find(item => {
-    return String(item.origem || "") === "agenda_mensalidade";
-  }) || null;
+  carrinho.find(item => String(item.origem || "") === "agenda_mensalidade") || null;
+
+const itensAgendaAvulso =
+  carrinho.filter(item => String(item.origem || "") === "agenda_avulso");
+
+const itemAgendaAvulso =
+  itensAgendaAvulso[0] || null;
 
 const vendaPayload = {
   empresa_id: empresaId,
@@ -2447,21 +2645,29 @@ const vendaPayload = {
   forma_pagamento: metodoPagamento,
   troco: troco,
 
-  origem: itemMensalidadeAgenda
+origem: itemMensalidadeAgenda
     ? "agenda_mensalidade"
-    : "pdv",
+    : itemAgendaAvulso
+      ? "agenda_avulso"
+      : "pdv",
 
   origem_id: itemMensalidadeAgenda
     ? itemMensalidadeAgenda.mensalidade_id
-    : null,
+    : itemAgendaAvulso
+      ? itemAgendaAvulso.agenda_id
+      : null,
 
   agenda_id: itemMensalidadeAgenda
     ? itemMensalidadeAgenda.agenda_id
-    : null,
+    : itemAgendaAvulso
+      ? itemAgendaAvulso.agenda_id
+      : null,
 
   descricao: itemMensalidadeAgenda
     ? itemMensalidadeAgenda.nome
-    : "Venda rápida",
+    : itemAgendaAvulso
+      ? `Jogo avulso - ${recebimentoAgendaCaixa?.local_recurso || "Quadra/Campo"} - ${recebimentoAgendaCaixa?.cliente_nome || "Responsável"}`
+      : "Venda rápida",
 
   data: new Date().toISOString(),
   operador_id: obterOperadorAtualId(),
@@ -2514,8 +2720,12 @@ return {
 
     if (itensError) throw itensError;
 
-    if (itemMensalidadeAgenda) {
+if (itemMensalidadeAgenda) {
   await atualizarMensalidadeAgendaAposVenda(vendaData.id);
+}
+
+if (itemAgendaAvulso) {
+  await atualizarJogadoresAvulsosAgendaAposVenda(vendaData.id);
 }
 
     await baixarEstoqueProdutos();
@@ -2729,7 +2939,9 @@ function renderHistorico() {
 
     vendas
     .filter(venda => {
-      if (String(venda.origem || "").toLowerCase() !== "agenda") {
+      const origem = String(venda.origem || "").toLowerCase();
+
+      if (origem !== "agenda") {
         return true;
       }
 
@@ -2738,24 +2950,29 @@ function renderHistorico() {
     .forEach(venda => {
     const origem = String(venda.origem || "pdv").toLowerCase();
 
+    const origemEhAgenda =
+      origem === "agenda" ||
+      origem === "agenda_avulso" ||
+      origem === "agenda_mensalidade";
+
     const icon =
       origem === "comanda"
         ? "ticket"
-        : origem === "agenda"
+        : origemEhAgenda
           ? "calendar-check"
           : "shopping-cart";
 
     const classe =
       origem === "comanda"
         ? "comanda"
-        : origem === "agenda"
+        : origemEhAgenda
           ? "agenda"
           : "venda";
 
     const titulo =
       origem === "comanda"
         ? (venda.descricao || "Comanda fechada")
-        : origem === "agenda"
+        : origemEhAgenda
           ? limparTituloJogoHistoricoCaixa(venda.descricao)
           : (venda.descricao || "Venda finalizada");
 
@@ -3235,15 +3452,18 @@ const totalPago = jogadores
 
     const { data: vendasAgenda, error } = await sb
       .from("vendas")
-      .select("origem_id")
+      .select("origem_id, agenda_id, origem")
       .eq("empresa_id", obterEmpresaId())
-      .eq("origem", "agenda")
-      .in("origem_id", idsJogos);
+      .in("origem", ["agenda", "agenda_avulso"])
+      .in("agenda_id", idsJogos);
 
     if (error) throw error;
 
     const idsComVenda = new Set(
-      (vendasAgenda || []).map(venda => String(venda.origem_id))
+      (vendasAgenda || [])
+        .map(venda => venda.agenda_id || venda.origem_id)
+        .filter(Boolean)
+        .map(id => String(id))
     );
 
     jogosPendentesSincronizacaoCaixa = jogosComRecebimento.filter(jogo => {
@@ -3726,36 +3946,7 @@ async function carregarJogosCaixa() {
 
     jogosCaixa = Array.isArray(jogos) ? jogos : [];
     jogadoresCaixaPorAgenda = agruparJogadoresCaixa(jogadores);
-    // Buscar mensalidades do mês atual para recalcular cobrar_no_jogo
-const competenciaHoje = obterHojeISOCaixa().slice(0, 7); // "2026-06"
-const { data: mensalidadesCaixa } = await sb
-  .from('agenda_mensalidades')
-  .select('agenda_origem_id, competencia, status')
-  .eq('empresa_id', obterEmpresaId())
-  .eq('competencia', competenciaHoje);
 
-// Recalcular cobrar_no_jogo para cada jogador mensalista
-if (mensalidadesCaixa?.length) {
-  Object.keys(jogadoresCaixaPorAgenda).forEach(agendaId => {
-    const jogo = jogosCaixa.find(j => String(j.id) === String(agendaId));
-    if (!jogo) return;
-    const origemId = jogo.recorrencia_origem_id || jogo.id;
-
-    jogadoresCaixaPorAgenda[agendaId] = jogadoresCaixaPorAgenda[agendaId].map(j => {
-      if (!j.mensalista) return j; // avulsos não mudam
-      const mensalidade = mensalidadesCaixa.find(m =>
-        String(m.agenda_origem_id) === String(origemId) &&
-        String(m.competencia) === String(competenciaHoje)
-      );
-      // Pago = isento. Pendente ou sem mensalidade = cobrar
-      const mensalidadePaga = mensalidade?.status === 'pago';
-      return {
-        ...j,
-        cobrar_no_jogo: !mensalidadePaga
-      };
-    });
-  });
-}
     vinculosComandaJogadorCaixa = {};
 
     await crvOfflineDB.salvarCache("caixa_jogos", jogosCaixa);

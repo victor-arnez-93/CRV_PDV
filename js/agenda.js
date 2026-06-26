@@ -105,13 +105,19 @@ function aplicarMascaraTelefoneAgenda(input) {
 }
 
 function formatarNomeProprioAgenda(valor) {
+  const minusculas = new Set(["de", "da", "do", "das", "dos", "e"]);
+
   return String(valor || "")
     .toLowerCase()
     .replace(/\s+/g, " ")
-    .trimStart()
-    .replace(/(^|\s)([a-záàâãéèêíïóôõöúçñ])/g, (match, espaco, letra) => {
-      return espaco + letra.toUpperCase();
-    });
+    .trim()
+    .split(" ")
+    .map((parte, index) => {
+      if (index > 0 && minusculas.has(parte)) return parte;
+
+      return parte.charAt(0).toUpperCase() + parte.slice(1);
+    })
+    .join(" ");
 }
 
 function hojeISOAgenda() {
@@ -210,11 +216,13 @@ function buscarMensalidadeAgenda(jogo) {
 // ======================================================
 // ESTADO
 // ======================================================
-
 let agendaDados = [];
 let jogadoresPorAgenda = {};
 let mensalidadesAgenda = [];
 let excecoesAgenda = [];
+
+let camposArena = [];
+let configuracaoAgenda = null;
 
 let agendaAtualId = null;
 let modoModalAgenda = "novo";
@@ -288,161 +296,53 @@ function inicializarEventosAgenda() {
     .getElementById("btnNovaReserva")
     ?.addEventListener("click", abrirNovoJogo);
 
-document
-  .getElementById("btnAgendaInline")
-  ?.addEventListener("click", alternarAgendaInline);
-
-document
-  .getElementById("buscaAgendaInline")
-  ?.addEventListener("input", renderizarAgendaInline);
-
-document
-  .getElementById("tipoAgendaInline")
-  ?.addEventListener("change", renderizarAgendaInline);
-
-document
-  .getElementById("campoAgendaInline")
-  ?.addEventListener("change", renderizarAgendaInline);
+  document
+    .getElementById("btnAgendaInline")
+    ?.addEventListener("click", alternarAgendaInline);
 
   document
-    .getElementById("btnFecharModalHorariosFixos")
-    ?.addEventListener("click", fecharModalHorariosFixos);
+    .getElementById("btnConfigGradeInline")
+    ?.addEventListener("click", alternarConfigGradeInline);
 
-      document
-    .getElementById("buscaHorariosFixos")
-    ?.addEventListener("input", () => {
-      const abaAtiva =
-        document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo || "todos";
-
-      renderizarHorariosFixos(abaAtiva);
-    });
-
-document
-  .getElementById("dataHorariosFixos")
-  ?.addEventListener("change", async () => {
-
-    const dataModal =
-      document.getElementById("dataHorariosFixos")?.value;
-
-    const filtroData =
-      document.getElementById("filtroData");
-
-    if (dataModal && filtroData) {
-      filtroData.value = dataModal;
-    }
-
-    await carregarAgenda();
-
-    renderizarHorariosFixos(
-      document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo ||
-      "fechados"
-    );
-  });
-
-document
-  .getElementById("btnHojeHorariosFixos")
-  ?.addEventListener("click", async () => {
-
-    const hoje = hojeISOAgenda();
-
-    document.getElementById("filtroData").value = hoje;
-    document.getElementById("dataHorariosFixos").value = hoje;
-
-    await carregarAgenda();
-
-    renderizarHorariosFixos(
-      document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo ||
-      "fechados"
-    );
-  });
-
-document
-  .getElementById("btnProximoDiaHorariosFixos")
-  ?.addEventListener("click", async () => {
-
-    const inputModal =
-      document.getElementById("dataHorariosFixos");
-
-    const inputPrincipal =
-      document.getElementById("filtroData");
-
-    const dataAtual =
-      inputModal?.value ||
-      inputPrincipal?.value ||
-      hojeISOAgenda();
-
-    const data = new Date(`${dataAtual}T12:00:00`);
-
-    data.setDate(data.getDate() + 1);
-
-    const novaData =
-      data.toISOString().slice(0, 10);
-
-    if (inputModal) {
-      inputModal.value = novaData;
-    }
-
-    if (inputPrincipal) {
-      inputPrincipal.value = novaData;
-    }
-
-    await carregarAgenda();
-
-    renderizarHorariosFixos(
-      document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo ||
-      "fechados"
-    );
-  });
-
-document
-  .getElementById("btnConfigHorarios")
-  ?.addEventListener("click", () => {
-
-    const box =
-      document.getElementById("boxConfigHorarios");
-
-    const btn =
-      document.getElementById("btnConfigHorarios");
-
-    if (!box || !btn) return;
-
-    box.classList.toggle("ativo");
-    btn.classList.toggle("ativo");
-
-  });
+    garantirBotaoSemanaAgenda();
 
   document
-  .getElementById("btnConfigGradeInline")
-  ?.addEventListener("click", () => {
-    abrirModalHorariosFixos();
+    .getElementById("btnAdicionarCampoArena")
+    ?.addEventListener("click", adicionarCampoArenaInline);
 
-    setTimeout(() => {
-      document.getElementById("btnConfigHorarios")?.click();
-    }, 80);
-  });
+    document
+  .getElementById("btnSalvarConfigAgendaInline")
+  ?.addEventListener("click", salvarConfiguracaoAgendaInlineCompleta);
 
-[
-  "configHoraAbertura",
-  "configHoraFechamento",
-  "configIntervaloInicio",
-  "configDuracoesJogo"
-].forEach(id => {
   document
-    .getElementById(id)
-    ?.addEventListener("change", () => {
+    .getElementById("buscaAgendaInline")
+    ?.addEventListener("input", renderizarAgendaInline);
 
-      const abaAtiva =
-        document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo ||
-        "fechados";
+  document
+    .getElementById("tipoAgendaInline")
+    ?.addEventListener("change", renderizarAgendaInline);
 
-        salvarConfigGradeAgenda();
+  document
+    .getElementById("campoAgendaInline")
+    ?.addEventListener("change", renderizarAgendaInline);
 
-        if (abaAtiva === "livres") {
-          renderizarHorariosLivres();
+  [
+    "configHoraAbertura",
+    "configHoraFechamento",
+    "configIntervaloInicio",
+    "configDuracoesJogo"
+  ].forEach(id => {
+    document
+      .getElementById(id)
+      ?.addEventListener("change", async () => {
+        await salvarConfigGradeAgenda();
+
+        if (agendaInlineAberta) {
+          popularCamposAgendaInline();
+          renderizarAgendaInline();
         }
-
-    });
-});
+      });
+  });
 
   document
     .getElementById("btnFecharModalReserva")
@@ -460,32 +360,16 @@ document
     .getElementById("btnAdicionarJogador")
     ?.addEventListener("click", adicionarLinhaJogador);
 
-document
-  .getElementById("filtroData")
-  ?.addEventListener("change", async () => {
-    const dataPrincipal = document.getElementById("filtroData")?.value;
-    const dataModal = document.getElementById("dataHorariosFixos");
+  document
+    .getElementById("filtroData")
+    ?.addEventListener("change", async () => {
+      await carregarAgenda();
 
-    if (dataModal && dataPrincipal) {
-      dataModal.value = dataPrincipal;
-    }
-
-    await carregarAgenda();
-
-    if (agendaInlineAberta) {
-      popularCamposAgendaInline();
-      renderizarAgendaInline();
-    }
-
-    const modalAberto =
-      document.getElementById("modalHorariosFixos")?.style.display === "flex";
-
-    if (modalAberto) {
-      renderizarHorariosFixos(
-        document.querySelector(".agenda-horarios-tab.active")?.dataset.tipo || "fechados"
-      );
-    }
-  });
+      if (agendaInlineAberta) {
+        popularCamposAgendaInline();
+        renderizarAgendaInline();
+      }
+    });
 
   document
     .getElementById("filtroBusca")
@@ -495,11 +379,11 @@ document
     .getElementById("filtroStatus")
     ?.addEventListener("change", aplicarFiltrosAgenda);
 
-document
-  .getElementById("tipoJogo")
-  ?.addEventListener("change", alternarCamposMensais);
+  document
+    .getElementById("tipoJogo")
+    ?.addEventListener("change", alternarCamposMensais);
 
-      document
+  document
     .getElementById("usarTimesJogo")
     ?.addEventListener("change", alternarTimesJogo);
 
@@ -556,7 +440,7 @@ function definirDataInicial() {
 
 }
 
-function alterarDiaAgenda(delta) {
+async function alterarDiaAgenda(delta) {
   const input = document.getElementById("filtroData");
   if (!input) return;
 
@@ -567,245 +451,16 @@ function alterarDiaAgenda(delta) {
 
   input.value = data.toISOString().slice(0, 10);
 
-  carregarAgenda();
+await sincronizarAgendaVisual();
 }
 
-function voltarHojeAgenda() {
+async function voltarHojeAgenda() {
   const input = document.getElementById("filtroData");
   if (!input) return;
 
   input.value = hojeISOAgenda();
 
-  carregarAgenda();
-}
-
-// ======================================================
-// MODAL HORÁRIOS FIXOS
-// ======================================================
-function abrirModalHorariosFixos() {
-  const modal = document.getElementById("modalHorariosFixos");
-
-  if (!modal) return;
-
-  modal.style.display = "flex";
-
-  carregarConfigGradeAgenda();
-
-  const busca =
-    document.getElementById("buscaHorariosFixos");
-
-  if (busca) {
-    busca.value = "";
-  }
-
-const dataPrincipal =
-  document.getElementById("filtroData")?.value || hojeISOAgenda();
-
-const dataModal =
-  document.getElementById("dataHorariosFixos");
-
-if (dataModal) {
-  dataModal.value = dataPrincipal;
-}
-
-  configurarAbasHorariosFixos();
-
-    renderizarHorariosFixos("fechados");
-
-  if (window.lucide) {
-    lucide.createIcons();
-  }
-}
-
-function fecharModalHorariosFixos() {
-  const modal = document.getElementById("modalHorariosFixos");
-
-  if (modal) {
-    modal.style.display = "none";
-  }
-}
-
-function configurarAbasHorariosFixos() {
-  document
-    .querySelectorAll(".agenda-horarios-tab")
-    .forEach(btn => {
-      btn.onclick = () => {
-        document
-          .querySelectorAll(".agenda-horarios-tab")
-          .forEach(item => item.classList.remove("active"));
-
-        btn.classList.add("active");
-
-        renderizarHorariosFixos(btn.dataset.tipo || "todos");
-      };
-    });
-}
-
-function renderizarHorariosFixos(tipo = "fechados") {
-  const lista = document.getElementById("listaHorariosFixos");
-  if (!lista) return;
-
-  if (tipo === "livres") {
-    renderizarHorariosLivres();
-    return;
-  }
-
-if (tipo === "mensalista") {
-  renderizarMensalidadesAgenda();
-  return;
-}
-
-  const dataFiltro =
-    document.getElementById("filtroData")?.value || hojeISOAgenda();
-
-  const termoBusca =
-    String(document.getElementById("buscaHorariosFixos")?.value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-  let jogos = [...agendaDados];
-
-  jogos = jogos.filter(jogo => {
-    if (jogo.status_jogo === "cancelado") return false;
-    if (jogo.status_jogo === "fechado") return false;
-
-    const dataJogo =
-      String(jogo.data_agendamento || "").slice(0, 10);
-
-    if (tipo === "fechados") {
-      return dataJogo === dataFiltro;
-    }
-
-    if (tipo === "mensalista") {
-      return (
-        !jogo.recorrencia_origem_id &&
-        jogoEhMensalAgenda(jogo)
-      );
-    }
-
-    if (tipo === "evento" || tipo === "campeonato") {
-      return (
-        String(jogo.tipo_jogo || "") === tipo &&
-        dataJogo >= hojeISOAgenda()
-      );
-    }
-
-    return false;
-  });
-
-  if (termoBusca) {
-    jogos = jogos.filter(jogo => {
-      const jogadores =
-        (jogadoresPorAgenda[jogo.id] || [])
-          .filter(j => j.removido !== true);
-
-      const textoBusca = [
-        jogo.cliente_nome,
-        jogo.local_recurso,
-        jogo.tipo_jogo,
-        jogo.recorrencia,
-        jogadores.map(j => j.nome || "").join(" "),
-        formatarHora(jogo.hora_inicio),
-        formatarHora(jogo.hora_fim)
-      ]
-        .join(" ")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-      return textoBusca.includes(termoBusca);
-    });
-  }
-
-  jogos.sort((a, b) => {
-    const dataA = `${a.data_agendamento || ""} ${a.hora_inicio || ""}`;
-    const dataB = `${b.data_agendamento || ""} ${b.hora_inicio || ""}`;
-    return dataA.localeCompare(dataB);
-  });
-
-  if (!jogos.length) {
-    lista.innerHTML = `
-      <div class="agenda-horarios-empty">
-        Nenhum horário encontrado para este filtro.
-      </div>
-    `;
-    return;
-  }
-
-  lista.innerHTML = jogos.map(jogo => {
-    const jogadores =
-      (jogadoresPorAgenda[jogo.id] || [])
-        .filter(j => j.removido !== true);
-
-    const mensalidade =
-      buscarMensalidadeAgenda(jogo);
-
-    const dataFormatada =
-      String(jogo.data_agendamento || "")
-        .slice(0, 10)
-        .split("-")
-        .reverse()
-        .join("/");
-
-    const mensalidadeTexto =
-      mensalidade
-        ? `${mensalidade.competencia} • ${mensalidade.status}`
-        : "Sem mensalidade gerada";
-
-    const badge =
-      jogo.recorrencia === "mensal" || jogo.tipo_jogo === "mensalista"
-        ? "Mensal"
-        : jogo.tipo_jogo || "Avulso";
-
-    return `
-      <div class="agenda-horario-item agenda-horario-click" data-id="${jogo.id}">
-
-        <div class="agenda-horario-main">
-
-          <div class="agenda-horario-topline">
-            <strong>${jogo.cliente_nome || "-"}</strong>
-            <span class="agenda-horario-badge">${badge}</span>
-          </div>
-
-          <span>
-            ${dataFormatada} • ${formatarHora(jogo.hora_inicio)} às ${formatarHora(jogo.hora_fim)}
-          </span>
-
-          <small>
-            ${jogo.local_recurso || "-"}
-            •
-            ${jogadores.length} jogador(es)
-            ${
-              jogoEhMensalAgenda(jogo)
-                ? `• Mensalidade: ${mensalidadeTexto}`
-                : ""
-            }
-          </small>
-
-          ${
-            jogo.horario_alterado === true
-              ? `<small class="agenda-horario-alerta">
-                  Horário alterado: ${jogo.motivo_alteracao_horario || "sem motivo informado"}
-                </small>`
-              : ""
-          }
-
-        </div>
-
-      </div>
-    `;
-  }).join("");
-
-  lista
-    .querySelectorAll(".agenda-horario-click")
-    .forEach(card => {
-      card.addEventListener("click", () => {
-        fecharModalHorariosFixos();
-        abrirJogo(card.dataset.id);
-      });
-    });
+await sincronizarAgendaVisual();
 }
 
 function normalizarLocalAgenda(local) {
@@ -816,6 +471,21 @@ function normalizarLocalAgenda(local) {
 }
 
 function obterLocaisAgenda() {
+  if (camposArena.length) {
+    return camposArena
+      .filter(campo => campo.ativo !== false)
+      .sort((a, b) => {
+        const ordemA = Number(a.ordem || 0);
+        const ordemB = Number(b.ordem || 0);
+
+        if (ordemA !== ordemB) return ordemA - ordemB;
+
+        return String(a.nome || "").localeCompare(String(b.nome || ""));
+      })
+      .map(campo => campo.nome)
+      .filter(Boolean);
+  }
+
   const locais = agendaDados
     .map(j => normalizarLocalAgenda(j.local_recurso))
     .filter(Boolean);
@@ -823,44 +493,104 @@ function obterLocaisAgenda() {
   return [...new Set(locais)].sort();
 }
 
+function obterCampoArenaPorNome(nome) {
+  const normalizado = normalizarBuscaAgendaInline(nome);
+
+  return camposArena.find(campo => {
+    return normalizarBuscaAgendaInline(campo.nome) === normalizado;
+  }) || null;
+}
+
+function popularSelectLocalRecurso(valorAtual = "") {
+  const select = document.getElementById("localRecurso");
+  if (!select) return;
+
+  const valor = normalizarLocalAgenda(valorAtual || select.value || "");
+  const camposAtivos = obterLocaisAgenda();
+
+  const existeNosAtivos =
+    camposAtivos.some(campo =>
+      normalizarBuscaAgendaInline(campo) === normalizarBuscaAgendaInline(valor)
+    );
+
+  select.innerHTML = `
+    <option value="">Selecione a quadra/campo</option>
+
+    ${camposAtivos.map(campo => `
+      <option value="${campo}">
+        ${campo}
+      </option>
+    `).join("")}
+
+    ${
+      valor && !existeNosAtivos
+        ? `
+          <option value="${valor}">
+            ${valor} (desativado)
+          </option>
+        `
+        : ""
+    }
+  `;
+
+  select.value = valor;
+}
+
 function minutosParaHoraAgenda(minutos) {
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
+  const total =
+    ((Number(minutos || 0) % 1440) + 1440) % 1440;
+
+  const h = Math.floor(total / 60);
+  const m = total % 60;
 
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function gerarSlotsPadraoArena() {
-  const abertura =
-    horaParaMinutos(
-      document.getElementById("configHoraAbertura")?.value || "08:00"
-    );
+const abertura = horaParaMinutos(
+  document.getElementById("configHoraAbertura")?.value ??
+  configuracaoAgenda?.hora_abertura ??
+  "08:00"
+);
 
-  const fechamento =
-    horaParaMinutos(
-      document.getElementById("configHoraFechamento")?.value || "23:45"
-    );
+let fechamento = horaParaMinutos(
+  document.getElementById("configHoraFechamento")?.value ??
+  configuracaoAgenda?.hora_fechamento ??
+  "23:45" // apenas fallback quando ainda não existir configuração
+);
+
+// expediente atravessando meia-noite
+// Ex:
+// 18:00 → 05:00
+// 08:00 → 00:00
+// 22:00 → 02:00
+if (fechamento <= abertura) {
+  fechamento += 1440;
+}
 
   const passoMinutos =
     Number(
-      document.getElementById("configIntervaloInicio")?.value || 30
+      document.getElementById("configIntervaloInicio")?.value ||
+      configuracaoAgenda?.intervalo_minutos ||
+      30
     );
 
-  const duracoes =
-    String(
-      document.getElementById("configDuracoesJogo")?.value || "60,90"
-    )
+  let duracoes =
+    configuracaoAgenda?.duracoes_minutos || [60, 90];
+
+  const duracoesInput =
+    document.getElementById("configDuracoesJogo")?.value;
+
+  if (duracoesInput) {
+    duracoes = String(duracoesInput)
       .split(",")
       .map(Number)
       .filter(Boolean);
+  }
 
   const slots = [];
 
-  for (
-    let inicio = abertura;
-    inicio < fechamento;
-    inicio += passoMinutos
-  ) {
+  for (let inicio = abertura; inicio < fechamento; inicio += passoMinutos) {
     duracoes.forEach(duracao => {
       const fim = inicio + duracao;
 
@@ -877,39 +607,58 @@ function gerarSlotsPadraoArena() {
   return slots;
 }
 
-function chaveConfigGradeAgenda() {
-  return `crv_agenda_grade_${APP_EMPRESA_ID || "default"}`;
-}
-
 function carregarConfigGradeAgenda() {
-  const salvo =
-    JSON.parse(localStorage.getItem(chaveConfigGradeAgenda()) || "{}");
-
   document.getElementById("configHoraAbertura").value =
-    salvo.abertura || "08:00";
+    configuracaoAgenda?.hora_abertura?.slice(0, 5) || "08:00";
 
   document.getElementById("configHoraFechamento").value =
-    salvo.fechamento || "23:45";
+    configuracaoAgenda?.hora_fechamento?.slice(0, 5) || "23:45";
 
   document.getElementById("configIntervaloInicio").value =
-    salvo.intervalo || "30";
+    String(configuracaoAgenda?.intervalo_minutos || 30);
 
   document.getElementById("configDuracoesJogo").value =
-    salvo.duracoes || "60,90";
+    Array.isArray(configuracaoAgenda?.duracoes_minutos)
+      ? configuracaoAgenda.duracoes_minutos.join(",")
+      : "60,90";
 }
 
-function salvarConfigGradeAgenda() {
-  const config = {
-    abertura: document.getElementById("configHoraAbertura")?.value || "08:00",
-    fechamento: document.getElementById("configHoraFechamento")?.value || "23:45",
-    intervalo: document.getElementById("configIntervaloInicio")?.value || "30",
-    duracoes: document.getElementById("configDuracoesJogo")?.value || "60,90"
+async function salvarConfigGradeAgenda() {
+  const duracoes =
+    String(document.getElementById("configDuracoesJogo")?.value || "60,90")
+      .split(",")
+      .map(Number)
+      .filter(Boolean);
+
+  const payload = {
+    empresa_id: APP_EMPRESA_ID,
+    hora_abertura: document.getElementById("configHoraAbertura")?.value || "08:00",
+    hora_fechamento: document.getElementById("configHoraFechamento")?.value || "23:45",
+    intervalo_minutos: Number(document.getElementById("configIntervaloInicio")?.value || 30),
+    duracoes_minutos: duracoes.length ? duracoes : [60, 90]
   };
 
-  localStorage.setItem(
-    chaveConfigGradeAgenda(),
-    JSON.stringify(config)
-  );
+  const { data, error } = await sb
+    .from("agenda_configuracao")
+    .upsert([payload], {
+      onConflict: "empresa_id"
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    crvToast({
+      titulo: "Erro",
+      mensagem: error.message || "Erro ao salvar configuração da grade.",
+      tipo: "error"
+    });
+
+    return;
+  }
+
+  configuracaoAgenda = data;
+
+  renderizarAgendaInline();
 }
 
 function horarioConflitaComJogo(slotInicio, slotFim, jogo) {
@@ -920,95 +669,6 @@ function horarioConflitaComJogo(slotInicio, slotFim, jogo) {
   const fimJogo = horaParaMinutos(jogo.hora_fim);
 
   return inicioSlot < fimJogo && fimSlot > inicioJogo;
-}
-
-function renderizarHorariosLivres() {
-  const lista = document.getElementById("listaHorariosFixos");
-  if (!lista) return;
-
-  const dataFiltro =
-    document.getElementById("filtroData")?.value || hojeISOAgenda();
-
-  const locais = obterLocaisAgenda();
-  const slots = gerarSlotsPadraoArena();
-
-  if (!locais.length) {
-    lista.innerHTML = `
-      <div class="agenda-horarios-empty">
-        Nenhum campo/quadra cadastrado ainda.
-      </div>
-    `;
-    return;
-  }
-
-  const jogosDoDia =
-    agendaDados.filter(jogo => {
-      return (
-        String(jogo.data_agendamento || "").slice(0, 10) === dataFiltro &&
-        jogo.status_jogo !== "cancelado"
-      );
-    });
-
-  let html = "";
-
-  locais.forEach(local => {
-    const livres = slots.filter(([inicio, fim]) => {
-      return !jogosDoDia.some(jogo => {
-        return (
-          String(jogo.local_recurso || "").trim().toLowerCase() === local.toLowerCase() &&
-          horarioConflitaComJogo(inicio, fim, jogo)
-        );
-      });
-    });
-
-    html += `
-      <div class="agenda-livres-grupo">
-
-        <div class="agenda-livres-header">
-          <strong>${local}</strong>
-          <span>${livres.length} horário(s) livre(s)</span>
-        </div>
-
-${
-  livres.length
-    ? `
-      <div class="agenda-livres-grid">
-        ${livres.map(([inicio, fim, duracao]) => `
-          <button
-            class="agenda-horario-livre"
-            type="button"
-            data-local="${local}"
-            data-inicio="${inicio}"
-            data-fim="${fim}"
-          >
-            <span>${inicio} às ${fim}</span>
-            <small>${duracao === 90 ? "1h30" : "1h"}</small>
-          </button>
-        `).join("")}
-      </div>
-    `
-    : `<div class="agenda-horarios-empty pequeno">Nenhum horário livre neste campo.</div>`
-}
-
-      </div>
-    `;
-  });
-
-  lista.innerHTML = html;
-
-  lista
-    .querySelectorAll(".agenda-horario-livre")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        fecharModalHorariosFixos();
-        abrirNovoJogo();
-
-        document.getElementById("dataAgendamento").value = dataFiltro;
-        document.getElementById("localRecurso").value = btn.dataset.local || "";
-        document.getElementById("horaInicio").value = btn.dataset.inicio || "";
-        document.getElementById("horaFim").value = btn.dataset.fim || "";
-      });
-    });
 }
 
 // ======================================================
@@ -1214,6 +874,7 @@ const payloadOcorrencia = {
       hora_inicio: horaInicioOcorrencia,
       hora_fim: horaFimOcorrencia,
       local_recurso: modelo.local_recurso,
+      campo_id: modelo.campo_id || null,
       tipo_jogo: modelo.tipo_jogo || "mensalista",
       status_jogo: "agendado",
       recorrencia: "avulso",
@@ -1376,6 +1037,34 @@ async function carregarAgenda() {
   .select("*")
   .eq("empresa_id", APP_EMPRESA_ID);
 
+  const {
+  data: campos,
+  error: camposError
+} = await sb
+  .from("arena_campos")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .eq("ativo", true)
+  .order("ordem", { ascending: true })
+  .order("nome", { ascending: true });
+
+const {
+  data: configAgenda,
+  error: configAgendaError
+} = await sb
+  .from("agenda_configuracao")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .maybeSingle();
+
+if (camposError) {
+  throw camposError;
+}
+
+if (configAgendaError) {
+  throw configAgendaError;
+}
+
 if (excecoesError) {
   throw excecoesError;
 }
@@ -1391,6 +1080,8 @@ if (mensalidadesError) {
 agendaDados = agenda || [];
 mensalidadesAgenda = mensalidades || [];
 excecoesAgenda = excecoes || [];
+camposArena = campos || [];
+configuracaoAgenda = configAgenda || null;
 
 jogadoresPorAgenda = agruparJogadores(
   jogadores || []
@@ -1416,14 +1107,30 @@ if (dataFiltro) {
     .eq("empresa_id", APP_EMPRESA_ID)
     .neq("removido", true);
 
-  const { data: mensalidadesAtualizadas } = await sb
-    .from("agenda_mensalidades")
-    .select("*")
-    .eq("empresa_id", APP_EMPRESA_ID);
+const { data: mensalidadesAtualizadas } = await sb
+  .from("agenda_mensalidades")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID);
 
-  agendaDados = agendaAtualizada || [];
-  jogadoresPorAgenda = agruparJogadores(jogadoresAtualizados || []);
-  mensalidadesAgenda = mensalidadesAtualizadas || [];
+const { data: camposAtualizados } = await sb
+  .from("arena_campos")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .eq("ativo", true)
+  .order("ordem", { ascending: true })
+  .order("nome", { ascending: true });
+
+const { data: configAgendaAtualizada } = await sb
+  .from("agenda_configuracao")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .maybeSingle();
+
+agendaDados = agendaAtualizada || [];
+jogadoresPorAgenda = agruparJogadores(jogadoresAtualizados || []);
+mensalidadesAgenda = mensalidadesAtualizadas || [];
+camposArena = camposAtualizados || [];
+configuracaoAgenda = configAgendaAtualizada || configuracaoAgenda;
 }
 
     aplicarFiltrosAgenda();
@@ -1434,6 +1141,15 @@ if (dataFiltro) {
 
   }
 
+}
+
+async function sincronizarAgendaVisual() {
+  await carregarAgenda();
+
+  if (agendaInlineAberta) {
+    popularCamposAgendaInline();
+    renderizarAgendaInline();
+  }
 }
 
 // ======================================================
@@ -1876,15 +1592,14 @@ const vencimentoMensal =
 const statusMensalidade =
   mensalidade?.status || null;
 
-  const jogosUsadosMensalidade =
-  Number(mensalidade?.quantidade_jogos_usados || 0);
-
-const jogosPrevistosMensalidade =
-  Number(mensalidade?.quantidade_jogos_prevista || 4);
+const cicloMensal =
+  mensalidade
+    ? calcularIndiceJogoMensal(jogo, mensalidade)
+    : null;
 
 const textoCicloMensal =
-  mensalidade
-    ? `Jogo ${Math.min(jogosUsadosMensalidade + 1, jogosPrevistosMensalidade)}/${jogosPrevistosMensalidade}`
+  cicloMensal
+    ? `Jogo ${cicloMensal.atual}/${cicloMensal.total}`
     : "";
 
   return `
@@ -2027,11 +1742,13 @@ function abrirNovoJogo() {
 
   modoModalAgenda = "novo";
 
-  limparModal();
+limparModal();
 
-  document.getElementById(
-    "modalReservaTitulo"
-  ).textContent = "Novo horário";
+popularSelectLocalRecurso();
+
+document.getElementById(
+  "modalReservaTitulo"
+).textContent = "Novo horário";
 
   document.getElementById(
     "statusJogo"
@@ -2049,7 +1766,7 @@ aplicarModoModal();
 
 }
 
-function abrirJogo(id) {
+function abrirJogo(id, opcoes = {}) {
 
   const jogo =
     agendaDados.find(
@@ -2065,7 +1782,7 @@ function abrirJogo(id) {
   const status =
     calcularStatusVisual(jogo);
 
-    if (status === "cobranca") {
+  if (status === "cobranca" && opcoes.forcarEdicao !== true) {
     abrirAvisoIrParaCaixa(jogo);
     return;
   }
@@ -2084,9 +1801,7 @@ function abrirJogo(id) {
     "dataAgendamento"
   ).value = jogo.data_agendamento || "";
 
-  document.getElementById(
-    "localRecurso"
-  ).value = jogo.local_recurso || "";
+popularSelectLocalRecurso(jogo.local_recurso || "");
 
   document.getElementById(
     "horaInicio"
@@ -2388,7 +2103,6 @@ function limparModal() {
     "clienteNome",
     "clienteTelefone",
     "dataAgendamento",
-    "localRecurso",
     "horaInicio",
     "horaFim",
     "valorPrevisto",
@@ -2777,11 +2491,15 @@ const tipoNovo =
 const novoEhMensal =
   tipoNovo === "mensalista";
 
-  const novoInicio =
-    horaParaMinutos(inicio);
+const novoInicio =
+  horaParaMinutos(inicio);
 
-  const novoFim =
-    horaParaMinutos(fim);
+let novoFim =
+  horaParaMinutos(fim);
+
+if (novoFim <= novoInicio) {
+  novoFim += 1440;
+}
 
   const novoDiaSemana =
     obterDiaSemanaAgenda(data);
@@ -2810,15 +2528,19 @@ const novoEhMensal =
       return false;
     }
 
-    const inicioExistente =
-      horaParaMinutos(
-        jogo.hora_inicio
-      );
+const inicioExistente =
+  horaParaMinutos(
+    jogo.hora_inicio
+  );
 
-    const fimExistente =
-      horaParaMinutos(
-        jogo.hora_fim
-      );
+let fimExistente =
+  horaParaMinutos(
+    jogo.hora_fim
+  );
+
+if (fimExistente <= inicioExistente) {
+  fimExistente += 1440;
+}
 
     const conflitoHora =
       novoInicio < fimExistente &&
@@ -2896,6 +2618,9 @@ async function salvarJogo() {
         "localRecurso"
       ).value.trim();
 
+      const campoArena =
+  obterCampoArenaPorNome(local);
+
     const inicio =
       document.getElementById(
         "horaInicio"
@@ -2936,12 +2661,16 @@ async function salvarJogo() {
       );
     }
 
-    const inicioMinutos = horaParaMinutos(inicio);
-const fimMinutos = horaParaMinutos(fim);
+const inicioMinutos = horaParaMinutos(inicio);
+let fimMinutos = horaParaMinutos(fim);
+
+if (fimMinutos <= inicioMinutos) {
+  fimMinutos += 1440;
+}
 
 if (fimMinutos <= inicioMinutos) {
   return mostrarErro(
-    "O horário final deve ser maior que o horário inicial."
+    "Informe um horário final válido."
   );
 }
 
@@ -3058,6 +2787,9 @@ const horarioFoiAlterado =
 
       local_recurso:
         local,
+
+        campo_id:
+  campoArena?.id || null,
 
       tipo_jogo:
         document.getElementById(
@@ -3381,17 +3113,15 @@ if (horarioFoiAlterado) {
       }
     }
 
-    mostrarSucesso(
-      "Jogo salvo com sucesso."
-    );
+mostrarSucesso(
+  "Jogo salvo com sucesso."
+);
 
-    await carregarAgenda();
+await sincronizarAgendaVisual();
 
-    setTimeout(() => {
-
-      fecharModalJogo();
-
-    }, 700);
+setTimeout(() => {
+  fecharModalJogo();
+}, 700);
 
   } catch (err) {
 
@@ -3450,7 +3180,7 @@ function cancelarJogo(id) {
           throw error;
         }
 
-        await carregarAgenda();
+await sincronizarAgendaVisual();
 
         crvToast({
           titulo: "Jogo cancelado",
@@ -3504,7 +3234,7 @@ function apagarJogo(id) {
           .delete()
           .eq("id", id);
 
-        await carregarAgenda();
+await sincronizarAgendaVisual();
 
         crvToast({
           titulo: "Jogo apagado",
@@ -3529,24 +3259,7 @@ function apagarJogo(id) {
 
 }
 
-function abrirModalMensalidades() {
 
-  abrirModalHorariosFixos();
-
-  setTimeout(() => {
-
-    const abaMensalistas =
-      document.querySelector(
-        '.agenda-horarios-tab[data-tipo="mensalista"]'
-      );
-
-    if (abaMensalistas) {
-      abaMensalistas.click();
-    }
-
-  }, 80);
-
-}
 
 function obterJogoOrigemMensalidade(mensalidade) {
   return agendaDados.find(jogo => {
@@ -3579,202 +3292,7 @@ function formatarCompetenciaMensalidade(comp) {
 }
 
 function renderizarMensalidadesAgenda() {
-  const lista =
-    document.getElementById("listaHorariosFixos");
-
-  if (!lista) return;
-
-  const termoBusca =
-    String(document.getElementById("buscaHorariosFixos")?.value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-  let mensalidades =
-    [...mensalidadesAgenda];
-
-    const dataFiltro =
-  document.getElementById("dataHorariosFixos")?.value ||
-  document.getElementById("filtroData")?.value ||
-  hojeISOAgenda();
-
-const competenciaAtual =
-  competenciaAgenda(dataFiltro);
-
-mensalidades = mensalidades.filter(m => {
-  const jogo = obterJogoOrigemMensalidade(m);
-
-  if (!jogo || jogo.status_jogo === "cancelado") {
-    return false;
-  }
-
-  return String(m.competencia) === String(competenciaAtual);
-});
-
-
-
-  if (termoBusca) {
-    mensalidades = mensalidades.filter(m => {
-      const jogo = obterJogoOrigemMensalidade(m);
-
-      const texto = [
-        jogo?.cliente_nome,
-        jogo?.local_recurso,
-        m.competencia,
-        m.status,
-        m.renovacao_status
-      ]
-        .join(" ")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-      return texto.includes(termoBusca);
-    });
-  }
-
-  mensalidades.sort((a, b) => {
-    return String(a.competencia || "").localeCompare(String(b.competencia || ""));
-  });
-
-  if (!mensalidades.length) {
-    lista.innerHTML = `
-      <div class="agenda-horarios-empty">
-        Nenhuma mensalidade encontrada.
-      </div>
-    `;
-    return;
-  }
-
-  lista.innerHTML = mensalidades.map(m => {
-    const jogo =
-      obterJogoOrigemMensalidade(m);
-
-const ciclo =
-  calcularIndiceJogoMensal(jogo, m);
-
-const usados =
-  ciclo.atual - 1;
-
-const previstos =
-  ciclo.total;
-
-    const statusClasse =
-      m.status === "pago"
-        ? "pago"
-        : m.status === "cancelado"
-          ? "cancelado"
-          : "pendente";
-
-    return `
-      <div class="agenda-mensalidade-item">
-
-        <div class="agenda-mensalidade-main">
-
-          <div class="agenda-mensalidade-top">
-            <strong>${jogo?.cliente_nome || "-"}</strong>
-            <span class="agenda-mensalidade-status ${statusClasse}">
-              ${m.status || "pendente"}
-            </span>
-          </div>
-
-          <div class="agenda-mensalidade-info">
-            <span>${jogo?.local_recurso || "-"}</span>
-            <span>${formatarHora(jogo?.hora_inicio)} às ${formatarHora(jogo?.hora_fim)}</span>
-            <span>Mensalidade referente a ${formatarCompetenciaMensalidade(m.competencia)}</span>
-          </div>
-
-          <div class="agenda-mensalidade-ciclo">
-<strong>
-  ${
-    ciclo.atual >= ciclo.total
-      ? `Último jogo ${ciclo.atual}/${ciclo.total}`
-      : `Próximo jogo ${ciclo.atual}/${ciclo.total}`
-  }
-</strong>
-            <span>${fmtAgenda(m.valor || 0)}</span>
-          </div>
-
-${
-  mensalidadeEhUltimoJogoCiclo(jogo, m)
-    ? `
-      <div class="agenda-mensalidade-alerta">
-        Último jogo do ciclo mensal. Verifique renovação para ${formatarCompetenciaMensalidade(obterProximaCompetenciaAgenda(m.competencia))}.
-      </div>
-    `
-    : ""
-}
-
-        </div>
-
-        <div class="agenda-mensalidade-actions">
-
-<button
-  type="button"
-  class="btn-secondary btn-receber-mensalidade"
-  data-id="${m.id}"
->
-  Receber no Caixa
-</button>
-
-<button
-  type="button"
-  class="btn-ghost btn-manter-pendente-mensalidade"
-  data-id="${m.id}"
->
-  Manter pendente
-</button>
-
-          <button
-            type="button"
-            class="btn-ghost btn-cancelar-mensalidade"
-            data-id="${m.id}"
-          >
-            Cancelar
-          </button>
-
-        </div>
-
-      </div>
-    `;
-  }).join("");
-
-  lista
-    .querySelectorAll(".btn-receber-mensalidade")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        receberMensalidadeAgenda(btn.dataset.id);
-      });
-    });
-
-  lista
-    .querySelectorAll(".btn-renovar-mensalidade")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        renovarMensalidadeAgenda(btn.dataset.id);
-      });
-    });
-
-lista
-  .querySelectorAll(".btn-manter-pendente-mensalidade")
-  .forEach(btn => {
-    btn.addEventListener("click", () => {
-      manterPendenteMensalidadeAgenda(btn.dataset.id);
-    });
-  });
-
-  lista
-    .querySelectorAll(".btn-cancelar-mensalidade")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        cancelarMensalidadeAgenda(btn.dataset.id);
-      });
-    });
-
-  if (window.lucide) {
-    lucide.createIcons();
-  }
+  renderizarAgendaInline();
 }
 
 function encontrarMensalidadePorId(id) {
@@ -3996,7 +3514,6 @@ function listarDatasTeoricasMensalidade(jogo, competencia) {
 
 function calcularIndiceJogoMensal(jogo, mensalidade) {
   const dataFiltro =
-    document.getElementById("dataHorariosFixos")?.value ||
     document.getElementById("filtroData")?.value ||
     hojeISOAgenda();
 
@@ -4078,6 +3595,319 @@ async function manterPendenteMensalidadeAgenda(id) {
       titulo: "Erro",
       texto: err.message || "Erro ao manter mensalidade pendente."
     });
+  }
+}
+
+function alternarConfigGradeInline() {
+  const painel = document.getElementById("agendaConfigInlinePanel");
+  const botao = document.getElementById("btnConfigGradeInline");
+
+  if (!painel || !botao) return;
+
+  const aberto = painel.style.display === "block";
+
+  painel.style.display = aberto ? "none" : "block";
+  botao.classList.toggle("aberto", !aberto);
+
+  if (!aberto) {
+    carregarConfigGradeAgenda();
+    renderizarCamposArenaInline();
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function renderizarCamposArenaInline() {
+  const lista = document.getElementById("listaCamposArenaInline");
+  if (!lista) return;
+
+  if (!camposArena.length) {
+    lista.innerHTML = `
+      <div class="agenda-inline-empty">
+        Nenhum campo cadastrado.
+      </div>
+    `;
+    return;
+  }
+
+  lista.innerHTML = camposArena.map(campo => `
+    <div class="agenda-campo-inline-item" data-id="${campo.id}">
+      <input
+        class="input agenda-campo-nome"
+        value="${campo.nome || ""}"
+        placeholder="Nome do campo"
+      >
+
+      <input
+        class="input agenda-campo-ordem"
+        type="number"
+        value="${campo.ordem || 0}"
+        placeholder="Ordem"
+      >
+
+<button
+  type="button"
+  class="agenda-inline-action cancelar btn-desativar-campo-arena"
+  data-id="${campo.id}"
+  title="Remover campo"
+>
+  <i data-lucide="trash-2" width="15" height="15"></i>
+</button>
+    </div>
+  `).join("");
+
+  lista.querySelectorAll(".btn-desativar-campo-arena").forEach(btn => {
+    btn.addEventListener("click", () => desativarCampoArenaInline(btn.dataset.id));
+  });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function adicionarCampoArenaInline() {
+  const lista = document.getElementById("listaCamposArenaInline");
+  if (!lista) return;
+
+  const tempId = `novo-${Date.now()}`;
+
+  const row = document.createElement("div");
+  row.className = "agenda-campo-inline-item";
+  row.dataset.id = tempId;
+  row.dataset.novo = "true";
+
+  row.innerHTML = `
+    <input
+      class="input agenda-campo-nome"
+      value="Novo espaço"
+      placeholder="Nome do campo"
+    >
+
+    <input
+      class="input agenda-campo-ordem"
+      type="number"
+      value="1"
+      placeholder="Ordem"
+    >
+
+    <button
+      type="button"
+      class="agenda-inline-action cancelar btn-desativar-campo-arena"
+      title="Remover campo"
+    >
+      <i data-lucide="trash-2" width="15" height="15"></i>
+    </button>
+  `;
+
+  lista.appendChild(row);
+
+  row.querySelector(".btn-desativar-campo-arena")
+    ?.addEventListener("click", () => row.remove());
+
+  row.querySelector(".agenda-campo-nome")?.focus();
+  row.querySelector(".agenda-campo-nome")?.select();
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+async function salvarCampoArenaInline(id) {
+  const row = document.querySelector(`.agenda-campo-inline-item[data-id="${id}"]`);
+  if (!row) return;
+
+  const nome = row.querySelector(".agenda-campo-nome")?.value.trim();
+  const ordem = Number(row.querySelector(".agenda-campo-ordem")?.value || 0);
+
+  if (!nome) {
+    crvToast({
+      titulo: "Campo obrigatório",
+      mensagem: "Informe o nome do campo.",
+      tipo: "warn"
+    });
+    return;
+  }
+
+  const { error } = await sb
+    .from("arena_campos")
+    .update({
+      nome,
+      ordem
+    })
+    .eq("id", id)
+    .eq("empresa_id", APP_EMPRESA_ID);
+
+  if (error) {
+    crvToast({
+      titulo: "Erro",
+      mensagem: error.message || "Erro ao salvar campo.",
+      tipo: "error"
+    });
+    return;
+  }
+
+  await carregarAgenda();
+  renderizarCamposArenaInline();
+  popularCamposAgendaInline();
+  renderizarAgendaInline();
+}
+
+function desativarCampoArenaInline(id) {
+  const campo = camposArena.find(c => String(c.id) === String(id));
+
+  abrirModalAviso({
+    titulo: "Remover campo",
+    texto: `Remover "${campo?.nome || "este campo"}" da grade? Jogos antigos continuam preservados.`,
+    confirmarTexto: "Remover",
+    mostrarCancelar: true,
+    onConfirm: async () => {
+      const { error } = await sb
+        .from("arena_campos")
+        .update({
+          ativo: false
+        })
+        .eq("id", id)
+        .eq("empresa_id", APP_EMPRESA_ID);
+
+      if (error) {
+        abrirModalAviso({
+          titulo: "Erro",
+          texto: error.message || "Erro ao remover campo."
+        });
+        return;
+      }
+
+      await carregarAgenda();
+      renderizarCamposArenaInline();
+      popularCamposAgendaInline();
+      renderizarAgendaInline();
+
+      crvToast({
+        titulo: "Campo removido",
+        mensagem: "Campo removido da grade.",
+        tipo: "success"
+      });
+    }
+  });
+}
+
+async function salvarConfiguracaoAgendaInlineCompleta() {
+  await salvarConfigGradeAgenda();
+
+  const linhas = [
+    ...document.querySelectorAll(".agenda-campo-inline-item")
+  ];
+
+  for (const linha of linhas) {
+    const id = linha.dataset.id;
+    const novo = linha.dataset.novo === "true";
+
+    const nome = formatarNomeProprioAgenda(
+      linha.querySelector(".agenda-campo-nome")?.value || ""
+    );
+
+    const ordem = Number(
+      linha.querySelector(".agenda-campo-ordem")?.value || 1
+    );
+
+    if (!nome) {
+      crvToast({
+        titulo: "Campo obrigatório",
+        mensagem: "Informe o nome do campo.",
+        tipo: "warn"
+      });
+
+      linha.querySelector(".agenda-campo-nome")?.focus();
+      return;
+    }
+
+    const existeDuplicado = camposArena.some(campo =>
+      String(campo.id) !== String(id) &&
+      normalizarBuscaAgendaInline(campo.nome) ===
+        normalizarBuscaAgendaInline(nome)
+    );
+
+    if (existeDuplicado) {
+      crvToast({
+        titulo: "Nome já utilizado",
+        mensagem: `Já existe um campo chamado "${nome}". Escolha outro nome.`,
+        tipo: "warn"
+      });
+
+      linha.querySelector(".agenda-campo-nome")?.focus();
+      return;
+    }
+
+    const { error } = novo
+      ? await sb
+          .from("arena_campos")
+          .insert([{
+            empresa_id: APP_EMPRESA_ID,
+            nome,
+            ordem,
+            ativo: true
+          }])
+      : await sb
+          .from("arena_campos")
+          .update({
+            nome,
+            ordem
+          })
+          .eq("id", id)
+          .eq("empresa_id", APP_EMPRESA_ID);
+
+    if (error) {
+      crvToast({
+        titulo: "Erro",
+        mensagem:
+          error.code === "23505"
+            ? `Já existe um campo chamado "${nome}". Escolha outro nome.`
+            : error.message || "Erro ao salvar campos.",
+        tipo: "error"
+      });
+      return;
+    }
+  }
+
+  await carregarAgenda();
+  renderizarCamposArenaInline();
+  popularCamposAgendaInline();
+  popularSelectLocalRecurso();
+  renderizarAgendaInline();
+
+  crvToast({
+    titulo: "Configuração salva",
+    mensagem: "Grade, duração e campos atualizados com sucesso.",
+    tipo: "success"
+  });
+}
+
+function garantirBotaoSemanaAgenda() {
+  const btnConfig =
+    document.getElementById("btnConfigGradeInline");
+
+  if (!btnConfig || document.getElementById("btnAgendaSemana")) {
+    return;
+  }
+
+  const btn = document.createElement("button");
+
+  btn.id = "btnAgendaSemana";
+  btn.type = "button";
+  btn.className = btnConfig.className;
+  btn.innerHTML = `
+    <i data-lucide="calendar-days"></i>
+    <span>Ver semana</span>
+  `;
+
+  btnConfig.insertAdjacentElement("afterend", btn);
+
+  btn.addEventListener("click", abrirModalSemanaAgenda);
+
+  if (window.lucide) {
+    lucide.createIcons();
   }
 }
 
@@ -4274,203 +4104,312 @@ function criarLinhasJogosAgendaInline() {
   }));
 }
 
-function renderizarAgendaInline() {
-  const tbody = document.getElementById("agendaInlineTabela");
-  if (!tbody) return;
+function atualizarContadoresAgendaInline(linhas) {
+  const painel = document.getElementById("agendaInlinePanel");
+  if (!painel) return;
 
-  const tipoFiltro =
-    document.getElementById("tipoAgendaInline")?.value || "todos";
+  let contador = painel.querySelector(".agenda-inline-contadores");
 
-  let linhas = [];
+  if (!contador) {
+    contador = document.createElement("div");
+    contador.className = "agenda-inline-contadores";
 
-  if (tipoFiltro === "livres") {
-    linhas = criarLinhasLivresAgendaInline();
-  } else if (tipoFiltro === "todos") {
-    linhas = [
-      ...criarLinhasJogosAgendaInline(),
-      ...criarLinhasLivresAgendaInline()
-    ];
-  } else {
-    linhas = criarLinhasJogosAgendaInline();
+    const toolbar = painel.querySelector(".agenda-inline-toolbar");
+    toolbar?.insertAdjacentElement("afterend", contador);
   }
 
-  linhas.sort((a, b) => {
-    const horaA = a.livre ? a.inicio : formatarHora(a.jogo?.hora_inicio);
-    const horaB = b.livre ? b.inicio : formatarHora(b.jogo?.hora_inicio);
+  const livres = linhas.filter(l => l.livre).length;
+  const fechados = linhas.filter(l => !l.livre).length;
 
-    const campoA = a.livre ? a.campo : a.jogo?.local_recurso || "";
-    const campoB = b.livre ? b.campo : b.jogo?.local_recurso || "";
+  contador.innerHTML = `
+    <span><strong>${livres}</strong> horário(s) disponível(is)</span>
+    <span><strong>${fechados}</strong> horário(s) fechado(s)</span>
+  `;
+}
 
-    return `${horaA} ${campoA}`.localeCompare(`${horaB} ${campoB}`);
-  });
+function abrirCobrancaAgendaInline(id) {
+  const jogo = agendaDados.find(j => String(j.id) === String(id));
+  if (!jogo) return;
 
-  if (!linhas.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" class="agenda-inline-empty">
-          Nenhum horário encontrado.
-        </td>
-      </tr>
-    `;
+  const mensalidade = buscarMensalidadeAgenda(jogo);
+
+  if (jogoEhMensalAgenda(jogo) && mensalidade) {
+    receberMensalidadeAgenda(mensalidade.id);
     return;
   }
 
-  tbody.innerHTML =
-    linhas.map(linha => {
-      if (linha.livre) {
-        return criarLinhaLivreAgendaInline(linha);
-      }
+  sessionStorage.setItem(
+    "crv_recebimento_agenda_caixa",
+    JSON.stringify({
+      tipo: "agenda_avulso",
+      agenda_id: jogo.id,
+      origem_id: jogo.id,
+      cliente_nome: jogo.cliente_nome || "Jogo avulso",
+      local_recurso: jogo.local_recurso || "",
+      data_agendamento: jogo.data_agendamento || "",
+      hora_inicio: jogo.hora_inicio || "",
+      hora_fim: jogo.hora_fim || "",
+      descricao: `Jogo avulso - ${jogo.cliente_nome || "Sem responsável"}`
+    })
+  );
 
-      return criarLinhaJogoAgendaInline(linha.jogo);
-    }).join("");
+  window.location.href = "caixa.html";
+}
 
-  tbody
-    .querySelectorAll(".btn-agenda-inline-ver")
+function garantirBotoesDataAgendaInline() {
+  const toolbar = document.querySelector(".agenda-inline-toolbar");
+  if (!toolbar) return;
+
+  let wrap = document.getElementById("agendaInlineDataWrap");
+
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.id = "agendaInlineDataWrap";
+    wrap.className = "agenda-inline-data-wrap";
+
+    wrap.innerHTML = `
+      <button id="btnAgendaInlineHoje" type="button" class="agenda-date-btn">Hoje</button>
+      <button id="btnAgendaInlineProximo" type="button" class="agenda-date-btn">Próximo dia →</button>
+      <div id="agendaInlineDataAtual" class="agenda-inline-data-atual"></div>
+    `;
+
+    const tipo = document.getElementById("tipoAgendaInline");
+    toolbar.insertBefore(wrap, tipo);
+
+    document.getElementById("btnAgendaInlineHoje")
+      ?.addEventListener("click", async () => {
+        voltarHojeAgenda();
+        atualizarDataAtualAgendaInline();
+      });
+
+    document.getElementById("btnAgendaInlineProximo")
+      ?.addEventListener("click", async () => {
+        alterarDiaAgenda(1);
+        atualizarDataAtualAgendaInline();
+      });
+  }
+
+  atualizarDataAtualAgendaInline();
+}
+
+function atualizarDataAtualAgendaInline() {
+  const el = document.getElementById("agendaInlineDataAtual");
+  const input = document.getElementById("filtroData");
+
+  if (!el || !input) return;
+
+  const [ano, mes, dia] = String(input.value || hojeISOAgenda()).split("-");
+
+  el.innerHTML = `<strong>${dia}/${mes}/${ano}</strong>`;
+}
+
+function obterSemanaAgenda(dataISO) {
+  const base = new Date(`${String(dataISO || hojeISOAgenda()).slice(0, 10)}T12:00:00`);
+  const diaSemana = base.getDay();
+  const diffSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+
+  const inicio = new Date(base);
+  inicio.setDate(base.getDate() + diffSegunda);
+
+  const fim = new Date(inicio);
+  fim.setDate(inicio.getDate() + 6);
+
+  return {
+    inicio: inicio.toISOString().slice(0, 10),
+    fim: fim.toISOString().slice(0, 10)
+  };
+}
+
+function listarDiasSemanaAgenda(inicioISO) {
+  const dias = [];
+  const base = new Date(`${inicioISO}T12:00:00`);
+
+  for (let i = 0; i < 7; i++) {
+    const data = new Date(base);
+    data.setDate(base.getDate() + i);
+    dias.push(data.toISOString().slice(0, 10));
+  }
+
+  return dias;
+}
+
+function formatarDiaSemanaCurtoAgenda(dataISO) {
+  const data = new Date(`${dataISO}T12:00:00`);
+
+  return data.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit"
+  });
+}
+
+function abrirModalSemanaAgenda() {
+  const existente = document.getElementById("modalSemanaAgenda");
+  if (existente) existente.remove();
+
+const dataBase = hojeISOAgenda();
+
+const semana = obterSemanaAgenda(dataBase);
+  const dias = listarDiasSemanaAgenda(semana.inicio);
+
+  const modal = document.createElement("div");
+  modal.id = "modalSemanaAgenda";
+  modal.className = "modal-overlay agenda-semana-modal-overlay";
+
+modal.innerHTML = `
+    <div class="modal card agenda-semana-modal">
+      <button
+        type="button"
+        class="btn-ghost agenda-semana-fechar"
+        id="btnFecharSemanaAgenda"
+        title="Fechar"
+      >
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+
+      <div class="agenda-semana-header">
+        <div>
+          <h2>Agenda da semana</h2>
+        <p>
+          Semana atual •
+          ${formatarDataCurtaAgenda(semana.inicio)}
+          até
+          ${formatarDataCurtaAgenda(semana.fim)}
+        </p>
+        </div>
+      </div>
+
+      <div class="agenda-semana-tabs">
+        ${dias.map((dia, index) => `
+          <button
+            type="button"
+            class="agenda-semana-tab ${index === 0 ? "ativo" : ""}"
+            data-dia="${dia}"
+          >
+            ${formatarDiaSemanaCurtoAgenda(dia)}
+          </button>
+        `).join("")}
+      </div>
+
+      <div id="agendaSemanaConteudo"></div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+    modal.style.display = "flex";
+
+  document
+    .getElementById("btnFecharSemanaAgenda")
+    ?.addEventListener("click", () => modal.remove());
+
+  modal.addEventListener("click", event => {
+    if (event.target.id === "modalSemanaAgenda") {
+      modal.remove();
+    }
+  });
+
+  modal
+    .querySelectorAll(".agenda-semana-tab")
     .forEach(btn => {
       btn.addEventListener("click", () => {
-        abrirJogo(btn.dataset.id);
+        modal
+          .querySelectorAll(".agenda-semana-tab")
+          .forEach(b => b.classList.remove("ativo"));
+
+        btn.classList.add("ativo");
+
+        renderizarDiaSemanaAgenda(btn.dataset.dia);
       });
     });
 
-  tbody
-    .querySelectorAll(".btn-agenda-inline-novo")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        abrirNovoJogo();
-
-        document.getElementById("dataAgendamento").value =
-          document.getElementById("filtroData")?.value || hojeISOAgenda();
-
-        document.getElementById("localRecurso").value =
-          btn.dataset.campo || "";
-
-        document.getElementById("horaInicio").value =
-          btn.dataset.inicio || "";
-
-        document.getElementById("horaFim").value =
-          btn.dataset.fim || "";
-      });
-    });
+  renderizarDiaSemanaAgenda(dias[0]);
 
   if (window.lucide) {
     lucide.createIcons();
   }
 }
 
-function criarLinhaLivreAgendaInline(linha) {
-  return `
-    <tr class="agenda-inline-row agenda-inline-livre">
-      <td>
-        <strong>${linha.horario}</strong>
-        <small>${linha.duracao === 90 ? "1h30" : "1h"}</small>
-      </td>
+function renderizarDiaSemanaAgenda(dataISO) {
+  const container = document.getElementById("agendaSemanaConteudo");
+  if (!container) return;
 
-      <td>${linha.campo || "-"}</td>
-      <td>—</td>
+  const campos = obterLocaisAgenda();
+  const slots = gerarSlotsPadraoArena();
 
-      <td>
-        <span class="agenda-inline-badge livre">Livre</span>
-      </td>
+  const jogosDia =
+    agendaDados.filter(jogo => {
+      return (
+        String(jogo.data_agendamento || "").slice(0, 10) === dataISO &&
+        jogo.status_jogo !== "cancelado"
+      );
+    });
 
-      <td>—</td>
-      <td>—</td>
-      <td>—</td>
+  container.innerHTML = `
+    <div class="agenda-semana-dia-header">
+      <strong>${formatarDiaSemanaCurtoAgenda(dataISO)}</strong>
+      <span>${jogosDia.length} jogo(s) marcado(s)</span>
+    </div>
 
-      <td class="right">
-        <button
-          type="button"
-          class="agenda-inline-action novo btn-agenda-inline-novo"
-          data-campo="${linha.campo}"
-          data-inicio="${linha.inicio}"
-          data-fim="${linha.fim}"
-        >
-          <i data-lucide="plus" width="15" height="15"></i>
-          Novo jogo
-        </button>
-      </td>
-    </tr>
+    <div class="agenda-semana-grade">
+      <table>
+        <thead>
+          <tr>
+            <th>Horário</th>
+            ${campos.map(campo => `<th>${campo}</th>`).join("")}
+          </tr>
+        </thead>
+
+        <tbody>
+          ${slots.map(([inicio, fim]) => `
+            <tr>
+              <td>
+                <strong>${inicio}</strong>
+                <small>${fim}</small>
+              </td>
+
+              ${campos.map(campo => {
+                const jogo = jogosDia.find(j => {
+                  return (
+                    normalizarBuscaAgendaInline(j.local_recurso) === normalizarBuscaAgendaInline(campo) &&
+                    horarioConflitaComJogo(inicio, fim, j)
+                  );
+                });
+
+                if (!jogo) {
+                  return `<td class="agenda-semana-livre">Livre</td>`;
+                }
+
+                const ehMensal = jogoEhMensalAgenda(jogo);
+
+                return `
+                  <td
+                    class="agenda-semana-ocupado ${ehMensal ? "mensal" : "avulso"}"
+                    data-id="${jogo.id}"
+                  >
+                    <strong>${jogo.cliente_nome || "Jogo"}</strong>
+                    <small>${ehMensal ? "Mensal" : "Avulso"}</small>
+                  </td>
+                `;
+              }).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
   `;
-}
 
-function criarLinhaJogoAgendaInline(jogo) {
-  const jogadores =
-    (jogadoresPorAgenda[jogo.id] || []).filter(j => j.removido !== true);
+  container
+    .querySelectorAll(".agenda-semana-ocupado")
+    .forEach(td => {
+      td.addEventListener("click", () => {
+        document.getElementById("modalSemanaAgenda")?.remove();
 
-  const status = calcularStatusVisual(jogo);
-  const mensalidade = buscarMensalidadeAgenda(jogo);
-  const ehMensal = jogoEhMensalAgenda(jogo);
-
-  const tipoTexto =
-    ehMensal
-      ? "Mensal"
-      : jogo.tipo_jogo === "evento"
-        ? "Evento"
-        : jogo.tipo_jogo === "campeonato"
-          ? "Campeonato"
-          : "Avulso";
-
-  const pagamentoTexto =
-    ehMensal
-      ? (
-          mensalidade?.status === "pago"
-            ? "Mensalidade paga"
-            : "Mensalidade pendente"
-        )
-      : (
-          jogadores.some(j => !j.pago && Number(j.valor || 0) > 0)
-            ? "Pendente"
-            : "Sem pendência"
-        );
-
-  const pagamentoClasse =
-    pagamentoTexto.toLowerCase().includes("pendente")
-      ? "pendente"
-      : "pago";
-
-  return `
-    <tr class="agenda-inline-row">
-      <td>
-        <strong>${formatarHora(jogo.hora_inicio)} - ${formatarHora(jogo.hora_fim)}</strong>
-      </td>
-
-      <td>${jogo.local_recurso || "-"}</td>
-
-      <td>
-        <strong>${jogo.cliente_nome || "-"}</strong>
-      </td>
-
-      <td>
-        <span class="agenda-inline-badge tipo">
-          ${tipoTexto}
-        </span>
-      </td>
-
-      <td>
-        <span class="agenda-inline-status status-${status}">
-          ${status === "cobranca" ? "Cobrança" : status}
-        </span>
-      </td>
-
-      <td>${jogadores.length}</td>
-
-      <td>
-        <span class="agenda-inline-pagamento ${pagamentoClasse}">
-          ${pagamentoTexto}
-        </span>
-      </td>
-
-      <td class="right">
-        <button
-          type="button"
-          class="agenda-inline-action btn-agenda-inline-ver"
-          data-id="${jogo.id}"
-          title="Visualizar jogo"
-        >
-          <i data-lucide="eye" width="16" height="16"></i>
-        </button>
-      </td>
-    </tr>
-  `;
+        abrirJogo(td.dataset.id, {
+          forcarEdicao: true
+        });
+      });
+    });
 }
 
 function renderizarAgendaInline() {
@@ -4479,6 +4418,8 @@ function renderizarAgendaInline() {
 
   if (!tbody) return;
 
+  garantirBotoesDataAgendaInline();
+
   const tipoFiltro =
     document.getElementById("tipoAgendaInline")?.value || "todos";
 
@@ -4494,6 +4435,8 @@ function renderizarAgendaInline() {
   } else {
     linhas = criarLinhasJogosAgendaInline();
   }
+
+atualizarContadoresAgendaInline(linhas);
 
   linhas.sort((a, b) => {
     const horaA =
@@ -4539,13 +4482,34 @@ function renderizarAgendaInline() {
       return criarLinhaJogoAgendaInline(linha.jogo);
     }).join("");
 
+tbody
+  .querySelectorAll(".btn-agenda-inline-caixa")
+  .forEach(btn => {
+    btn.addEventListener("click", () => {
+      abrirCobrancaAgendaInline(btn.dataset.id);
+    });
+  });
+
   tbody
-    .querySelectorAll(".btn-agenda-inline-ver")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        abrirJogo(btn.dataset.id);
+  .querySelectorAll(".btn-agenda-inline-ver")
+  .forEach(btn => {
+    btn.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      abrirJogo(btn.dataset.id, {
+        forcarEdicao: true
       });
     });
+  });
+
+tbody
+  .querySelectorAll(".btn-agenda-inline-cancelar")
+  .forEach(btn => {
+    btn.addEventListener("click", () => {
+      cancelarJogo(btn.dataset.id);
+    });
+  });
 
   tbody
     .querySelectorAll(".btn-agenda-inline-novo")
@@ -4556,8 +4520,7 @@ function renderizarAgendaInline() {
         document.getElementById("dataAgendamento").value =
           document.getElementById("filtroData")?.value || hojeISOAgenda();
 
-        document.getElementById("localRecurso").value =
-          btn.dataset.campo || "";
+popularSelectLocalRecurso(btn.dataset.campo || "");
 
         document.getElementById("horaInicio").value =
           btn.dataset.inicio || "";
@@ -4684,15 +4647,43 @@ function criarLinhaJogoAgendaInline(jogo) {
       </td>
 
       <td class="right">
-        <button
-          type="button"
-          class="agenda-inline-action btn-agenda-inline-ver"
-          data-id="${jogo.id}"
-          title="Visualizar jogo"
-        >
-          <i data-lucide="eye" width="16" height="16"></i>
-        </button>
-      </td>
+  <div class="agenda-inline-actions-row">
+
+    <button
+      type="button"
+      class="agenda-inline-action btn-agenda-inline-ver"
+      data-id="${jogo.id}"
+      title="Editar jogo"
+    >
+      <i data-lucide="pencil" width="16" height="16"></i>
+    </button>
+
+    ${
+      pagamentoClasse === "pendente"
+        ? `
+          <button
+            type="button"
+            class="agenda-inline-action receber btn-agenda-inline-caixa"
+            data-id="${jogo.id}"
+            title="Receber no caixa"
+          >
+            <i data-lucide="wallet" width="16" height="16"></i>
+          </button>
+        `
+          : ""
+    }
+
+    <button
+      type="button"
+      class="agenda-inline-action cancelar btn-agenda-inline-cancelar"
+      data-id="${jogo.id}"
+      title="Cancelar jogo"
+    >
+      <i data-lucide="ban" width="16" height="16"></i>
+    </button>
+
+  </div>
+</td>
     </tr>
   `;
 }
