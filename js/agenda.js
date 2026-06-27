@@ -1467,6 +1467,15 @@ function calcularStatusVisual(jogo) {
   if (jogo.status_jogo === "cancelado") return "cancelado";
   if (jogo.status_jogo === "fechado") return "fechado";
 
+  const resumoPagamento = obterResumoPagamentoAgenda(jogo);
+
+  if (
+    resumoPagamento.total > 0 &&
+    resumoPagamento.classe === "pago"
+  ) {
+    return "fechado";
+  }
+
   const hoje = hojeISOAgenda();
   const dataJogo = String(jogo.data_agendamento || "").slice(0, 10);
 
@@ -5101,7 +5110,7 @@ const pagamentoClasse =
 
       <td>
         <span class="agenda-inline-status status-${status}">
-          ${status === "cobranca" ? "Cobrança" : status}
+          ${status === "cobranca" ? "Cobrança" : status === "fechado" ? "Pago" : status}
         </span>
       </td>
 
