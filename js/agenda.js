@@ -791,11 +791,11 @@ function abrirModalAviso({
       ></textarea>
     `;
 
-  } else {
+} else {
 
-    textoEl.textContent = texto;
+  textoEl.innerHTML = texto;
 
-  }
+}
 
   const btnConfirmar =
     document.getElementById("btnAvisoConfirmar");
@@ -1670,6 +1670,15 @@ container
 
   });
 
+
+container
+  .querySelectorAll(".btn-renovar-mensalidade")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      renovarMensalidadeAgenda(btn.dataset.id);
+    });
+  });
 }
 
 function criarCardJogo(jogo) {
@@ -1821,6 +1830,25 @@ const textoCicloMensal =
       `
       : ""
   }
+
+${
+  ehMensal &&
+  mensalidade?.status === "pago" &&
+  cicloMensal &&
+  cicloMensal.atual >= cicloMensal.total &&
+  mensalidade.renovacao_status !== "renovada"
+    ? `
+      <button
+        class="btn-renovar-mensalidade"
+        data-id="${mensalidade.id}"
+        title="Renovar próximo mês"
+        type="button"
+      >
+        <i data-lucide="rotate-cw"></i>
+      </button>
+    `
+    : ""
+}
 
   <button
     class="btn-apagar-jogo"
@@ -2057,19 +2085,58 @@ function aplicarModoModal() {
   const btnAdicionar = document.getElementById("btnAdicionarJogador");
 
   if (modoNovo) {
+
     titulo.textContent = "Novo horário";
     subtitulo.textContent = "Cadastre o horário, responsável e jogadores.";
+
   } else if (modoFechado) {
-    titulo.textContent = "Jogo fechado";
-    subtitulo.textContent = "Jogo já finalizado no caixa.";
+
+    const jogoAtualModal =
+      agendaDados.find(j => String(j.id) === String(agendaAtualId));
+
+    const mensalidadeAtual =
+      jogoAtualModal
+        ? buscarMensalidadeAgenda(jogoAtualModal)
+        : null;
+
+    const ehMensalAtual =
+      jogoAtualModal
+        ? jogoEhMensalAgenda(jogoAtualModal)
+        : false;
+
+    if (
+      ehMensalAtual &&
+      mensalidadeAtual?.renovacao_status === "renovada"
+    ) {
+
+      const proximoMes =
+        obterProximaCompetenciaAgenda(mensalidadeAtual.competencia);
+
+      titulo.textContent =
+        `Renovado para ${formatarCompetenciaMensalidade(proximoMes)}`;
+
+      subtitulo.textContent =
+        "Jogo fechado no caixa. O próximo mês já foi criado.";
+
+    } else {
+
+      titulo.textContent = "Jogo fechado";
+      subtitulo.textContent = "Jogo já finalizado no caixa.";
+
+    }
+
   } else if (modoCancelado) {
+
     titulo.textContent = "Jogo cancelado";
     subtitulo.textContent = "Jogo cancelado.";
-  } else {
-    titulo.textContent = "Editar jogo";
-    subtitulo.textContent = "Ajuste horário, responsável e jogadores. A cobrança é feita no Caixa.";
-  }
 
+  } else {
+
+    titulo.textContent = "Editar jogo";
+    subtitulo.textContent =
+      "Ajuste horário, responsável e jogadores. A cobrança é feita no Caixa.";
+
+  }
   [
     "clienteNome",
     "clienteTelefone",
@@ -3457,59 +3524,216 @@ function receberMensalidadeAgenda(id) {
   window.location.href = "caixa.html";
 }
 
+function formatarDiaSemanaNomeAgenda(dataISO) {
+  if (!dataISO) return "-";
+
+  const data = new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
+
+  return data.toLocaleDateString("pt-BR", {
+    weekday: "long"
+  });
+}
+
+function obterResumoHorarioRenovacaoAgenda(jogo) {
+  const originalData =
+    jogo?.horario_original_data ||
+    jogo?.data_agendamento;
+
+  const originalInicio =
+    jogo?.horario_original_inicio ||
+    jogo?.hora_inicio;
+
+  const originalFim =
+    jogo?.horario_original_fim ||
+    jogo?.hora_fim;
+
+  const atualData =
+    jogo?.data_agendamento;
+
+  const atualInicio =
+    jogo?.hora_inicio;
+
+  const atualFim =
+    jogo?.hora_fim;
+
+  const originalTexto =
+    `${formatarDiaSemanaNomeAgenda(originalData)} • ${formatarHora(originalInicio)} às ${formatarHora(originalFim)}`;
+
+  const atualTexto =
+    `${formatarDiaSemanaNomeAgenda(atualData)} • ${formatarHora(atualInicio)} às ${formatarHora(atualFim)}`;
+
+  const alterado =
+    jogo?.horario_alterado === true ||
+    String(originalData || "").slice(0, 10) !== String(atualData || "").slice(0, 10) ||
+    formatarHora(originalInicio) !== formatarHora(atualInicio) ||
+    formatarHora(originalFim) !== formatarHora(atualFim);
+
+  return {
+    originalTexto,
+    atualTexto,
+    alterado
+  };
+}
+
+function obterDatasProximoMesMensalidade(jogo, proximaCompetencia) {
+  const origemData =
+    jogo?.horario_original_data ||
+    jogo?.data_agendamento;
+
+  const diaSemana =
+    obterDiaSemanaAgenda(origemData);
+
+  const [ano, mes] =
+    String(proximaCompetencia).split("-").map(Number);
+
+  const primeiroDia =
+    new Date(ano, mes - 1, 1, 12);
+
+  const ultimoDia =
+    new Date(ano, mes, 0, 12);
+
+  const datas = [];
+
+  for (
+    let data = new Date(primeiroDia);
+    data <= ultimoDia;
+    data.setDate(data.getDate() + 1)
+  ) {
+    if (data.getDay() === diaSemana) {
+      datas.push(data.toISOString().slice(0, 10));
+    }
+  }
+
+  return datas;
+}
+
 async function renovarMensalidadeAgenda(id) {
-  const mensalidade =
-    encontrarMensalidadePorId(id);
+  const mensalidade = encontrarMensalidadePorId(id);
 
   if (!mensalidade) return;
 
-  const jogo =
-    obterJogoOrigemMensalidade(mensalidade);
+  const jogo = obterJogoOrigemMensalidade(mensalidade);
+
+  if (!jogo) {
+    abrirModalAviso({
+      titulo: "Mensalidade sem horário",
+      texto: "Não foi possível localizar o horário original deste mensalista."
+    });
+    return;
+  }
+
+  const proximaCompetencia =
+    obterProximaCompetenciaAgenda(mensalidade.competencia);
+
+  const datasProximoMes =
+    obterDatasProximoMesMensalidade(jogo, proximaCompetencia);
+
+  const primeiraData =
+    datasProximoMes[0] || `${proximaCompetencia}-01`;
+
+  const ultimaData =
+    datasProximoMes[datasProximoMes.length - 1] || primeiraData;
+
+  const horario =
+    obterResumoHorarioRenovacaoAgenda(jogo);
+
+  const textoHorario = horario.alterado
+    ? `
+      <span><strong>Horário original</strong> ${horario.originalTexto}</span>
+      <span><strong>Último jogo</strong> ${horario.atualTexto}</span>
+      <span class="agenda-renovacao-alerta">
+        O próximo mês será criado utilizando o <strong>horário original</strong>.
+      </span>
+    `
+    : `
+      <span><strong>Horário</strong> ${horario.originalTexto}</span>
+    `;
 
   abrirModalAviso({
-    titulo: "Renovar mensalidade",
-    texto: `Este é o último jogo do ciclo. Renovar ${jogo?.cliente_nome || "mensalista"} para ${formatarCompetenciaMensalidade(obterProximaCompetenciaAgenda(mensalidade.competencia))}?`,
-    confirmarTexto: "Renovar",
+    titulo: "Renovar próximo mês",
+    texto: `
+      <div class="agenda-renovacao-aviso">
+
+        <p>
+          Este foi o último jogo deste horário mensal.
+        </p>
+
+        <div class="agenda-renovacao-info">
+
+          <span>
+            <strong>Responsável</strong>
+            ${jogo.cliente_nome || "Mensalista"}
+          </span>
+
+          <span>
+            <strong>Campo</strong>
+            ${jogo.local_recurso || "-"}
+          </span>
+
+          ${textoHorario}
+
+          <span>
+            <strong>Próximo mês</strong>
+            ${formatarCompetenciaMensalidade(proximaCompetencia)}
+          </span>
+
+        </div>
+
+        <div class="agenda-renovacao-datas">
+
+          <strong>Jogos previstos</strong>
+
+          <span>
+            ${datasProximoMes
+              .map(formatarDataCurtaAgenda)
+              .join(" • ")}
+          </span>
+
+        </div>
+
+      </div>
+    `,
+    confirmarTexto: "Criar próximo mês",
     mostrarCancelar: true,
+
     onConfirm: async () => {
+
       try {
-        const [ano, mes] =
-          String(mensalidade.competencia).split("-").map(Number);
 
-        const proximaData =
-          new Date(ano, mes, 1);
-
-        const proximaCompetencia =
-          `${proximaData.getFullYear()}-${String(proximaData.getMonth() + 1).padStart(2, "0")}`;
-
-        const dataInicio =
-          `${proximaCompetencia}-01`;
-
-        const dataFim =
-          new Date(
-            proximaData.getFullYear(),
-            proximaData.getMonth() + 1,
-            0
-          ).toISOString().slice(0, 10);
+        const dataInicio = primeiraData;
+        const dataFim = ultimaData;
 
         const { error } = await sb
           .from("agenda_mensalidades")
-          .upsert([{
-            empresa_id: APP_EMPRESA_ID,
-            agenda_origem_id: mensalidade.agenda_origem_id,
-            competencia: proximaCompetencia,
-            valor: Number(mensalidade.valor || jogo?.valor_mensal || 0),
-            status: "pendente",
-            data_inicio: dataInicio,
-            data_fim: dataFim,
-            quantidade_jogos_prevista: Number(mensalidade.quantidade_jogos_prevista || 4),
-            quantidade_jogos_usados: 0,
-            renovacao_status: "ativa",
-            observacoes: "Mensalidade renovada pela agenda",
-            atualizado_em: new Date().toISOString()
-          }], {
-            onConflict: "empresa_id,agenda_origem_id,competencia"
-          });
+          .upsert(
+            [{
+              empresa_id: APP_EMPRESA_ID,
+              agenda_origem_id: mensalidade.agenda_origem_id,
+              competencia: proximaCompetencia,
+              valor: Number(
+                mensalidade.valor ||
+                jogo.valor_mensal ||
+                0
+              ),
+              status: "pendente",
+              data_inicio: dataInicio,
+              data_fim: dataFim,
+              quantidade_jogos_prevista:
+                datasProximoMes.length ||
+                Number(
+                  mensalidade.quantidade_jogos_prevista || 4
+                ),
+              quantidade_jogos_usados: 0,
+              renovacao_status: "ativa",
+              observacoes:
+                `Próximo mês criado pela agenda: ${formatarDataCurtaAgenda(dataInicio)} até ${formatarDataCurtaAgenda(dataFim)}`,
+              atualizado_em: new Date().toISOString()
+            }],
+            {
+              onConflict:
+                "empresa_id,agenda_origem_id,competencia"
+            }
+          );
 
         if (error) throw error;
 
@@ -3522,24 +3746,30 @@ async function renovarMensalidadeAgenda(id) {
           .eq("id", mensalidade.id)
           .eq("empresa_id", APP_EMPRESA_ID);
 
-        await carregarAgenda();
-
-        renderizarMensalidadesAgenda();
+        await sincronizarAgendaVisual();
 
         crvToast({
-          titulo: "Mensalidade renovada",
-          mensagem: "Nova competência criada com sucesso.",
+          titulo: "Próximo mês criado",
+          mensagem:
+            `${formatarCompetenciaMensalidade(proximaCompetencia)} criado com sucesso.`,
           tipo: "success"
         });
 
       } catch (err) {
+
         abrirModalAviso({
           titulo: "Erro",
-          texto: err.message || "Erro ao renovar mensalidade."
+          texto:
+            err.message ||
+            "Erro ao renovar próximo mês."
         });
+
       }
+
     }
+
   });
+
 }
 
 async function cancelarMensalidadeAgenda(id) {
@@ -4367,7 +4597,7 @@ function garantirBotaoSemanaAgenda() {
   btn.className = btnConfig.className;
   btn.innerHTML = `
     <i data-lucide="calendar-days"></i>
-    <span>Ver semana</span>
+    <span>Gerenciar horários</span>
   `;
 
   btnConfig.insertAdjacentElement("afterend", btn);
@@ -4711,24 +4941,32 @@ function formatarDiaSemanaCurtoAgenda(dataISO) {
   });
 }
 
+let dataGerenciarHorariosAgenda =
+  hojeISOAgenda();
+
+let filtroTipoGerenciarHorariosAgenda =
+  "todos";
+
+let buscaGerenciarHorariosAgenda =
+  "";
+
 function abrirModalSemanaAgenda() {
-  const existente = document.getElementById("modalSemanaAgenda");
+  const existente =
+    document.getElementById("modalSemanaAgenda");
+
   if (existente) existente.remove();
 
-const dataBase = hojeISOAgenda();
-
-const semana = obterSemanaAgenda(dataBase);
-  const dias = listarDiasSemanaAgenda(semana.inicio);
+  dataGerenciarHorariosAgenda =
+    document.getElementById("filtroData")?.value || hojeISOAgenda();
 
   const modal = document.createElement("div");
+
   modal.id = "modalSemanaAgenda";
   modal.className = "modal-overlay agenda-semana-modal-overlay";
 
-const hoje = hojeISOAgenda();
-const indiceHoje = Math.max(0, dias.findIndex(dia => dia === hoje));
+  modal.innerHTML = `
+    <div class="modal card agenda-semana-modal agenda-gerenciar-modal">
 
-modal.innerHTML = `
-    <div class="modal card agenda-semana-modal">
       <button
         type="button"
         class="btn-ghost agenda-semana-fechar"
@@ -4740,35 +4978,74 @@ modal.innerHTML = `
 
       <div class="agenda-semana-header">
         <div>
-          <h2>Agenda da semana</h2>
-        <p>
-          Semana atual •
-          ${formatarDataCurtaAgenda(semana.inicio)}
-          até
-          ${formatarDataCurtaAgenda(semana.fim)}
-        </p>
+          <h2>Gerenciar horários</h2>
+          <p>
+            Consulte horários livres, mensais e avulsos. Clique em um horário para administrar.
+          </p>
         </div>
       </div>
 
-      <div class="agenda-semana-tabs">
-        ${dias.map((dia, index) => `
-          <button
-            type="button"
-            class="agenda-semana-tab ${index === indiceHoje ? "ativo" : ""}"
-            data-dia="${dia}"
-          >
-            ${formatarDiaSemanaCurtoAgenda(dia)}
-          </button>
-        `).join("")}
+      <div class="agenda-gerenciar-toolbar">
+
+        <input
+          type="date"
+          class="input"
+          id="agendaGerenciarData"
+          value="${dataGerenciarHorariosAgenda}"
+        >
+
+        <button
+          type="button"
+          class="agenda-date-btn"
+          id="btnGerenciarDiaAnterior"
+        >
+          ← Dia anterior
+        </button>
+
+        <button
+          type="button"
+          class="agenda-date-btn active"
+          id="btnGerenciarHoje"
+        >
+          Hoje
+        </button>
+
+        <button
+          type="button"
+          class="agenda-date-btn"
+          id="btnGerenciarProximoDia"
+        >
+          Próximo dia →
+        </button>
+
+        <input
+          type="search"
+          class="input"
+          id="agendaGerenciarBusca"
+          placeholder="Buscar responsável, jogador, campo ou horário..."
+        >
+
+        <select
+          class="input"
+          id="agendaGerenciarTipo"
+        >
+          <option value="todos">Todos</option>
+          <option value="mensal">Mensais</option>
+          <option value="mensais_mes">Mensais do mês</option>
+          <option value="avulso">Avulsos</option>
+          <option value="livre">Livres</option>
+        </select>
+
       </div>
 
       <div id="agendaSemanaConteudo"></div>
+
     </div>
   `;
 
   document.body.appendChild(modal);
 
-    modal.style.display = "flex";
+  modal.style.display = "flex";
 
   document
     .getElementById("btnFecharSemanaAgenda")
@@ -4780,21 +5057,188 @@ modal.innerHTML = `
     }
   });
 
-  modal
-    .querySelectorAll(".agenda-semana-tab")
-    .forEach(btn => {
-      btn.addEventListener("click", () => {
-        modal
-          .querySelectorAll(".agenda-semana-tab")
-          .forEach(b => b.classList.remove("ativo"));
-
-        btn.classList.add("ativo");
-
-        renderizarDiaSemanaAgenda(btn.dataset.dia);
-      });
+  document
+    .getElementById("agendaGerenciarData")
+    ?.addEventListener("change", event => {
+      dataGerenciarHorariosAgenda = event.target.value || hojeISOAgenda();
+      renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
     });
 
-  renderizarDiaSemanaAgenda(dias[indiceHoje]);
+  document
+    .getElementById("btnGerenciarDiaAnterior")
+    ?.addEventListener("click", () => {
+      dataGerenciarHorariosAgenda =
+        somarDiasAgenda(dataGerenciarHorariosAgenda, -1);
+
+      document.getElementById("agendaGerenciarData").value =
+        dataGerenciarHorariosAgenda;
+
+      renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
+    });
+
+  document
+    .getElementById("btnGerenciarHoje")
+    ?.addEventListener("click", () => {
+      dataGerenciarHorariosAgenda = hojeISOAgenda();
+
+      document.getElementById("agendaGerenciarData").value =
+        dataGerenciarHorariosAgenda;
+
+      renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
+    });
+
+  document
+    .getElementById("btnGerenciarProximoDia")
+    ?.addEventListener("click", () => {
+      dataGerenciarHorariosAgenda =
+        somarDiasAgenda(dataGerenciarHorariosAgenda, 1);
+
+      document.getElementById("agendaGerenciarData").value =
+        dataGerenciarHorariosAgenda;
+
+      renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
+    });
+
+  document
+    .getElementById("agendaGerenciarBusca")
+    ?.addEventListener("input", event => {
+      buscaGerenciarHorariosAgenda =
+        normalizarBuscaAgendaInline(event.target.value || "");
+
+      renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
+    });
+
+  document
+    .getElementById("agendaGerenciarTipo")
+    ?.addEventListener("change", event => {
+      filtroTipoGerenciarHorariosAgenda =
+        event.target.value || "todos";
+
+      renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
+    });
+
+  renderizarDiaSemanaAgenda(dataGerenciarHorariosAgenda);
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function renderizarMensaisDoMesAgenda(dataISO) {
+  const container =
+    document.getElementById("agendaSemanaConteudo");
+
+  if (!container) return;
+
+  const competencia =
+    competenciaAgenda(dataISO);
+
+  const mensalidadesMes =
+    mensalidadesAgenda.filter(m => {
+      return (
+        String(m.competencia || "") === competencia &&
+        String(m.status || "") !== "cancelado"
+      );
+    });
+
+  const itens =
+    mensalidadesMes
+      .map(mensalidade => {
+        const jogo =
+          obterJogoOrigemMensalidade(mensalidade);
+
+        if (!jogo) return null;
+
+        const horario =
+          obterResumoHorarioRenovacaoAgenda(jogo);
+
+        const datas =
+          obterDatasProximoMesMensalidade(jogo, competencia);
+
+        return {
+          mensalidade,
+          jogo,
+          horario,
+          datas
+        };
+      })
+      .filter(Boolean)
+      .filter(item => {
+        if (!buscaGerenciarHorariosAgenda) return true;
+
+        const texto =
+          normalizarBuscaAgendaInline([
+            item.jogo.cliente_nome,
+            item.jogo.local_recurso,
+            item.horario.originalTexto,
+            item.datas.map(formatarDataCurtaAgenda).join(" ")
+          ].join(" "));
+
+        return texto.includes(buscaGerenciarHorariosAgenda);
+      })
+      .sort((a, b) =>
+        String(a.jogo.cliente_nome || "")
+          .localeCompare(String(b.jogo.cliente_nome || ""), "pt-BR")
+      );
+
+  container.innerHTML = `
+    <div class="agenda-semana-dia-header">
+      <strong>Mensais do mês</strong>
+      <span>
+        ${
+          itens.length === 1
+            ? "1 mensalista encontrado"
+            : `${itens.length} mensalista(s) encontrado(s)`
+        }
+      </span>
+    </div>
+
+    ${
+      itens.length
+        ? itens.map(({ mensalidade, jogo, horario, datas }) => `
+          <div
+            class="agenda-mensal-item"
+            data-id="${jogo.id}"
+          >
+            <div class="agenda-mensal-topo">
+              <strong>${jogo.cliente_nome || "Mensalista"}</strong>
+              <span>${formatarCompetenciaMensalidade(mensalidade.competencia)}</span>
+            </div>
+
+            <div class="agenda-mensal-info">
+              ${horario.originalTexto} • ${jogo.local_recurso || "-"}
+            </div>
+
+            <div class="agenda-mensal-datas">
+              Jogos previstos:
+              ${
+                datas.length
+                  ? datas.map(formatarDataCurtaAgenda).join(" • ")
+                  : "sem datas previstas"
+              }
+            </div>
+          </div>
+        `).join("")
+        : `
+          <div class="agenda-gerenciar-sem-resultado">
+            <strong>Nenhum mensalista encontrado neste mês.</strong>
+            <small>Troque o mês pelo calendário ou limpe a busca.</small>
+          </div>
+        `
+    }
+  `;
+
+  container
+    .querySelectorAll(".agenda-mensal-item")
+    .forEach(card => {
+      card.addEventListener("click", () => {
+        document.getElementById("modalSemanaAgenda")?.remove();
+
+        abrirJogo(card.dataset.id, {
+          forcarEdicao: true
+        });
+      });
+    });
 
   if (window.lucide) {
     lucide.createIcons();
@@ -4802,13 +5246,26 @@ modal.innerHTML = `
 }
 
 function renderizarDiaSemanaAgenda(dataISO) {
-  const container = document.getElementById("agendaSemanaConteudo");
+  const container =
+    document.getElementById("agendaSemanaConteudo");
+
   if (!container) return;
 
-  const campos = obterLocaisAgenda();
-  const slots = gerarSlotsPadraoArena();
+  if (filtroTipoGerenciarHorariosAgenda === "mensais_mes") {
+  renderizarMensaisDoMesAgenda(dataISO);
+  return;
+}
 
-  const jogosDia =
+  const campos =
+    obterLocaisAgenda();
+
+  const slots =
+    gerarSlotsPadraoArena();
+
+  const dataFormatada =
+    formatarDiaSemanaCurtoAgenda(dataISO);
+
+  let jogosDia =
     agendaDados.filter(jogo => {
       return (
         String(jogo.data_agendamento || "").slice(0, 10) === dataISO &&
@@ -4816,10 +5273,15 @@ function renderizarDiaSemanaAgenda(dataISO) {
       );
     });
 
+  const totalJogosDia =
+    jogosDia.length;
+
   container.innerHTML = `
     <div class="agenda-semana-dia-header">
-      <strong>${formatarDiaSemanaCurtoAgenda(dataISO)}</strong>
-      <span>${jogosDia.length} jogo(s) marcado(s)</span>
+      <strong>${dataFormatada}</strong>
+      <span id="agendaGerenciarResumoDia">
+        ${totalJogosDia} jogo(s) marcado(s)
+      </span>
     </div>
 
     <div class="agenda-semana-grade">
@@ -4848,10 +5310,76 @@ function renderizarDiaSemanaAgenda(dataISO) {
                 });
 
                 if (!jogo) {
-                  return `<td class="agenda-semana-livre">Livre</td>`;
+                  const textoLivre =
+                    normalizarBuscaAgendaInline([
+                      "livre",
+                      campo,
+                      inicio,
+                      fim,
+                      inicio.replace(":", ""),
+                      fim.replace(":", "")
+                    ].join(" "));
+
+                  if (
+                    filtroTipoGerenciarHorariosAgenda !== "todos" &&
+                    filtroTipoGerenciarHorariosAgenda !== "livre"
+                  ) {
+                    return `<td class="agenda-semana-vazio"></td>`;
+                  }
+
+                  if (
+                    buscaGerenciarHorariosAgenda &&
+                    !textoLivre.includes(buscaGerenciarHorariosAgenda)
+                  ) {
+                    return `<td class="agenda-semana-vazio"></td>`;
+                  }
+
+                  return `
+                    <td
+                      class="agenda-semana-livre agenda-semana-clicavel"
+                      data-campo="${campo}"
+                      data-inicio="${inicio}"
+                      data-fim="${fim}"
+                    >
+                      <strong>Livre</strong>
+                      <small>Novo horário</small>
+                    </td>
+                  `;
                 }
 
-                const ehMensal = jogoEhMensalAgenda(jogo);
+                const ehMensal =
+                  jogoEhMensalAgenda(jogo);
+
+                const tipo =
+                  ehMensal ? "mensal" : "avulso";
+
+                if (
+                  filtroTipoGerenciarHorariosAgenda !== "todos" &&
+                  filtroTipoGerenciarHorariosAgenda !== tipo
+                ) {
+                  return `<td class="agenda-semana-vazio"></td>`;
+                }
+
+                const jogadores =
+                  (jogadoresPorAgenda[jogo.id] || [])
+                    .filter(j => j.removido !== true);
+
+                const textoBusca =
+                  normalizarBuscaAgendaInline([
+                    jogo.cliente_nome,
+                    jogo.local_recurso,
+                    tipo,
+                    inicio,
+                    fim,
+                    jogadores.map(j => j.nome).join(" ")
+                  ].join(" "));
+
+                if (
+                  buscaGerenciarHorariosAgenda &&
+                  !textoBusca.includes(buscaGerenciarHorariosAgenda)
+                ) {
+                  return `<td class="agenda-semana-vazio"></td>`;
+                }
 
                 return `
                   <td
@@ -4859,7 +5387,11 @@ function renderizarDiaSemanaAgenda(dataISO) {
                     data-id="${jogo.id}"
                   >
                     <strong>${jogo.cliente_nome || "Jogo"}</strong>
-                    <small>${ehMensal ? "Mensal" : "Avulso"}</small>
+                    <small>
+                      ${ehMensal ? "Mensal" : "Avulso"}
+                      •
+                      ${formatarHora(jogo.hora_inicio)} às ${formatarHora(jogo.hora_fim)}
+                    </small>
                   </td>
                 `;
               }).join("")}
@@ -4881,6 +5413,71 @@ function renderizarDiaSemanaAgenda(dataISO) {
         });
       });
     });
+
+  container
+    .querySelectorAll(".agenda-semana-livre")
+    .forEach(td => {
+      td.addEventListener("click", () => {
+        document.getElementById("modalSemanaAgenda")?.remove();
+
+        abrirNovoJogo();
+
+        document.getElementById("dataAgendamento").value =
+          dataISO;
+
+        popularSelectLocalRecurso(td.dataset.campo || "");
+
+        document.getElementById("horaInicio").value =
+          td.dataset.inicio || "";
+
+        document.getElementById("horaFim").value =
+          td.dataset.fim || "";
+
+        aplicarValorPadraoAgendaNoModal();
+      });
+    });
+
+    const resultadosGerenciar =
+  container.querySelectorAll(".agenda-semana-ocupado, .agenda-semana-livre");
+
+const resumoGerenciar =
+  document.getElementById("agendaGerenciarResumoDia");
+
+if (resumoGerenciar) {
+  if (buscaGerenciarHorariosAgenda) {
+    resumoGerenciar.textContent =
+      resultadosGerenciar.length === 1
+        ? "1 horário encontrado neste dia"
+        : `${resultadosGerenciar.length} horários encontrados neste dia`;
+  } else {
+    resumoGerenciar.textContent =
+      totalJogosDia === 1
+        ? "1 jogo marcado"
+        : `${totalJogosDia} jogo(s) marcado(s)`;
+  }
+}
+
+if (
+  buscaGerenciarHorariosAgenda &&
+  resultadosGerenciar.length === 0
+) {
+  const aviso = document.createElement("div");
+
+  aviso.className = "agenda-gerenciar-sem-resultado";
+
+  aviso.innerHTML = `
+    <strong>Nenhum horário encontrado neste dia.</strong>
+    <small>
+      Tente outro dia, use “Próximo dia” ou limpe a busca para ver todos os horários.
+    </small>
+  `;
+
+  container.appendChild(aviso);
+}
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 function renderizarAgendaInline() {
@@ -4982,6 +5579,14 @@ tbody
     });
   });
 
+tbody
+  .querySelectorAll(".btn-agenda-inline-renovar")
+  .forEach(btn => {
+    btn.addEventListener("click", () => {
+      renovarMensalidadeAgenda(btn.dataset.id);
+    });
+  });
+
   tbody
     .querySelectorAll(".btn-agenda-inline-novo")
     .forEach(btn => {
@@ -5059,6 +5664,11 @@ function criarLinhaJogoAgendaInline(jogo) {
 
   const ehMensal =
     jogoEhMensalAgenda(jogo);
+
+    const cicloMensal =
+  mensalidade
+    ? calcularIndiceJogoMensal(jogo, mensalidade)
+    : null;
 
   const tipoTexto =
     ehMensal
@@ -5148,6 +5758,25 @@ const pagamentoClasse =
         `
           : ""
     }
+
+${
+ehMensal &&
+mensalidade?.status === "pago" &&
+cicloMensal &&
+cicloMensal.atual >= cicloMensal.total &&
+mensalidade.renovacao_status !== "renovada"
+    ? `
+      <button
+        type="button"
+        class="agenda-inline-action renovar btn-agenda-inline-renovar"
+        data-id="${mensalidade.id}"
+        title="Renovar próximo mês"
+      >
+        <i data-lucide="rotate-cw" width="16" height="16"></i>
+      </button>
+    `
+    : ""
+}
 
     <button
       type="button"

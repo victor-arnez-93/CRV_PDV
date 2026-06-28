@@ -948,15 +948,19 @@ if (!emailDigitado) {
 // ===== INIT =====
 document.addEventListener("DOMContentLoaded", async () => {
 
-  setTimeout(async () => {
-    if (typeof crvCarregarConfiguracoesEmpresa === "function") {
-      await crvCarregarConfiguracoesEmpresa();
-    }
+  if (typeof window.crvAguardarEmpresa === "function") {
+    const empresaOk = await window.crvAguardarEmpresa();
 
-    if (window.APP_EMPRESA_ID) {
-      await initDashboard();
-    } else {
-      logSistema("DASHBOARD", "Empresa ainda não carregada após aguardar auth", "error");
+    if (!empresaOk) {
+      logSistema(
+        "DASHBOARD",
+        "Empresa não carregou após aguardar autenticação.",
+        "error"
+      );
+      return;
     }
-  }, 1000);
+  }
+
+  await initDashboard();
+
 });

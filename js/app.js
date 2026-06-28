@@ -507,6 +507,23 @@ async function crvAguardarSupabaseGlobal() {
   return false;
 }
 
+window.crvAguardarEmpresa = async function (timeout = 5000) {
+  const inicio = Date.now();
+
+  while (
+    !crvObterEmpresaIdGlobal() &&
+    Date.now() - inicio < timeout
+  ) {
+    if (typeof window.crvCarregarConfiguracoesEmpresa === "function") {
+      await window.crvCarregarConfiguracoesEmpresa();
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return !!crvObterEmpresaIdGlobal();
+};
+
 function crvAplicarStatusCaixa(aberto, caixaData = null) {
   const caixaStatus = document.getElementById("caixaStatus");
   const statusDot = document.getElementById("statusDot");
@@ -1386,8 +1403,8 @@ async function crvCarregarLogoEmpresaTopbar() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  if (typeof lucide !== 'undefined') {
+document.addEventListener("DOMContentLoaded", async () => {
+  if (typeof lucide !== "undefined") {
     lucide.createIcons();
   }
 
@@ -1396,30 +1413,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   crvInicializarRelogio();
   crvInicializarModalUsuario();
 
-  if (window.crvCarregarConfiguracoesEmpresa) {
-    await window.crvCarregarConfiguracoesEmpresa();
+  const empresaOk = await window.crvAguardarEmpresa();
+
+  if (!empresaOk) {
+    console.warn("[CRV PDV][APP] Empresa não carregou. Permissões não serão validadas agora.");
+    document.documentElement.classList.remove("crv-permissoes-carregando");
+    return;
   }
 
   await crvAtualizarSaudacao();
   await crvAtualizarStatusCaixaGlobal();
   await crvCarregarLogoEmpresaTopbar();
-
   await crvInicializarPermissoesSistema();
 
-if (
-  window.crvSync &&
-  typeof window.crvSync.sincronizarPendencias === "function"
-) {
-  window.crvSync.sincronizarPendencias();
-}
-
-setInterval(() => {
-  if (navigator.onLine !== false && window.APP_STATUS?.online !== false) {
-    crvAtualizarStatusCaixaGlobal();
+  if (
+    window.crvSync &&
+    typeof window.crvSync.sincronizarPendencias === "function"
+  ) {
+    window.crvSync.sincronizarPendencias();
   }
-}, 15000);
 
-  if (typeof lucide !== 'undefined') {
+  setInterval(() => {
+    if (
+      navigator.onLine !== false &&
+      window.APP_STATUS?.online !== false
+    ) {
+      crvAtualizarStatusCaixaGlobal();
+    }
+  }, 15000);
+
+  if (typeof lucide !== "undefined") {
     lucide.createIcons();
   }
 });

@@ -377,6 +377,35 @@ body.light .status-cobranca {
   box-shadow: 0 0 12px rgba(255,80,80,.18);
 }
 
+.btn-renovar-mensalidade {
+  all: unset;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all .18s ease;
+
+  color: #d4a843;
+  border: 1px solid rgba(212,168,67,.48);
+  background: rgba(212,168,67,.10);
+}
+
+.btn-renovar-mensalidade:hover {
+  color: #f4c95d;
+  border-color: rgba(212,168,67,.75);
+  background: rgba(212,168,67,.18);
+  box-shadow: 0 0 12px rgba(212,168,67,.18);
+}
+
+.btn-renovar-mensalidade svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.4;
+}
+
 .btn-cancelar-jogo svg,
 .btn-apagar-jogo svg {
   width: 17px;
@@ -1095,6 +1124,29 @@ body.light .agenda-alteracao-info {
   background: rgba(255,80,80,.14);
 }
 
+.agenda-inline-actions-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.agenda-inline-action.renovar {
+  min-width: 42px;
+  width: 42px;
+  height: 34px;
+  padding: 0;
+  color: #d4a843;
+  border-color: rgba(212,168,67,.48);
+  background: rgba(212,168,67,.10);
+}
+
+.agenda-inline-action.renovar:hover {
+  color: #f4c95d;
+  border-color: rgba(212,168,67,.75);
+  background: rgba(212,168,67,.18);
+}
+
 /* ======================================================
    AGENDA INLINE - TOOLBAR
 ====================================================== */
@@ -1363,6 +1415,62 @@ body.light .agenda-alteracao-info {
   min-height: 96px;
   margin-top: 14px;
   resize: vertical;
+}
+
+.agenda-renovacao-aviso {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agenda-renovacao-aviso p {
+  margin: 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.agenda-renovacao-info {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(212,168,67,.22);
+  background: rgba(212,168,67,.07);
+}
+
+.agenda-renovacao-info span {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--text-secondary);
+  font-size: .9rem;
+  line-height: 1.35;
+}
+
+.agenda-renovacao-info strong {
+  color: var(--text-primary);
+}
+
+.agenda-renovacao-datas {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  text-align: center;
+}
+
+.agenda-renovacao-datas strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.agenda-renovacao-datas span {
+  color: #d4a843;
+  font-weight: 900;
 }
 
 /* ======================================================
@@ -1802,6 +1910,76 @@ body.light .agenda-alteracao-info {
   font-weight: 700;
 }
 
+.agenda-gerenciar-toolbar {
+  display: grid;
+  grid-template-columns: 170px auto auto auto minmax(260px, 1fr) 180px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.agenda-gerenciar-toolbar .input,
+.agenda-gerenciar-toolbar select {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.agenda-semana-vazio {
+  background: rgba(255,255,255,.015);
+  opacity: .35;
+}
+
+.agenda-semana-clicavel {
+  cursor: pointer;
+}
+
+.agenda-semana-livre strong {
+  display: block;
+  color: #54CD16;
+  font-weight: 900;
+}
+
+.agenda-semana-livre small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(84,205,22,.82);
+  font-size: .68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.agenda-semana-livre:hover {
+  background: rgba(84,205,22,.10);
+  box-shadow: inset 0 0 0 1px rgba(84,205,22,.22);
+}
+
+.agenda-gerenciar-sem-resultado {
+  margin-top: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(212,168,67,.38);
+  background: rgba(212,168,67,.07);
+  text-align: center;
+}
+
+.agenda-gerenciar-sem-resultado strong {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.agenda-gerenciar-sem-resultado small {
+  display: block;
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .agenda-semana-tabs {
   display: flex;
   align-items: center;
@@ -2030,6 +2208,18 @@ body.light .agenda-alteracao-info {
   .agenda-semana-grade {
     max-height: 62vh;
   }
+
+  .agenda-gerenciar-toolbar {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.agenda-gerenciar-toolbar .agenda-date-btn,
+.agenda-gerenciar-toolbar .input,
+.agenda-gerenciar-toolbar select {
+  width: 100%;
+  min-height: 42px;
+}
 }
 
 /* ======================================================
@@ -2141,6 +2331,68 @@ body.light .agenda-alteracao-info {
   height: 42px;
   padding: 0 22px;
   border-radius: 999px;
+}
+
+/* ======================================================
+   MENSALISTAS DO MÊS
+====================================================== */
+
+.agenda-mensal-item{
+    padding:18px;
+    margin-bottom:14px;
+
+    border:1px solid var(--border);
+    border-radius:16px;
+
+    background:var(--bg-elevated);
+
+    cursor:pointer;
+    transition:.18s;
+}
+
+.agenda-mensal-item:hover{
+    transform:translateY(-1px);
+    border-color:rgba(212,168,67,.60);
+    box-shadow:0 8px 18px rgba(0,0,0,.12);
+}
+
+.agenda-mensal-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:10px;
+}
+
+.agenda-mensal-topo strong{
+    font-size:1rem;
+    font-weight:900;
+    color:var(--text-primary);
+}
+
+.agenda-mensal-topo span{
+    font-size:.74rem;
+    font-weight:800;
+    color:#d4a843;
+}
+
+.agenda-mensal-info{
+    margin-bottom:10px;
+    color:var(--text-secondary);
+    font-size:.86rem;
+    font-weight:700;
+}
+
+.agenda-mensal-datas{
+    color:#d4a843;
+    font-size:.82rem;
+    font-weight:800;
+    line-height:1.5;
+}
+
+[data-theme="light"] .agenda-mensal-item{
+    background:#fff;
+    border-color:rgba(0,56,135,.14);
 }
 
 /* ======================================================
