@@ -26,9 +26,15 @@
 
 <nav class="sidebar-nav">
 
+<div class="nav-section-head">
   <span class="nav-section-label">
     Principal
   </span>
+
+  <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Recolher menu">
+    <i data-lucide="panel-left-close"></i>
+  </button>
+</div>
 
   <a href="dashboard.html" class="nav-item active">
     <i data-lucide="layout-dashboard" class="nav-icon"></i>
@@ -122,6 +128,12 @@
 
         <!-- Data/hora -->
         <div class="topbar-datetime" id="topbarDatetime"></div>
+
+        <!-- Clima -->
+        <button class="topbar-weather" id="topbarWeather" type="button" title="Previsão do tempo">
+          <span id="weatherIcon">☁️</span>
+          <span id="weatherTemp">--°</span>
+        </button>
 
         <!-- Theme toggle -->
         <button class="theme-toggle" id="themeToggle" title="Alternar tema">

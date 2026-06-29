@@ -1008,8 +1008,10 @@ function montarRecebimentosJogosAgrupados(vendas) {
     const itensJogo =
       (venda.itens || []).filter(item => itemEhPagamentoJogo(item));
 
-    const vendaDiretaJogo =
-      origemVenda === "agenda";
+const vendaDiretaJogo =
+  origemVenda === "agenda" ||
+  origemVenda === "agenda_avulso" ||
+  origemVenda === "agenda_mensalidade";
 
     const vendaComandaComJogo =
       origemVenda === "comanda" &&
@@ -1019,10 +1021,10 @@ function montarRecebimentosJogosAgrupados(vendas) {
       return;
     }
 
-    const chave =
-      vendaDiretaJogo
-        ? venda.origem_id || venda.id
-        : itensJogo[0]?.origem_id || itensJogo[0]?.agenda_id || venda.id;
+const chave =
+  vendaDiretaJogo
+    ? venda.agenda_id || venda.origem_id || venda.id
+    : itensJogo[0]?.agenda_id || itensJogo[0]?.origem_id || venda.id;
 
     const descricaoLimpa =
       vendaDiretaJogo
@@ -1757,7 +1759,3 @@ function mostrarModalAviso(mensagem) {
         modal.remove();
     };
 }
-
-setTimeout(() => {
-  crvCarregarConfiguracoesEmpresa();
-}, 900);

@@ -665,8 +665,8 @@ async function crvCarregarNomeUsuario() {
 }
 
 async function crvAtualizarSaudacao() {
-  const greetEl = document.getElementById('greetingText');
-  const greetDate = document.getElementById('greetingDate');
+  const greetEl = document.getElementById("greetingText");
+  const greetDate = document.getElementById("greetingDate");
 
   if (greetEl) {
     const h = new Date().getHours();
@@ -677,21 +677,21 @@ async function crvAtualizarSaudacao() {
         ? "Boa tarde"
         : "Boa noite";
 
-    const nomeUsuario = await crvCarregarNomeUsuario();
+const nomeEmpresa =
+  window.APP_EMPRESA_NOME ||
+  window.APP_CONFIG?.nome_fantasia ||
+  window.APP_CONFIG?.nome ||
+  "";
 
-    crvAppUsuarioNome = nomeUsuario;
-
-    greetEl.textContent = nomeUsuario
-      ? `${saudacao}, ${nomeUsuario} 👋`
-      : `${saudacao} 👋`;
+    greetEl.textContent = `${saudacao}, ${nomeEmpresa} 👋`;
   }
 
   if (greetDate) {
-    greetDate.textContent = new Date().toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    greetDate.textContent = new Date().toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
     });
   }
 }
@@ -766,6 +766,58 @@ function crvInicializarSidebarMobile() {
     sidebar.classList.remove('open');
     overlay.classList.remove('open');
   });
+}
+
+function crvInicializarSidebarDesktop() {
+  const shell = document.querySelector(".app-shell");
+  const sidebar = document.getElementById("sidebar");
+  const nav = sidebar?.querySelector(".sidebar-nav");
+
+  if (!shell || !sidebar || !nav) return;
+
+  let toggle = document.getElementById("sidebarToggle");
+
+  if (!toggle) {
+    const primeiroLabel = nav.querySelector(".nav-section-label");
+
+    if (!primeiroLabel) return;
+
+    let head = primeiroLabel.closest(".nav-section-head");
+
+    if (!head) {
+      head = document.createElement("div");
+      head.className = "nav-section-head";
+      primeiroLabel.parentNode.insertBefore(head, primeiroLabel);
+      head.appendChild(primeiroLabel);
+    }
+
+    toggle = document.createElement("button");
+    toggle.className = "sidebar-toggle";
+    toggle.id = "sidebarToggle";
+    toggle.type = "button";
+    toggle.title = "Recolher menu";
+    toggle.innerHTML = `<i data-lucide="panel-left-close"></i>`;
+
+    head.appendChild(toggle);
+  }
+
+  const aplicar = (collapsed) => {
+    shell.classList.toggle("sidebar-collapsed", collapsed);
+    localStorage.setItem("crv-sidebar-collapsed", collapsed ? "1" : "0");
+
+    const iconName = collapsed ? "panel-left-open" : "panel-left-close";
+    toggle.innerHTML = `<i data-lucide="${iconName}"></i>`;
+
+    if (typeof lucide !== "undefined") {
+      lucide.createIcons();
+    }
+  };
+
+  aplicar(localStorage.getItem("crv-sidebar-collapsed") === "1");
+
+  toggle.onclick = () => {
+    aplicar(!shell.classList.contains("sidebar-collapsed"));
+  };
 }
 
 function crvInicializarRelogio() {
@@ -1378,6 +1430,22 @@ if (sidebarLogo && !sidebarLogo.src.includes("logo1.png")) {
   }
 }
 
+function crvAplicarNomeEmpresaSidebar(nomeEmpresa) {
+  const sub = document.querySelector(".sidebar-logo-sub");
+
+  if (!sub) return;
+
+const nome =
+  nomeEmpresa ||
+  window.APP_EMPRESA_NOME ||
+  window.APP_CONFIG?.nome_fantasia ||
+  window.APP_CONFIG?.nome ||
+  "";
+
+  sub.textContent = nome.toUpperCase();
+  sub.classList.add("ready");
+}
+
 window.crvAplicarLogoEmpresaTopbar = crvAplicarLogoEmpresaTopbar;
 
 async function crvCarregarLogoEmpresaTopbar() {
@@ -1390,17 +1458,135 @@ async function crvCarregarLogoEmpresaTopbar() {
 
     const { data, error } = await sb
       .from("empresas")
-      .select("logo_url")
+      .select("logo_url, nome, nome_fantasia")
       .eq("id", empresaId)
       .single();
 
     if (error) throw error;
 
-    crvAplicarLogoEmpresaTopbar(data?.logo_url || "");
+crvAplicarLogoEmpresaTopbar(data?.logo_url || "");
+crvAplicarNomeEmpresaSidebar(
+  data?.nome_fantasia ||
+  data?.nome ||
+  ""
+);
 
   } catch (err) {
     console.warn("[CRV PDV] Não foi possível carregar logo da empresa:", err.message);
   }
+}
+
+function crvWeatherEmoji(code) {
+  if ([0, 1].includes(code)) return "☀️";
+  if ([2, 3].includes(code)) return "⛅";
+  if ([45, 48].includes(code)) return "🌫️";
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return "🌧️";
+  if ([95, 96, 99].includes(code)) return "⛈️";
+  return "☁️";
+}
+
+async function crvInicializarClimaTopbar() {
+let btn = document.getElementById("topbarWeather");
+let icon = document.getElementById("weatherIcon");
+let temp = document.getElementById("weatherTemp");
+
+if (!btn) {
+  const datetime = document.getElementById("topbarDatetime");
+  const theme = document.getElementById("themeToggle");
+
+  if (!datetime || !theme) return;
+
+  btn = document.createElement("button");
+  btn.className = "topbar-weather";
+  btn.id = "topbarWeather";
+  btn.type = "button";
+  btn.title = "Previsão do tempo";
+  btn.innerHTML = `
+    <span id="weatherIcon">☁️</span>
+    <span id="weatherTemp">--°</span>
+  `;
+
+  theme.parentNode.insertBefore(btn, theme);
+
+  icon = document.getElementById("weatherIcon");
+  temp = document.getElementById("weatherTemp");
+}
+
+if (!btn || !icon || !temp) return;
+
+  let popover = document.getElementById("weatherPopover");
+
+  if (!popover) {
+    popover = document.createElement("div");
+    popover.id = "weatherPopover";
+    popover.className = "weather-popover hidden";
+    document.body.appendChild(popover);
+  }
+
+  const url =
+    "https://api.open-meteo.com/v1/forecast?latitude=-23.35&longitude=-47.85&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=America/Sao_Paulo&forecast_days=3";
+
+  try {
+    const resp = await fetch(url);
+
+    if (!resp.ok) throw new Error("Falha ao carregar clima.");
+
+    const data = await resp.json();
+    const atual = data.current_weather || {};
+    const codigoAtual = Number(atual.weathercode);
+
+    icon.textContent = crvWeatherEmoji(codigoAtual);
+    temp.textContent = Number.isFinite(atual.temperature)
+      ? `${Math.round(atual.temperature)}°`
+      : "--°";
+
+    const dias = data.daily?.time || [];
+    const max = data.daily?.temperature_2m_max || [];
+    const min = data.daily?.temperature_2m_min || [];
+    const codes = data.daily?.weathercode || [];
+
+    popover.innerHTML = `
+      <div class="weather-popover-title">Clima em Tatuí/SP</div>
+      ${dias.map((dia, i) => {
+        const dataDia = new Date(`${dia}T12:00:00`);
+        const label = dataDia.toLocaleDateString("pt-BR", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit"
+        });
+
+        return `
+          <div class="weather-day">
+            <span>${crvWeatherEmoji(Number(codes[i]))} ${label}</span>
+            <strong>${Math.round(min[i])}° / ${Math.round(max[i])}°</strong>
+          </div>
+        `;
+      }).join("")}
+    `;
+
+  } catch (err) {
+    console.warn("[CRV PDV] Clima indisponível:", err.message);
+    icon.textContent = "☁️";
+    temp.textContent = "--°";
+
+    popover.innerHTML = `
+      <div class="weather-popover-title">Clima indisponível</div>
+      <p style="font-size:.86rem;color:var(--text-secondary);">
+        Não foi possível carregar a previsão agora.
+      </p>
+    `;
+  }
+
+btn.onclick = event => {
+  event.stopPropagation();
+  popover.classList.toggle("hidden");
+};
+
+  document.addEventListener("click", event => {
+    if (!popover.contains(event.target) && !btn.contains(event.target)) {
+      popover.classList.add("hidden");
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1408,10 +1594,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     lucide.createIcons();
   }
 
-  crvInicializarTema();
-  crvInicializarSidebarMobile();
-  crvInicializarRelogio();
-  crvInicializarModalUsuario();
+crvInicializarTema();
+crvInicializarSidebarMobile();
+crvInicializarSidebarDesktop();
+crvInicializarRelogio();
+crvInicializarClimaTopbar();
+crvInicializarModalUsuario();
+
 
   const empresaOk = await window.crvAguardarEmpresa();
 

@@ -254,63 +254,27 @@
   </select>
 </div>
 
-      <div class="form-group full">
-  <label>Segmento do negócio</label>
+<div class="form-group">
+  <label>Categoria do negócio</label>
 
-  <select id="cfgTipoNegocio">
-    <option value="">Selecione o segmento</option>
+  <select id="cfgCategoriaNegocio">
+    <option value="">Selecione a categoria</option>
+    <option value="comercio">Comércio</option>
+    <option value="alimentacao">Alimentação</option>
+    <option value="servicos">Serviços</option>
+    <option value="esportes">Esportes</option>
+  </select>
+</div>
 
-    <option value="comercio_geral">
-      Comércio geral
-    </option>
+<div class="form-group">
+  <label>Tipo de negócio</label>
 
-    <option value="padaria">
-      Padaria
-    </option>
-
-    <option value="restaurante">
-      Restaurante
-    </option>
-
-    <option value="bar_adega">
-      Bar / Adega
-    </option>
-
-    <option value="lanchonete">
-      Lanchonete
-    </option>
-
-    <option value="cafeteria_doceria">
-      Cafeteria / Doceria
-    </option>
-
-    <option value="mercado_mercearia">
-      Mercado / Mercearia
-    </option>
-
-    <option value="conveniencia">
-      Loja de conveniência
-    </option>
-
-    <option value="arena_esportiva">
-      Arena esportiva
-    </option>
-
-    <option value="arena_beach">
-      Arena de areia / Beach sports
-    </option>
-
-    <option value="quadras_esportivas">
-      Quadras esportivas
-    </option>
-
-    <option value="servicos">
-      Serviços
-    </option>
+  <select id="cfgTipoNegocio" disabled>
+    <option value="">Selecione primeiro a categoria</option>
   </select>
 
   <small>
-    O sistema irá adaptar automaticamente módulos e funcionalidades para o seu segmento.
+    O sistema adapta automaticamente módulos e funcionalidades conforme o tipo escolhido.
   </small>
 </div>
     </div>

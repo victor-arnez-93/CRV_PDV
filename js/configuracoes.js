@@ -4,76 +4,133 @@
 
 let CONFIG_EMPRESA = null;
 
-const SEGMENTOS_CONFIG = {
+const TIPOS_NEGOCIO_POR_CATEGORIA = {
+  comercio: [
+    ["comercio_geral", "Comércio geral"],
+    ["mercado_mercearia", "Mercado / Mercearia"],
+    ["conveniencia", "Loja de conveniência"]
+  ],
 
+  alimentacao: [
+    ["padaria", "Padaria"],
+    ["panificadora", "Panificadora"],
+    ["confeitaria", "Confeitaria"],
+    ["cafeteria_padaria", "Cafeteria / Padaria"],
+    ["doceria", "Doceria"],
+    ["restaurante", "Restaurante"],
+    ["bar_adega", "Bar / Adega"],
+    ["lanchonete", "Lanchonete"],
+    ["cafeteria_doceria", "Cafeteria / Doceria"]
+  ],
+
+  servicos: [
+    ["servicos", "Serviços"],
+    ["barbearia", "Barbearia"],
+    ["salao", "Salão de beleza"],
+    ["assistencia", "Assistência técnica"]
+  ],
+
+  esportes: [
+    ["arena_esportiva", "Arena esportiva"],
+    ["arena_beach", "Arena de areia / Beach sports"],
+    ["quadras_esportivas", "Quadras esportivas"]
+  ]
+};
+
+const SEGMENTOS_CONFIG = {
   comercio_geral: {
     titulo: "Comércio geral",
-    modulos: [
-      "Caixa / PDV",
-      "Produtos",
-      "Clientes",
-      "Relatórios"
-    ]
+    modulos: ["Caixa / PDV", "Produtos", "Clientes", "Relatórios"]
+  },
+
+  mercado_mercearia: {
+    titulo: "Mercado / Mercearia",
+    modulos: ["Código de barras", "Balança", "Estoque mínimo", "Fiado", "Relatórios"]
+  },
+
+  conveniencia: {
+    titulo: "Loja de conveniência",
+    modulos: ["Caixa rápido", "Código de barras", "Comandas opcionais", "Produtos", "Relatórios"]
   },
 
   padaria: {
     titulo: "Padaria",
-    modulos: [
-      "Caixa rápido",
-      "Produtos",
-      "Comandas opcionais",
-      "Relatórios"
-    ]
+    modulos: ["Caixa rápido", "Produtos por peso", "Comandas opcionais", "Fiado", "Relatórios"]
+  },
+
+  panificadora: {
+    titulo: "Panificadora",
+    modulos: ["Caixa rápido", "Balança", "Produtos", "Comandas", "Relatórios"]
+  },
+
+  confeitaria: {
+    titulo: "Confeitaria",
+    modulos: ["Produtos", "Combos", "Encomendas futuras", "Clientes", "Relatórios"]
+  },
+
+  cafeteria_padaria: {
+    titulo: "Cafeteria / Padaria",
+    modulos: ["Comandas", "Mesas futuras", "Produtos", "Caixa", "Relatórios"]
+  },
+
+  doceria: {
+    titulo: "Doceria",
+    modulos: ["Produtos", "Combos", "Fiado", "Clientes", "Relatórios"]
   },
 
   restaurante: {
     titulo: "Restaurante",
-    modulos: [
-      "Comandas",
-      "Caixa",
-      "Produtos",
-      "Relatórios"
-    ]
+    modulos: ["Comandas", "Caixa", "Produtos", "Relatórios"]
   },
 
   bar_adega: {
     titulo: "Bar / Adega",
-    modulos: [
-      "Comandas",
-      "Caixa",
-      "Bebidas",
-      "Relatórios"
-    ]
+    modulos: ["Comandas", "Caixa", "Bebidas", "Relatórios"]
+  },
+
+  lanchonete: {
+    titulo: "Lanchonete",
+    modulos: ["Caixa", "Comandas", "Produtos", "Delivery futuro", "Relatórios"]
+  },
+
+  cafeteria_doceria: {
+    titulo: "Cafeteria / Doceria",
+    modulos: ["Caixa", "Comandas", "Produtos", "Clientes", "Relatórios"]
+  },
+
+  servicos: {
+    titulo: "Serviços",
+    modulos: ["Caixa", "Clientes", "Ordem de serviço futura", "Relatórios"]
+  },
+
+  barbearia: {
+    titulo: "Barbearia",
+    modulos: ["Agenda futura", "Clientes", "Produtos", "Caixa", "Comissões futuras"]
+  },
+
+  salao: {
+    titulo: "Salão de beleza",
+    modulos: ["Agenda futura", "Clientes", "Serviços", "Caixa", "Relatórios"]
+  },
+
+  assistencia: {
+    titulo: "Assistência técnica",
+    modulos: ["Ordem de serviço futura", "Clientes", "Produtos", "Caixa", "Relatórios"]
   },
 
   arena_esportiva: {
     titulo: "Arena esportiva",
-    modulos: [
-      "Agenda esportiva",
-      "Controle de jogos",
-      "Cobrança por jogador",
-      "Relatórios"
-    ]
+    modulos: ["Agenda esportiva", "Controle de jogos", "Cobrança por jogador", "Relatórios"]
   },
 
   arena_beach: {
     titulo: "Arena de areia / Beach sports",
-    modulos: [
-      "Quadras",
-      "Agenda",
-      "Jogos",
-      "Cobrança por jogador"
-    ]
+    modulos: ["Quadras", "Agenda", "Jogos", "Cobrança por jogador"]
   },
 
   quadras_esportivas: {
     titulo: "Quadras esportivas",
-    modulos: [
-      "Reservas",
-      "Agenda",
-      "Controle de horários",
-      "Relatórios"
-    ]
+    modulos: ["Reservas", "Agenda", "Controle de horários", "Relatórios"]
   }
 };
 
@@ -118,6 +175,41 @@ function cfgFeedback(msg, tipo = "normal") {
 function valor(id) {
   const el = document.getElementById(id);
   return el ? String(el.value || "").trim() : "";
+}
+
+function categoriaPorTipoNegocio(tipo) {
+  for (const [categoria, tipos] of Object.entries(TIPOS_NEGOCIO_POR_CATEGORIA)) {
+    if (tipos.some(([codigo]) => codigo === tipo)) {
+      return categoria;
+    }
+  }
+
+  return "";
+}
+
+function carregarTiposDaCategoria(categoria, tipoSelecionado = "") {
+  const selectTipo = document.getElementById("cfgTipoNegocio");
+
+  if (!selectTipo) return;
+
+  const tipos = TIPOS_NEGOCIO_POR_CATEGORIA[categoria] || [];
+
+  if (!categoria || !tipos.length) {
+    selectTipo.innerHTML = `<option value="">Selecione primeiro a categoria</option>`;
+    selectTipo.disabled = true;
+    return;
+  }
+
+  selectTipo.disabled = false;
+
+  selectTipo.innerHTML = `
+    <option value="">Selecione o tipo de negócio</option>
+    ${tipos.map(([codigo, label]) => `
+      <option value="${codigo}">${label}</option>
+    `).join("")}
+  `;
+
+  selectTipo.value = tipoSelecionado || "";
 }
 
 // ======================================================
@@ -242,8 +334,12 @@ function preencherFormulario(data) {
   document.getElementById("cfgUf").value =
     data.uf || "";
 
-document.getElementById("cfgTipoNegocio").value =
-  data.tipo_negocio || "";
+const tipoNegocio = data.tipo_negocio || "";
+const categoriaNegocio = categoriaPorTipoNegocio(tipoNegocio);
+
+document.getElementById("cfgCategoriaNegocio").value = categoriaNegocio;
+
+carregarTiposDaCategoria(categoriaNegocio, tipoNegocio);
 
 atualizarPreviewSegmento();
 
@@ -380,7 +476,7 @@ async function enviarLogoEmpresa(empresaId) {
 // ======================================================
 function liberarEdicaoConfiguracao() {
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgTipoNegocio, #cfgLogoFile"
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgLogoFile"
   ).forEach(el => {
     el.disabled = false;
   });
@@ -567,7 +663,7 @@ function aplicarBloqueioConfiguracao() {
   if (!CONFIG_EMPRESA?.configuracao_inicial_concluida) return;
 
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgTipoNegocio"
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio"
   ).forEach(el => {
     el.disabled = true;
   });
@@ -749,8 +845,18 @@ if (params.get("aba") === "operadores") {
   }, 100);
 }
 
-  const tipoNegocio =
+const categoriaNegocio =
+  document.getElementById("cfgCategoriaNegocio");
+
+const tipoNegocio =
   document.getElementById("cfgTipoNegocio");
+
+if (categoriaNegocio) {
+  categoriaNegocio.addEventListener("change", () => {
+    carregarTiposDaCategoria(categoriaNegocio.value);
+    atualizarPreviewSegmento();
+  });
+}
 
 if (tipoNegocio) {
   tipoNegocio.addEventListener(
