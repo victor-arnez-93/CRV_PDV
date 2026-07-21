@@ -652,7 +652,7 @@ p { line-height: 1.6; color: var(--text-secondary); }
 }
 
 /* ============================================================
-BACKGROUND GLOBAL COM BLUR (SUBSTITUINDO BG)
+   FUNDO GLOBAL DO SISTEMA
 ============================================================ */
 
 body::before {
@@ -666,33 +666,38 @@ body::before {
   background-repeat: no-repeat;
 }
 
-/* CAMADA DE LEITURA */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
-
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none;
 }
 
-/* ===== TEMA CLARO ===== */
+/* TEMA CLARO */
+
 html[data-theme="light"] body::before {
-  background-image: var(--app-bg-light, url("../assets/imgfundo.png"));
+  background-image: var(
+    --app-bg-light,
+    url("../assets/imgfundo.png")
+  );
 }
 
 html[data-theme="light"] body::after {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-/* ===== TEMA ESCURO ===== */
+/* TEMA ESCURO */
+
 html[data-theme="dark"] body::before {
-  background-image: var(--app-bg-dark, url("../assets/imgfundo1.png"));
+  background-image: var(
+    --app-bg-dark,
+    url("../assets/imgfundo1.png")
+  );
 }
 
 html[data-theme="dark"] body::after {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* ================= MODAL USER ================= */

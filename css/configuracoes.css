@@ -22,7 +22,7 @@
 }
 
 /* ======================================================
-   ABAS CONFIGURAÃ‡Ã•ES
+   ABAS CONFIGURAÇÕES
 ====================================================== */
 
 .config-tabs {
@@ -644,7 +644,7 @@
   gap: 12px;
 }
 
-/* MODAL PERMISSÃ•ES SIMPLES */
+/* MODAL PERMISSÕES SIMPLES */
 
 .modal-permissoes-operador {
   width: min(640px, calc(100vw - 32px));
@@ -780,7 +780,7 @@
 }
 
 /* ======================================================
-   RESPONSIVE â€” CONFIGURAÃ‡Ã•ES
+   RESPONSIVE — CONFIGURAÇÕES
 ====================================================== */
 
 @media (max-width: 768px) {
@@ -1477,7 +1477,7 @@
 }
 
 /* ======================================================
-   CONFIGURAÃ‡Ã•ES â€” LAYOUT 2026
+   CONFIGURAÇÕES — LAYOUT 2026
 ====================================================== */
 
 .config-tabs {
