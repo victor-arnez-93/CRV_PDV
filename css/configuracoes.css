@@ -1752,9 +1752,15 @@
 }
 
 .aparencia-actions {
-  grid-area: acoes;
-  grid-column: auto;
+  grid-area: auto;
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 14px 0 0;
+  padding: 0 0 52px;
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 @media (max-width: 1180px) {
