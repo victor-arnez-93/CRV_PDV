@@ -3,28 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRV PDV — Sistema Web de PDV e Fluxo de Caixa</title>
+  <meta name="description" content="CRV PDV: vendas, caixa, produtos, comandas, clientes e relatórios em um sistema web modular para pequenos negócios." />
+  <meta name="robots" content="index,follow" />
+  <meta name="theme-color" content="#000000" />
+  <title>CRV PDV — Gestão simples, operação conectada</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/landing.css">
-
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 </head>
 
 <body>
   <header class="landing-header">
     <div class="container nav">
-      <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="brand-link">
+      <a href="#inicio" class="brand-link" aria-label="CRV PDV — início">
         <img src="assets/logo2.png" alt="CRV Soluções em TI" class="brand-logo-crv">
       </a>
+
+      <nav class="landing-nav-links" aria-label="Navegação principal">
+        <a href="#recursos">Recursos</a>
+        <a href="#modular">Sistema modular</a>
+        <a href="#plano">Plano</a>
+        <a href="#duvidas">Dúvidas</a>
+      </nav>
 
       <div class="nav-actions">
         <a href="#" data-prelogin-open class="btn btn-secondary">
@@ -40,69 +47,69 @@
   </header>
 
   <main>
-    <section class="hero">
+    <section class="hero" id="inicio">
       <div class="container hero-grid">
-        <div class="float-in">
+        <div class="hero-content float-in">
           <div class="kicker">
-            <i data-lucide="shield-check" width="16"></i>
-            Sistema web de PDV e fluxo de caixa
+            <i data-lucide="sparkles" width="16"></i>
+            Gestão simples para negócios reais
           </div>
 
           <h1 class="hero-title">
-            Um PDV moderno que se adapta ao <span>seu tipo de negócio</span>
+            Seu negócio conectado do atendimento ao <span>fechamento do caixa</span>
           </h1>
 
           <p class="hero-text">
-            O CRV PDV conecta vendas, produtos, comandas, agenda, caixa, dashboard e relatórios em uma operação única. O sistema libera módulos conforme o segmento: arena, padaria, restaurante, bar, conveniência, serviços e outros modelos comerciais.
+            Centralize vendas, produtos, comandas, clientes, operadores e relatórios em um sistema web rápido, organizado e preparado para evoluir com a sua operação.
           </p>
 
           <div class="hero-actions">
-            <a href="#" data-prelogin-open class="btn btn-primary">
-              <i data-lucide="rocket"></i>
-              <span>Acessar o Sistema</span>
+            <a href="#demonstracao" data-whatsapp-message="Olá! Gostaria de solicitar uma demonstração do CRV PDV." class="btn btn-primary">
+              <i data-lucide="monitor-play"></i>
+              <span>Solicitar demonstração</span>
             </a>
 
-            <a href="#features" class="btn btn-secondary">
+            <a href="#recursos" class="btn btn-secondary">
               <i data-lucide="layout-grid"></i>
-              <span>Ver Funcionalidades</span>
+              <span>Conhecer o sistema</span>
             </a>
           </div>
 
           <div class="hero-tags">
-            <span class="tag">Supabase real</span>
+            <span class="tag">100% web</span>
             <span class="tag">Multiempresa</span>
-            <span class="tag">Offline Ready</span>
+            <span class="tag">Multiusuário</span>
             <span class="tag">Responsivo</span>
           </div>
         </div>
 
-        <aside class="system-panel reveal soft-float">
+        <aside class="system-panel reveal soft-float" aria-label="Resumo do CRV PDV">
           <div class="panel-top">
             <img src="assets/logo1.png" alt="CRV PDV" class="panel-logo">
-            <span class="live-pill">Operação viva</span>
+            <span class="live-pill">Operação conectada</span>
           </div>
 
           <div class="panel-grid">
             <div class="panel-row">
               <div>
-                <strong>Caixa em tempo real</strong>
-                <span>Vendas, pagamentos e fechamento conectados</span>
+                <strong>Vendas e caixa integrados</strong>
+                <span>Movimentações financeiras no mesmo fluxo</span>
               </div>
               <div class="panel-icon"><i data-lucide="wallet"></i></div>
             </div>
 
             <div class="panel-row">
               <div>
-                <strong>Agenda para arenas</strong>
-                <span>Jogo pago vira venda e entra nos relatórios</span>
+                <strong>Gestão da operação</strong>
+                <span>Produtos, comandas, clientes e operadores</span>
               </div>
-              <div class="panel-icon"><i data-lucide="calendar-days"></i></div>
+              <div class="panel-icon"><i data-lucide="blocks"></i></div>
             </div>
 
             <div class="panel-row">
               <div>
-                <strong>Dashboard do dia</strong>
-                <span>Indicadores vivos para decisão rápida</span>
+                <strong>Indicadores claros</strong>
+                <span>Dashboard e relatórios para decisões rápidas</span>
               </div>
               <div class="panel-icon"><i data-lucide="bar-chart-3"></i></div>
             </div>
@@ -111,70 +118,152 @@
       </div>
     </section>
 
-    <section class="features" id="features">
+    <section class="proof-strip">
+      <div class="container proof-grid reveal">
+        <div><i data-lucide="cloud"></i><strong>Acesso web</strong><span>Use de onde estiver</span></div>
+        <div><i data-lucide="shield-check"></i><strong>Acesso controlado</strong><span>Perfis e operadores</span></div>
+        <div><i data-lucide="refresh-cw"></i><strong>Evolução contínua</strong><span>Suporte e atualizações</span></div>
+        <div><i data-lucide="sliders-horizontal"></i><strong>Personalizável</strong><span>Tema e identidade do negócio</span></div>
+      </div>
+    </section>
+
+    <section class="features" id="recursos">
       <div class="container">
         <div class="section-head reveal">
-          <span>Funcionalidades</span>
-          <h2>Operação integrada do começo ao fim</h2>
-          <p>Do atendimento ao relatório final, tudo conversa entre si para evitar retrabalho, perda de dados e controle manual.</p>
+          <span>Disponível no sistema</span>
+          <h2>Uma base completa para controlar a rotina</h2>
+          <p>Os principais pontos da operação trabalham juntos para reduzir retrabalho e deixar as informações mais claras.</p>
         </div>
 
         <div class="features-grid">
           <article class="feature-card reveal">
             <div class="feature-icon"><i data-lucide="shopping-cart"></i></div>
-            <h3>PDV Completo</h3>
-            <p>Venda produtos, controle itens rápidos, acompanhe estoque e registre pagamentos com fluxo simples para o operador.</p>
+            <h3>Vendas e PDV</h3>
+            <p>Registre produtos, formas de pagamento e vendas com um fluxo objetivo para o atendimento.</p>
           </article>
 
           <article class="feature-card reveal">
             <div class="feature-icon"><i data-lucide="wallet"></i></div>
             <h3>Fluxo de Caixa</h3>
-            <p>Abertura, fechamento, entradas, saídas e conferência financeira com dados conectados às vendas reais.</p>
+            <p>Abertura, entradas, saídas, conferência e fechamento conectados às movimentações registradas.</p>
           </article>
 
           <article class="feature-card reveal">
-            <div class="feature-icon"><i data-lucide="bar-chart-3"></i></div>
-            <h3>Relatórios & Dashboard</h3>
-            <p>Métricas em tempo real, vendas do dia, pagamentos, ticket médio, lucro bruto e visão operacional limpa.</p>
+            <div class="feature-icon"><i data-lucide="package-search"></i></div>
+            <h3>Produtos</h3>
+            <p>Catálogo organizado com preços, categorias, custos e informações importantes para a venda.</p>
+          </article>
+
+          <article class="feature-card reveal">
+            <div class="feature-icon"><i data-lucide="clipboard-list"></i></div>
+            <h3>Comandas</h3>
+            <p>Acompanhe consumos em aberto e finalize o atendimento com integração ao restante do sistema.</p>
           </article>
 
           <article class="feature-card reveal">
             <div class="feature-icon"><i data-lucide="users"></i></div>
-            <h3>Clientes & Agenda</h3>
-            <p>Controle clientes, horários, jogadores, cobranças e pagamentos quando o segmento do negócio exigir agenda.</p>
+            <h3>Clientes e Operadores</h3>
+            <p>Centralize cadastros e organize os acessos da equipe conforme a rotina do estabelecimento.</p>
           </article>
 
           <article class="feature-card reveal">
-            <div class="feature-icon"><i data-lucide="wifi-off"></i></div>
-            <h3>Offline Ready</h3>
-            <p>Base preparada para continuar operando mesmo sem conexão, com sincronização quando a internet voltar.</p>
-          </article>
-
-          <article class="feature-card reveal">
-            <div class="feature-icon"><i data-lucide="smartphone"></i></div>
-            <h3>Responsivo Mobile</h3>
-            <p>Interface adaptada para desktop, tablets e celulares, mantendo operação rápida em diferentes telas.</p>
+            <div class="feature-icon"><i data-lucide="chart-no-axes-combined"></i></div>
+            <h3>Dashboard e Relatórios</h3>
+            <p>Acompanhe resultados, pagamentos e indicadores em uma visão financeira e operacional integrada.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="adaptive">
+    <section class="adaptive" id="modular">
       <div class="container">
         <div class="adaptive-box reveal">
           <div>
-            <h2>O sistema muda conforme o negócio</h2>
-            <p>Uma arena precisa de agenda e jogos no financeiro. Uma padaria precisa de PDV, produtos e caixa. O CRV PDV ativa os módulos certos para cada operação, sem poluir o sistema com telas desnecessárias.</p>
+            <span class="eyebrow">Estrutura modular</span>
+            <h2>A base é a mesma. A experiência respeita o seu negócio.</h2>
+            <p>O CRV PDV parte de uma estrutura sólida de vendas e gestão. Recursos especializados podem ser ativados conforme a compatibilidade e a necessidade de cada operação, sem encher a tela com funções que você não utiliza.</p>
           </div>
 
-          <div class="business-types">
-            <span>Arena</span>
-            <span>Padaria</span>
-            <span>Bar</span>
-            <span>Restaurante</span>
-            <span>Mercado</span>
+          <div class="business-types" aria-label="Exemplos de negócios">
+            <span>Comércio</span>
+            <span>Lojas</span>
+            <span>Alimentação</span>
+            <span>Conveniência</span>
             <span>Serviços</span>
+            <span>Arenas</span>
           </div>
+        </div>
+
+        <div class="specialized-module reveal">
+          <div class="specialized-icon"><i data-lucide="calendar-range"></i></div>
+          <div>
+            <span class="eyebrow">Módulo especializado disponível</span>
+            <h3>Agenda esportiva para arenas e quadras</h3>
+            <p>Organização de campos, horários, jogos avulsos, mensalistas e pagamentos conectados ao caixa e aos relatórios.</p>
+          </div>
+          <span class="module-status">Disponível</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="how-it-works" id="demonstracao">
+      <div class="container">
+        <div class="section-head reveal">
+          <span>Contratação assistida</span>
+          <h2>Começar é simples</h2>
+          <p>Antes da ativação, entendemos sua operação e confirmamos se os recursos disponíveis atendem ao seu negócio.</p>
+        </div>
+
+        <div class="steps-grid">
+          <article class="step-card reveal"><span>01</span><i data-lucide="messages-square"></i><h3>Conte sobre o negócio</h3><p>Fale com a CRV pelo WhatsApp e explique sua rotina.</p></article>
+          <article class="step-card reveal"><span>02</span><i data-lucide="monitor-play"></i><h3>Veja a demonstração</h3><p>Conheça o sistema aplicado ao cenário da sua empresa.</p></article>
+          <article class="step-card reveal"><span>03</span><i data-lucide="settings-2"></i><h3>Configure e comece</h3><p>Após a validação, preparamos o ambiente e os acessos.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="pricing" id="plano">
+      <div class="container pricing-layout">
+        <div class="pricing-copy reveal">
+          <span class="eyebrow">Condição de lançamento</span>
+          <h2>Gestão profissional com um investimento acessível</h2>
+          <p>Uma oferta direta para os primeiros clientes do CRV PDV, com implantação acompanhada e sem contratação automática antes da análise do negócio.</p>
+          <div class="pricing-note"><i data-lucide="info"></i><span>Módulos especializados são disponibilizados conforme compatibilidade com o segmento.</span></div>
+        </div>
+
+        <article class="price-card reveal">
+          <div class="price-badge">Plano de lançamento</div>
+          <div class="price"><small>R$</small><strong>149,90</strong><span>/mês</span></div>
+          <ul>
+            <li><i data-lucide="check"></i> Base completa do CRV PDV</li>
+            <li><i data-lucide="check"></i> Acesso com operadores</li>
+            <li><i data-lucide="check"></i> Configuração inicial inclusa</li>
+            <li><i data-lucide="check"></i> Suporte e atualizações</li>
+            <li><i data-lucide="check"></i> Sem fidelidade</li>
+          </ul>
+          <a href="#" data-whatsapp-message="Olá! Tenho interesse no plano de lançamento do CRV PDV por R$ 149,90/mês. Gostaria de saber se ele atende ao meu negócio." class="btn btn-primary price-button">
+            <i data-lucide="message-circle"></i>
+            <span>Quero contratar</span>
+          </a>
+          <small class="assisted-label">Contratação e ativação assistidas pela CRV</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="faq" id="duvidas">
+      <div class="container faq-layout">
+        <div class="faq-intro reveal">
+          <span class="eyebrow">Dúvidas frequentes</span>
+          <h2>O que você precisa saber</h2>
+          <p>Se a sua dúvida não estiver aqui, fale diretamente com nossa equipe.</p>
+        </div>
+
+        <div class="faq-list reveal">
+          <details><summary>O CRV PDV atende qualquer tipo de negócio?<i data-lucide="plus"></i></summary><p>A base atende diferentes operações, mas recursos especializados variam conforme o segmento. Antes da contratação, confirmamos a compatibilidade com a sua necessidade.</p></details>
+          <details><summary>Preciso instalar o sistema?<i data-lucide="plus"></i></summary><p>Não. O CRV PDV funciona pela web e pode ser acessado em dispositivos compatíveis com navegador e conexão à internet.</p></details>
+          <details><summary>Posso cadastrar operadores?<i data-lucide="plus"></i></summary><p>Sim. O sistema permite organizar usuários e operadores para apoiar a rotina do estabelecimento.</p></details>
+          <details><summary>Existe fidelidade no plano de lançamento?<i data-lucide="plus"></i></summary><p>Não. A proposta inicial é mensal e sem fidelidade, conforme as condições combinadas na contratação.</p></details>
+          <details><summary>Como funciona a demonstração?<i data-lucide="plus"></i></summary><p>Você solicita pelo WhatsApp, informa seu tipo de negócio e recebe uma apresentação orientada aos recursos compatíveis com sua operação.</p></details>
         </div>
       </div>
     </section>
@@ -182,44 +271,37 @@
     <section class="cta">
       <div class="container">
         <div class="cta-box reveal">
-          <h2>Seu caixa, suas vendas e seus relatórios no mesmo fluxo</h2>
-          <p>Entre no sistema e acompanhe a operação em tempo real.</p>
-
-          <a href="#" data-prelogin-open class="btn btn-primary">
-            <i data-lucide="log-in"></i>
-            <span>Entrar no Sistema</span>
-          </a>
+          <span class="eyebrow">CRV PDV</span>
+          <h2>Pronto para organizar sua operação?</h2>
+          <p>Solicite uma demonstração e descubra como o sistema pode se encaixar no seu negócio.</p>
+          <div class="cta-actions">
+            <a href="#" data-whatsapp-message="Olá! Gostaria de conhecer o CRV PDV e solicitar uma demonstração." class="btn btn-primary">
+              <i data-lucide="message-circle"></i>
+              <span>Falar com a CRV</span>
+            </a>
+            <a href="#" data-prelogin-open class="btn btn-secondary"><i data-lucide="log-in"></i><span>Já sou cliente</span></a>
+          </div>
         </div>
       </div>
     </section>
   </main>
 
-  <div class="prelogin-overlay hidden" id="preloginModal">
-  <div class="prelogin-card">
-    <button class="prelogin-close" id="fecharPrelogin" type="button">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-
-    <div class="prelogin-icon">
-      <i class="fa-solid fa-lock"></i>
+  <div class="prelogin-overlay hidden" id="preloginModal" role="dialog" aria-modal="true" aria-labelledby="preloginTitulo">
+    <div class="prelogin-card">
+      <button class="prelogin-close" id="fecharPrelogin" type="button" aria-label="Fechar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="prelogin-icon"><i class="fa-solid fa-lock"></i></div>
+      <h2 id="preloginTitulo">Acesso restrito</h2>
+      <p>Informe a credencial fornecida pela CRV Soluções em TI.</p>
+      <label for="preloginEmail">E-mail</label>
+      <input type="email" id="preloginEmail" placeholder="admin@sistema.com" autocomplete="username">
+      <label for="preloginSenha">Senha</label>
+      <input type="password" id="preloginSenha" placeholder="Digite a senha" autocomplete="current-password">
+      <div id="preloginFeedback" aria-live="polite"></div>
+      <button class="btn btn-primary" id="btnValidarPrelogin" type="button">Entrar</button>
     </div>
-
-    <h2>Acesso restrito</h2>
-    <p>Informe a credencial fornecida pela CRV Soluções em TI.</p>
-
-    <label>E-mail</label>
-    <input type="email" id="preloginEmail" placeholder="admin@sistema.com">
-
-    <label>Senha</label>
-    <input type="password" id="preloginSenha" placeholder="Digite a senha">
-
-    <div id="preloginFeedback"></div>
-
-    <button class="btn btn-primary" id="btnValidarPrelogin" type="button">
-      Entrar
-    </button>
   </div>
-</div>
 
   <footer class="footer">
     <div class="container footer-inner">
@@ -227,116 +309,129 @@
         <img src="assets/logo2.png" alt="CRV Soluções em TI">
         <span>© 2026 CRV Soluções em TI — CRV PDV</span>
       </a>
-
+      <div class="footer-copy"><span>Sistema web de PDV e gestão para pequenos negócios.</span></div>
       <div class="footer-links">
-        <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="footer-icon" aria-label="Site CRV">
-          <i class="fa-solid fa-globe"></i>
-        </a>
-
-        <a href="https://www.instagram.com/crvsolucoesemti" target="_blank" rel="noopener" class="footer-icon" aria-label="Instagram CRV">
-          <i class="fa-brands fa-instagram"></i>
-        </a>
-
-        <a href="https://wa.me/5515997021387" target="_blank" rel="noopener" class="footer-icon" aria-label="WhatsApp CRV">
-          <i class="fa-brands fa-whatsapp"></i>
-        </a>
+        <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="footer-icon" aria-label="Site CRV"><i class="fa-solid fa-globe"></i></a>
+        <a href="https://www.instagram.com/crvsolucoesemti" target="_blank" rel="noopener" class="footer-icon" aria-label="Instagram CRV"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://wa.me/5515997021387" target="_blank" rel="noopener" class="footer-icon" aria-label="WhatsApp CRV"><i class="fa-brands fa-whatsapp"></i></a>
       </div>
     </div>
   </footer>
 
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    let temaAtual = "dark";
     const html = document.documentElement;
     const themeToggle = document.getElementById("themeToggle");
+    let temaAtual = localStorage.getItem("crv-landing-theme") === "light" ? "light" : "dark";
 
     function aplicarTema(tema) {
       temaAtual = tema;
       html.setAttribute("data-theme", tema);
-
+      localStorage.setItem("crv-landing-theme", tema);
       themeToggle.innerHTML = tema === "dark"
         ? '<i data-lucide="moon"></i>'
         : '<i data-lucide="sun"></i>';
-
       lucide.createIcons();
     }
 
-    themeToggle.addEventListener("click", () => {
-      aplicarTema(temaAtual === "dark" ? "light" : "dark");
-    });
+    aplicarTema(temaAtual);
+    themeToggle.addEventListener("click", () => aplicarTema(temaAtual === "dark" ? "light" : "dark"));
 
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-        }
+        if (entry.isIntersecting) entry.target.classList.add("visible");
       });
-    }, { threshold: .15 });
-
+    }, { threshold: .12 });
     document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
 
-const SUPABASE_URL = "https://qpytwbiiqixkitnpksna.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_9Bc3KFSsNOQ3Qc9Q9DEfCQ_GBD-_K-F";
+    document.querySelectorAll("[data-whatsapp-message]").forEach(link => {
+      const mensagem = link.dataset.whatsappMessage;
+      link.href = `https://wa.me/5515997021387?text=${encodeURIComponent(mensagem)}`;
+      link.target = "_blank";
+      link.rel = "noopener";
+    });
 
-const supabasePrelogin = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_URL = "https://qpytwbiiqixkitnpksna.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_9Bc3KFSsNOQ3Qc9Q9DEfCQ_GBD-_K-F";
+    const supabasePrelogin = SUPABASE_ANON_KEY && window.supabase
+      ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
 
-const preloginModal = document.getElementById("preloginModal");
-const fecharPrelogin = document.getElementById("fecharPrelogin");
-const btnValidarPrelogin = document.getElementById("btnValidarPrelogin");
-const preloginFeedback = document.getElementById("preloginFeedback");
+    const preloginModal = document.getElementById("preloginModal");
+    const fecharPrelogin = document.getElementById("fecharPrelogin");
+    const btnValidarPrelogin = document.getElementById("btnValidarPrelogin");
+    const preloginFeedback = document.getElementById("preloginFeedback");
+    const preloginEmail = document.getElementById("preloginEmail");
+    const preloginSenha = document.getElementById("preloginSenha");
 
-document.querySelectorAll("[data-prelogin-open]").forEach(botao => {
-  botao.addEventListener("click", event => {
-    event.preventDefault();
-    preloginModal.classList.remove("hidden");
-    document.getElementById("preloginEmail").focus();
-  });
-});
+    function abrirPrelogin() {
+      preloginModal.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+      setTimeout(() => preloginEmail.focus(), 50);
+    }
 
-fecharPrelogin.addEventListener("click", () => {
-  preloginModal.classList.add("hidden");
-});
+    function fecharModalPrelogin() {
+      preloginModal.classList.add("hidden");
+      document.body.classList.remove("modal-open");
+      preloginFeedback.textContent = "";
+    }
 
-preloginModal.addEventListener("click", event => {
-  if (event.target === preloginModal) {
-    preloginModal.classList.add("hidden");
-  }
-});
+    document.querySelectorAll("[data-prelogin-open]").forEach(botao => {
+      botao.addEventListener("click", event => {
+        event.preventDefault();
+        abrirPrelogin();
+      });
+    });
 
-btnValidarPrelogin.addEventListener("click", async () => {
-  const email = document.getElementById("preloginEmail").value.trim();
-  const senha = document.getElementById("preloginSenha").value.trim();
+    fecharPrelogin.addEventListener("click", fecharModalPrelogin);
+    preloginModal.addEventListener("click", event => {
+      if (event.target === preloginModal) fecharModalPrelogin();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !preloginModal.classList.contains("hidden")) fecharModalPrelogin();
+    });
 
-  preloginFeedback.textContent = "";
+    async function validarPrelogin() {
+      const email = preloginEmail.value.trim();
+      const senha = preloginSenha.value.trim();
+      preloginFeedback.textContent = "";
 
-  if (!email || !senha) {
-    preloginFeedback.textContent = "Informe e-mail e senha.";
-    return;
-  }
+      if (!email || !senha) {
+        preloginFeedback.textContent = "Informe e-mail e senha.";
+        return;
+      }
 
-  btnValidarPrelogin.disabled = true;
-  btnValidarPrelogin.textContent = "Validando...";
+      if (!supabasePrelogin) {
+        preloginFeedback.textContent = "Configure a chave pública do Supabase para validar o acesso.";
+        return;
+      }
 
-  const { data, error } = await supabasePrelogin.rpc("validar_pre_acesso", {
-    p_email: email,
-    p_senha: senha
-  });
+      btnValidarPrelogin.disabled = true;
+      btnValidarPrelogin.textContent = "Validando...";
 
-  btnValidarPrelogin.disabled = false;
-  btnValidarPrelogin.textContent = "Entrar";
+      const { data, error } = await supabasePrelogin.rpc("validar_pre_acesso", {
+        p_email: email,
+        p_senha: senha
+      });
 
-  if (error || data !== true) {
-    preloginFeedback.textContent = "Credencial inválida ou acesso inativo.";
-    return;
-  }
+      btnValidarPrelogin.disabled = false;
+      btnValidarPrelogin.textContent = "Entrar";
 
-  sessionStorage.setItem("crv-prelogin-ok", "true");
-  window.location.href = "login.html";
-});
+      if (error || data !== true) {
+        preloginFeedback.textContent = "Credencial inválida ou acesso inativo.";
+        return;
+      }
+
+      sessionStorage.setItem("crv-prelogin-ok", "true");
+      window.location.href = "login.html";
+    }
+
+    btnValidarPrelogin.addEventListener("click", validarPrelogin);
+    preloginSenha.addEventListener("keydown", event => {
+      if (event.key === "Enter") validarPrelogin();
+    });
 
     lucide.createIcons();
   </script>
-
 </body>
 </html>
