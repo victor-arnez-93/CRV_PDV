@@ -22,7 +22,7 @@
 }
 
 /* ======================================================
-   ABAS CONFIGURAÇÕES
+   ABAS CONFIGURAÃ‡Ã•ES
 ====================================================== */
 
 .config-tabs {
@@ -644,7 +644,7 @@
   gap: 12px;
 }
 
-/* MODAL PERMISSÕES SIMPLES */
+/* MODAL PERMISSÃ•ES SIMPLES */
 
 .modal-permissoes-operador {
   width: min(640px, calc(100vw - 32px));
@@ -780,7 +780,7 @@
 }
 
 /* ======================================================
-   RESPONSIVE — CONFIGURAÇÕES
+   RESPONSIVE â€” CONFIGURAÃ‡Ã•ES
 ====================================================== */
 
 @media (max-width: 768px) {
@@ -1474,4 +1474,182 @@
   color: #fff;
   font-size: .7rem;
   font-weight: 800;
+}
+
+/* ======================================================
+   CONFIGURAÃ‡Ã•ES â€” LAYOUT 2026
+====================================================== */
+
+.config-tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.config-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.config-tab > i {
+  font-size: .82rem;
+}
+
+#secConfiguracoes .config-grid {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1120px;
+}
+
+#secConfiguracoes .config-card-wide {
+  grid-column: 1;
+  grid-row: auto;
+}
+
+.config-save-bottom-wide {
+  grid-column: 1;
+}
+
+.config-save-bottom {
+  gap: 10px;
+}
+
+.config-save-bottom .btn-secondary,
+.config-save-bottom .btn-primary {
+  min-width: 190px;
+  justify-content: center;
+}
+
+.aparencia-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr);
+  grid-template-areas:
+    "modo modo"
+    "logo fundo"
+    "acoes acoes";
+  gap: 16px;
+  align-items: stretch;
+}
+
+.aparencia-mode-card {
+  grid-area: modo;
+  display: grid;
+  grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: 24px;
+  padding: 20px 22px;
+  border-color: rgba(249, 137, 72, .24);
+  background:
+    linear-gradient(120deg, rgba(249, 137, 72, .08), transparent 48%),
+    var(--bg-card);
+}
+
+.aparencia-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--crv-orange);
+  font-family: var(--font-display);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.aparencia-mode-card .segment-preview-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aparencia-mode-card .segment-module {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+}
+
+.aparencia-logo-card {
+  grid-area: logo;
+}
+
+.aparencia-fundo-card {
+  grid-area: fundo;
+  grid-column: auto;
+}
+
+.aparencia-logo-card,
+.aparencia-fundo-card {
+  min-height: 330px;
+}
+
+.aparencia-logo-card .logo-preview-box {
+  flex: 1;
+}
+
+.aparencia-fundo-card .fundo-preview-grid {
+  flex: 1;
+}
+
+.aparencia-fundo-card .fundo-preview-item {
+  min-height: 160px;
+}
+
+.aparencia-actions {
+  grid-area: acoes;
+  grid-column: auto;
+}
+
+@media (max-width: 900px) {
+  .aparencia-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "modo"
+      "logo"
+      "fundo"
+      "acoes";
+  }
+
+  .aparencia-mode-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .aparencia-logo-card,
+  .aparencia-fundo-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .config-tabs {
+    gap: 18px;
+  }
+
+  .config-tab {
+    font-size: .78rem;
+  }
+
+  .config-save-bottom {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .config-save-bottom .btn-secondary,
+  .config-save-bottom .btn-primary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .aparencia-mode-card {
+    padding: 16px;
+  }
+
+  .aparencia-fundo-card .fundo-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .aparencia-fundo-card .fundo-preview-item {
+    min-height: 120px;
+  }
 }

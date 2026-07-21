@@ -3,6 +3,7 @@
 // ======================================================
 
 let CONFIG_EMPRESA = null;
+let LOGO_REMOVER_PENDENTE = false;
 
 const CATALOGO_NEGOCIOS_FALLBACK = [
   {
@@ -547,6 +548,19 @@ async function enviarLogoEmpresa(empresaId) {
   const logoInput = document.getElementById("cfgLogoFile");
   const logoFile = logoInput?.files?.[0];
 
+  if (LOGO_REMOVER_PENDENTE) {
+    const pasta = `empresas/${empresaId}`;
+
+    await sb.storage.from("logo").remove([
+      `${pasta}/logo.png`,
+      `${pasta}/logo.jpg`,
+      `${pasta}/logo.jpeg`,
+      `${pasta}/logo.webp`
+    ]);
+
+    return "";
+  }
+
   if (!logoFile) {
     return CONFIG_EMPRESA?.logo_url || "";
   }
@@ -605,8 +619,29 @@ function liberarEdicaoConfiguracao() {
     el.disabled = false;
   });
 
-  document.getElementById("btnSalvarConfiguracoes").style.display = "";
+  document.querySelectorAll(".btn-salvar-config, .btn-cancelar-config").forEach(btn => {
+    btn.style.display = "";
+  });
+
+  const btnRemoverLogo = document.getElementById("btnRemoverLogoEmpresa");
+  if (btnRemoverLogo) btnRemoverLogo.disabled = false;
+
   document.getElementById("btnEditarConfiguracoes").style.display = "none";
+}
+
+function cancelarEdicaoConfiguracao() {
+  if (!CONFIG_EMPRESA) return;
+
+  LOGO_REMOVER_PENDENTE = false;
+
+  const logoInput = document.getElementById("cfgLogoFile");
+  const fileName = document.getElementById("cfgLogoFileName");
+
+  if (logoInput) logoInput.value = "";
+  if (fileName) fileName.textContent = "Nenhum arquivo selecionado";
+
+  preencherFormulario(CONFIG_EMPRESA);
+  cfgFeedback("Alterações canceladas.", "sucesso");
 }
 
 // ======================================================
@@ -667,6 +702,7 @@ async function salvarConfiguracoes() {
     }
 
     CONFIG_EMPRESA = data;
+    LOGO_REMOVER_PENDENTE = false;
 
     atualizarPreviewLogo();
     atualizarPreviewFundo();
@@ -717,59 +753,18 @@ async function salvarConfiguracoes() {
   }
 }
 
-async function removerLogoEmpresa() {
-  try {
-    const empresaId = window.APP_EMPRESA_ID;
+function removerLogoEmpresa() {
+  LOGO_REMOVER_PENDENTE = true;
 
-    if (!empresaId) {
-      cfgFeedback("Empresa não encontrada.", "erro");
-      return;
-    }
+  const preview = document.getElementById("cfgLogoPreview");
+  const logoInput = document.getElementById("cfgLogoFile");
+  const fileName = document.getElementById("cfgLogoFileName");
 
-    cfgFeedback("Removendo logo...");
+  if (preview) preview.src = "assets/logo1.png";
+  if (logoInput) logoInput.value = "";
+  if (fileName) fileName.textContent = "Logo será removida ao salvar";
 
-    const pasta = `empresas/${empresaId}`;
-
-    await sb.storage.from("logo").remove([
-      `${pasta}/logo.png`,
-      `${pasta}/logo.jpg`,
-      `${pasta}/logo.jpeg`,
-      `${pasta}/logo.webp`
-    ]);
-
-    const { data, error } = await sb
-      .from("empresas")
-      .update({
-        logo_url: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", empresaId)
-      .select("*")
-      .maybeSingle();
-
-    if (error) throw error;
-
-    CONFIG_EMPRESA = data;
-
-    const preview = document.getElementById("cfgLogoPreview");
-    const headerLogo = document.querySelector(".empresa-logo-header");
-    const logoInput = document.getElementById("cfgLogoFile");
-    const fileName = document.getElementById("cfgLogoFileName");
-
-    if (preview) preview.src = "assets/logo1.png";
-    if (headerLogo) headerLogo.src = "assets/logo1.png";
-    if (logoInput) logoInput.value = "";
-    if (fileName) fileName.textContent = "Nenhum arquivo selecionado";
-
-    if (window.crvCarregarConfiguracoesEmpresa) {
-      await crvCarregarConfiguracoesEmpresa();
-    }
-
-    cfgFeedback("Logo removida com sucesso.", "erro");
-  } catch (err) {
-    console.error("[CRV CONFIG]", err);
-    cfgFeedback(err?.message || "Erro ao remover logo.", "erro");
-  }
+  cfgFeedback("Remoção preparada. Salve para confirmar ou cancele para desfazer.");
 }
 
 // ======================================================
@@ -789,13 +784,23 @@ function initFeedbackLink() {
 }
 
 function aplicarBloqueioConfiguracao() {
-  if (!CONFIG_EMPRESA?.configuracao_inicial_concluida) return;
+  if (!CONFIG_EMPRESA?.configuracao_inicial_concluida) {
+    liberarEdicaoConfiguracao();
+    return;
+  }
 
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset"
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset, #cfgLogoFile"
   ).forEach(el => {
     el.disabled = true;
   });
+
+  document.querySelectorAll(".btn-salvar-config, .btn-cancelar-config").forEach(btn => {
+    btn.style.display = "none";
+  });
+
+  const btnRemoverLogo = document.getElementById("btnRemoverLogoEmpresa");
+  if (btnRemoverLogo) btnRemoverLogo.disabled = true;
 
   const btnEditar = document.getElementById("btnEditarConfiguracoes");
 
@@ -813,6 +818,10 @@ function initConfigTabs() {
     {
       tab: document.getElementById("tabConfiguracoes"),
       sec: document.getElementById("secConfiguracoes")
+    },
+    {
+      tab: document.getElementById("tabAparencia"),
+      sec: document.getElementById("secAparencia")
     },
     {
       tab: document.getElementById("tabOperadores"),
@@ -854,6 +863,10 @@ function initConfigTabs() {
     document.getElementById("tabOperadores")?.click();
   }
 
+  if (abaInicial === "aparencia") {
+    document.getElementById("tabAparencia")?.click();
+  }
+
   if (abaInicial === "sobre") {
     document.getElementById("tabSobreSistema")?.click();
   }
@@ -890,7 +903,8 @@ async function aguardarEmpresaECarregarConfiguracoes() {
 // INIT
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
-  const btnSalvar = document.getElementById("btnSalvarConfiguracoes");
+  const botoesSalvar = document.querySelectorAll(".btn-salvar-config");
+  const botoesCancelar = document.querySelectorAll(".btn-cancelar-config");
   const logoInput = document.getElementById("cfgLogoFile");
   const btnRemoverLogo = document.getElementById("btnRemoverLogoEmpresa");
   const fundoPreset = document.getElementById("cfgFundoPreset");
@@ -899,9 +913,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initFeedbackLink();
   initConfigTabs();
 
-  if (btnSalvar) {
-    btnSalvar.addEventListener("click", salvarConfiguracoes);
-  }
+  botoesSalvar.forEach(btn => btn.addEventListener("click", salvarConfiguracoes));
+  botoesCancelar.forEach(btn => btn.addEventListener("click", cancelarEdicaoConfiguracao));
 
 const modalRemoverLogo = document.getElementById("modalConfirmarRemoverLogo");
 const btnCancelarRemoverLogo = document.getElementById("btnCancelarRemoverLogo");
@@ -924,12 +937,12 @@ if (btnCancelarRemoverLogo) {
 }
 
 if (btnConfirmarRemoverLogo) {
-  btnConfirmarRemoverLogo.addEventListener("click", async () => {
+  btnConfirmarRemoverLogo.addEventListener("click", () => {
     if (modalRemoverLogo) {
       modalRemoverLogo.classList.remove("active");
     }
 
-    await removerLogoEmpresa();
+    removerLogoEmpresa();
   });
 }
 
@@ -953,6 +966,7 @@ if (logoInput) {
     const fileName = document.getElementById("cfgLogoFileName");
 
     if (file) {
+      LOGO_REMOVER_PENDENTE = false;
       atualizarPreviewLogo(file);
 
       if (fileName) {

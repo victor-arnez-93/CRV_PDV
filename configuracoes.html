@@ -139,41 +139,30 @@
 
 </div>
 
-<button class="config-tab active" id="tabConfiguracoes" type="button">
-  Configurações
-</button>
+<div class="config-tabs" role="tablist" aria-label="Áreas de configuração">
+  <button class="config-tab active" id="tabConfiguracoes" type="button">
+    <i class="fa-solid fa-building"></i>
+    Configurações
+  </button>
 
-<button class="config-tab" id="tabOperadores" type="button">
-  Operadores
-</button>
+  <button class="config-tab" id="tabAparencia" type="button">
+    <i class="fa-solid fa-palette"></i>
+    Aparência
+  </button>
 
-<button class="config-tab" id="tabSobreSistema" type="button">
-  Sobre o sistema
-</button>
+  <button class="config-tab" id="tabOperadores" type="button">
+    <i class="fa-solid fa-users-gear"></i>
+    Operadores
+  </button>
+
+  <button class="config-tab" id="tabSobreSistema" type="button">
+    <i class="fa-solid fa-circle-info"></i>
+    Sobre o sistema
+  </button>
+</div>
 
       <section class="config-section active" id="secConfiguracoes">
         <section class="config-grid">
-
-        <div class="card config-card segment-preview-card">
-  <div class="segment-preview-header">
-    <i class="fa-solid fa-layer-group"></i>
-    <div>
-      <h2>Modo do sistema</h2>
-      <p id="segmentPreviewTitle">
-        Configure o segmento do negócio
-      </p>
-    </div>
-  </div>
-
-  <div
-    class="segment-preview-content"
-    id="segmentPreviewContent"
-  >
-    <div class="segment-empty">
-      Selecione um segmento para visualizar os recursos automáticos do sistema.
-    </div>
-  </div>
-</div>
 
   <div class="card config-card config-card-wide">
     <h2>Dados da empresa</h2>
@@ -276,7 +265,40 @@
     </div>
   </div>
 
-  <div class="card config-card">
+  <div class="config-save-bottom config-save-bottom-wide">
+    <button class="btn-secondary btn-cancelar-config" type="button" style="display:none;">
+      <i class="fa-solid fa-rotate-left"></i>
+      <span>Cancelar</span>
+    </button>
+    <button class="btn-primary btn-salvar-config" type="button" style="display:none;">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span>Salvar alterações</span>
+    </button>
+  </div>
+
+        </section>
+      </section>
+
+      <section class="config-section" id="secAparencia">
+        <section class="aparencia-layout">
+          <div class="card config-card segment-preview-card aparencia-mode-card">
+            <div class="segment-preview-header">
+              <i class="fa-solid fa-layer-group"></i>
+              <div>
+                <span class="aparencia-eyebrow">Configuração automática</span>
+                <h2>Modo do sistema</h2>
+                <p id="segmentPreviewTitle">Configure o segmento do negócio</p>
+              </div>
+            </div>
+
+            <div class="segment-preview-content" id="segmentPreviewContent">
+              <div class="segment-empty">
+                Selecione um segmento para visualizar os recursos automáticos do sistema.
+              </div>
+            </div>
+          </div>
+
+  <div class="card config-card aparencia-logo-card">
     <h2>Logo da empresa</h2>
 
     <p class="config-muted">
@@ -314,7 +336,7 @@
     </small>
   </div>
 
-  <div class="card config-card fundo-config-card">
+  <div class="card config-card fundo-config-card aparencia-fundo-card">
     <div>
       <h2>Fundo do sistema</h2>
       <p class="config-muted">
@@ -343,8 +365,12 @@
     </div>
   </div>
 
-  <div class="config-save-bottom">
-    <button class="btn-primary" id="btnSalvarConfiguracoes" type="button" style="display:none;">
+  <div class="config-save-bottom aparencia-actions">
+    <button class="btn-secondary btn-cancelar-config" type="button" style="display:none;">
+      <i class="fa-solid fa-rotate-left"></i>
+      <span>Cancelar</span>
+    </button>
+    <button class="btn-primary btn-salvar-config" id="btnSalvarConfiguracoes" type="button" style="display:none;">
       <i class="fa-solid fa-floppy-disk"></i>
       <span>Salvar alterações</span>
     </button>
