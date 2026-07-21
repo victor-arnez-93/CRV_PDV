@@ -18,28 +18,28 @@ window.CRV_FEATURES = {};
 const CRV_FUNDOS_PRESET = Object.freeze({
   classico: {
     nome: "Classico CRV",
-    claro: "assets/imgfundo.webp",
-    escuro: "assets/imgfundo1.webp"
+    claro: "assets/imgfundo.png",
+    escuro: "assets/imgfundo1.png"
   },
   grafico: {
     nome: "Gestao",
-    claro: "assets/fundo1.webp",
-    escuro: "assets/fundo2.webp"
+    claro: "assets/fundo1.png",
+    escuro: "assets/fundo2.png"
   },
   financeiro: {
     nome: "Financeiro",
-    claro: "assets/fundo_5.webp",
-    escuro: "assets/fundo_4.webp"
+    claro: "assets/fundo_5.png",
+    escuro: "assets/fundo_4.png"
   },
   circuito: {
     nome: "Circuito",
-    claro: "assets/fundo_6.webp",
-    escuro: "assets/fundo_1.1.webp"
+    claro: "assets/fundo_6.png",
+    escuro: "assets/fundo_1.1.png"
   },
   conexoes: {
     nome: "Conexoes",
-    claro: "assets/fundo_7.webp",
-    escuro: "assets/fundo_9.webp"
+    claro: "assets/fundo_7.png",
+    escuro: "assets/fundo_9.png"
   }
 });
 
