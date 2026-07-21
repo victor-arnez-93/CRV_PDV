@@ -442,6 +442,9 @@ function atualizarPreviewSegmento() {
   const content =
     document.getElementById("segmentPreviewContent");
 
+  const count =
+    document.getElementById("segmentResourceCount");
+
   if (!select || !title || !content) return;
 
   const tipo = normalizarTipoNegocio(select.value);
@@ -454,11 +457,16 @@ function atualizarPreviewSegmento() {
   if (!tipoInfo) {
 
     title.textContent =
-      "Configure o segmento do negócio";
+      "Escolha o tipo de negócio para ver os recursos";
+
+    if (count) {
+      count.hidden = true;
+      count.textContent = "";
+    }
 
     content.innerHTML = `
       <div class="segment-empty">
-        Selecione um segmento para visualizar os recursos automáticos do sistema.
+        Assim que você escolher o tipo de negócio, os módulos e recursos incluídos aparecerão aqui.
       </div>
     `;
 
@@ -469,6 +477,11 @@ function atualizarPreviewSegmento() {
   content.replaceChildren();
 
   if (!itens.length) {
+    if (count) {
+      count.hidden = true;
+      count.textContent = "";
+    }
+
     const vazio = document.createElement("div");
     vazio.className = "segment-empty";
     vazio.textContent = "Os recursos deste tipo serão carregados após salvar.";
@@ -476,19 +489,121 @@ function atualizarPreviewSegmento() {
     return;
   }
 
-  itens.forEach(item => {
-    const linha = document.createElement("div");
-    linha.className = "segment-module";
+  const nomes = [...new Set(
+    itens
+      .map(item => typeof item === "string" ? item : item?.nome)
+      .map(item => String(item || "").trim())
+      .filter(Boolean)
+  )];
 
-    const icone = document.createElement("i");
-    icone.className = "fa-solid fa-circle-check";
+  const temAgendaEsportiva = nomes.some(nome =>
+    nome.toLocaleLowerCase("pt-BR") === "agenda esportiva"
+  );
 
-    const texto = document.createElement("span");
-    texto.textContent = item;
+  const nomesSemRedundancia = nomes.filter(nome =>
+    !(temAgendaEsportiva && nome.toLocaleLowerCase("pt-BR") === "agenda")
+  );
 
-    linha.append(icone, texto);
-    content.appendChild(linha);
+  const baseSistema = new Set([
+    "dashboard",
+    "caixa / pdv",
+    "caixa/pdv",
+    "vendas",
+    "produtos",
+    "clientes",
+    "relatórios",
+    "relatorios",
+    "configurações",
+    "configuracoes"
+  ]);
+
+  const operacaoSegmento = new Set([
+    "comandas",
+    "agenda",
+    "agenda esportiva",
+    "quadras / campos",
+    "quadras/campos",
+    "mensalistas",
+    "jogadores",
+    "times",
+    "combos"
+  ]);
+
+  const grupos = [
+    {
+      titulo: "Base do sistema",
+      icone: "fa-solid fa-table-cells-large",
+      itens: []
+    },
+    {
+      titulo: "Operação do negócio",
+      icone: "fa-solid fa-bolt",
+      itens: []
+    },
+    {
+      titulo: "Controles adicionais",
+      icone: "fa-solid fa-sliders",
+      itens: []
+    }
+  ];
+
+  nomesSemRedundancia.forEach(nome => {
+    const chave = nome.toLocaleLowerCase("pt-BR");
+
+    if (baseSistema.has(chave)) {
+      grupos[0].itens.push(nome);
+    } else if (operacaoSegmento.has(chave)) {
+      grupos[1].itens.push(nome);
+    } else {
+      grupos[2].itens.push(nome);
+    }
   });
+
+  if (count) {
+    const total = nomesSemRedundancia.length;
+    count.hidden = false;
+    count.textContent = `${total} ${total === 1 ? "recurso" : "recursos"}`;
+  }
+
+  grupos
+    .filter(grupoItem => grupoItem.itens.length)
+    .forEach(grupoItem => {
+      const grupoEl = document.createElement("section");
+      grupoEl.className = "segment-resource-group";
+
+      const cabecalho = document.createElement("div");
+      cabecalho.className = "segment-resource-group-header";
+
+      const iconeGrupo = document.createElement("i");
+      iconeGrupo.className = grupoItem.icone;
+
+      const tituloGrupo = document.createElement("h3");
+      tituloGrupo.textContent = grupoItem.titulo;
+
+      const quantidadeGrupo = document.createElement("span");
+      quantidadeGrupo.textContent = grupoItem.itens.length;
+
+      cabecalho.append(iconeGrupo, tituloGrupo, quantidadeGrupo);
+
+      const lista = document.createElement("ul");
+      lista.className = "segment-resource-list";
+
+      grupoItem.itens.forEach(nome => {
+        const itemEl = document.createElement("li");
+        const check = document.createElement("i");
+        check.className = "fa-solid fa-check";
+        check.setAttribute("aria-hidden", "true");
+
+        const texto = document.createElement("span");
+        texto.textContent = nome;
+
+        itemEl.append(check, texto);
+        lista.appendChild(itemEl);
+      });
+
+      grupoEl.append(cabecalho, lista);
+      content.appendChild(grupoEl);
+    });
 }
 
 function atualizarPreviewFundo() {
