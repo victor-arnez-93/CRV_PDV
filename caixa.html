@@ -108,6 +108,16 @@
         <span class="topbar-title">Caixa / PDV</span>
       </div>
       <div class="topbar-actions">
+        <button
+          class="caixa-view-toggle"
+          id="btnModoRapido"
+          type="button"
+          aria-pressed="false"
+          title="Ativar modo rápido"
+        >
+          <i data-lucide="zap" width="16" height="16"></i>
+          <span>Modo rápido</span>
+        </button>
         <div class="caixa-status" id="caixaStatus">
           <span class="status-dot closed" id="statusDot"></span>
           <span id="statusText">Carregando caixa...</span>
@@ -225,6 +235,7 @@
     id="btnModoComanda"
     data-mode="comanda"
     type="button"
+    style="display:none;"
   >
     <i data-lucide="ticket" width="16" height="16"></i>
     <span>Comandas</span>

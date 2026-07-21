@@ -158,7 +158,7 @@
   max-width: 100%;
 }
 
-/* ===== AVISO DE SINCRONIZAÇÃO DE JOGOS ===== */
+/* ===== AVISO DE SINCRONIZAÃ‡ÃƒO DE JOGOS ===== */
 
 .aviso-sync-jogos-caixa {
   margin-bottom: 14px;
@@ -366,7 +366,7 @@
   pointer-events: none;
 }
 
-/* Sugestões */
+/* SugestÃµes */
 .pdv-suggestions {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -399,7 +399,7 @@
   font-size: 0.9rem;
 }
 
-/* ===== PRODUTOS RÁPIDOS ===== */
+/* ===== PRODUTOS RÃPIDOS ===== */
 .pdv-quick-header {
   display: flex;
   align-items: center;
@@ -1475,7 +1475,7 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 .jogo-caixa-jogador-row.pago .jogo-caixa-jogador-nome::before {
-  content: "✓ ";
+  content: "âœ“ ";
   color: var(--crv-green);
 }
 
@@ -1737,7 +1737,7 @@ body.light .jogo-caixa-status.cobranca {
   width: 100%;
 }
 
-/* ===== MODAL CONFIRMAÇÃO CAIXA ===== */
+/* ===== MODAL CONFIRMAÃ‡ÃƒO CAIXA ===== */
 
 .confirm-modal {
   max-width: 420px;
@@ -1762,7 +1762,7 @@ body.light .jogo-caixa-status.cobranca {
   letter-spacing: 0.02em;
 }
 
-/* ===== DIVISÓRIA DECORATIVA PDV ===== */
+/* ===== DIVISÃ“RIA DECORATIVA PDV ===== */
 .pdv-section-divider {
   width: 100%;
   height: 1px;
@@ -1836,7 +1836,7 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 /* ======================================================
-   COMANDAS ABERTAS NO CAIXA — FAIXA HORIZONTAL
+   COMANDAS ABERTAS NO CAIXA â€” FAIXA HORIZONTAL
 ====================================================== */
 .comandas-abertas-caixa {
   display: none;
@@ -2063,7 +2063,7 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 /* ======================================================
-   MODAL TODOS PRODUTOS — CAIXA
+   MODAL TODOS PRODUTOS â€” CAIXA
 ====================================================== */
 
 .modal-produtos-caixa {
@@ -2218,7 +2218,7 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 /* ======================================================
-   JOGOS ATIVOS NO CAIXA — FAIXA HORIZONTAL
+   JOGOS ATIVOS NO CAIXA â€” FAIXA HORIZONTAL
 ====================================================== */
 
 .jogos-ativos-caixa {
@@ -2407,7 +2407,7 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 /* ======================================================
-   RESPONSIVE — CAIXA / PDV
+   RESPONSIVE â€” CAIXA / PDV
 ====================================================== */
 
 @media (max-width: 1100px) {
@@ -2769,7 +2769,7 @@ body.light .jogo-caixa-status.cobranca {
     flex-shrink: 0;
   }
 
-  /* --- PRODUTOS RÁPIDOS --- */
+  /* --- PRODUTOS RÃPIDOS --- */
 
   .pdv-quick-header {
     margin: 14px 0 10px;
@@ -2982,7 +2982,7 @@ body.light .jogo-caixa-status.cobranca {
     margin-top: 2px;
   }
 
-  /* --- HISTÓRICO --- */
+  /* --- HISTÃ“RICO --- */
 
   .pdv-historico {
     padding: 12px 10px;
@@ -3326,5 +3326,220 @@ body.light .jogo-caixa-status.cobranca {
 
   #modalSucesso .modal {
     padding: 22px 14px;
+  }
+}
+
+/* ======================================================
+   MODO RÃPIDO â€” MESMO CAIXA, INTERFACE REDUZIDA
+====================================================== */
+
+.caixa-view-toggle {
+  all: unset;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: .76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.caixa-view-toggle:hover,
+.caixa-view-toggle.active {
+  color: var(--crv-orange);
+  border-color: var(--crv-orange);
+  background: rgba(249, 137, 72, .08);
+  box-shadow: var(--glow-orange);
+}
+
+.caixa-view-toggle:active {
+  transform: scale(.97);
+}
+
+body.caixa-modo-rapido #sidebarToggle {
+  display: none;
+}
+
+body.caixa-modo-rapido .caixa-infobar {
+  justify-content: flex-end;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+body.caixa-modo-rapido .caixa-infobar .caixa-info-item:not(.highlight) {
+  display: none;
+}
+
+body.caixa-modo-rapido .caixa-info-item.highlight {
+  flex: 0 1 210px;
+  min-width: 160px;
+  padding-left: 0;
+  border-left: 0;
+}
+
+body.caixa-modo-rapido .pdv-grid {
+  grid-template-columns: minmax(0, 1.25fr) minmax(420px, .75fr);
+  gap: 18px;
+}
+
+body.caixa-modo-rapido .pdv-search {
+  height: 58px;
+  font-size: 1.05rem;
+  border-color: rgba(249, 137, 72, .28);
+}
+
+body.caixa-modo-rapido .pdv-quick-header a[href="produtos.html"],
+body.caixa-modo-rapido .pdv-section-divider,
+body.caixa-modo-rapido .pdv-atividade {
+  display: none;
+}
+
+body.caixa-modo-rapido .pdv-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  max-height: 350px;
+  padding: 0 4px 8px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body.caixa-modo-rapido .pdv-quick-grid .quick-item {
+  min-width: 0;
+  min-height: 88px;
+}
+
+body.caixa-modo-rapido .pdv-cart {
+  top: 72px;
+  gap: 14px;
+  padding: 22px;
+  border-color: rgba(249, 137, 72, .24);
+  box-shadow: var(--shadow-md);
+}
+
+body.caixa-modo-rapido .cart-items {
+  min-height: 170px;
+  max-height: 310px;
+}
+
+body.caixa-modo-rapido .cart-total-row.total {
+  padding: 10px 12px;
+  border: 1px solid rgba(84, 205, 22, .22);
+  border-radius: var(--radius-md);
+  background: rgba(84, 205, 22, .07);
+  font-size: 1.55rem;
+}
+
+body.caixa-modo-rapido .pdv-finalizar {
+  min-height: 56px;
+  font-size: 1.08rem;
+  box-shadow: 0 10px 26px rgba(0, 56, 135, .2);
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  body.caixa-modo-rapido .pdv-grid {
+    grid-template-columns: minmax(0, 1fr) 390px;
+  }
+
+  body.caixa-modo-rapido .pdv-cart {
+    position: sticky;
+  }
+}
+
+@media (max-width: 900px) {
+  body.caixa-modo-rapido .pdv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.caixa-modo-rapido .pdv-cart {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar-weather {
+    display: none;
+  }
+
+  .caixa-view-toggle {
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+    flex: 0 0 38px;
+    border-radius: var(--radius-md);
+  }
+
+  .caixa-view-toggle span {
+    display: none;
+  }
+
+  body.caixa-modo-rapido .caixa-infobar {
+    display: flex;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  body.caixa-modo-rapido .caixa-info-item.highlight {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 8px;
+  }
+
+  body.caixa-modo-rapido #btnFecharCaixa {
+    width: auto;
+    min-width: 132px;
+    margin: 0;
+  }
+
+  body.caixa-modo-rapido .pdv-search {
+    height: 52px;
+    font-size: .94rem;
+  }
+
+  body.caixa-modo-rapido .pdv-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 310px;
+  }
+
+  body.caixa-modo-rapido .pdv-cart {
+    padding: 14px 12px;
+  }
+
+  body.caixa-modo-rapido .cart-items {
+    min-height: 130px;
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 380px) {
+  .caixa-view-toggle {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    flex-basis: 36px;
+  }
+
+  body.caixa-modo-rapido .caixa-infobar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.caixa-modo-rapido #btnFecharCaixa {
+    width: 100%;
+    max-width: none;
   }
 }
