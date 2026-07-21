@@ -65,6 +65,15 @@ async function crvCarregarConfiguracoesEmpresa() {
     window.CRV_CONFIG.segmento = empresa.tipo_negocio || "comercio_geral";
     window.CRV_SEGMENTO = window.CRV_CONFIG.segmento;
 
+    const fundoConfirmado = crvAplicarFundoPreset(
+      empresa.fundo_preset || "classico"
+    );
+
+    localStorage.setItem(
+      "crv-background-preset",
+      fundoConfirmado
+    );
+
     await crvCarregarModulosSegmento(window.CRV_SEGMENTO);
     await crvCarregarFeaturesEmpresa();
 

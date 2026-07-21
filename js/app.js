@@ -514,14 +514,18 @@ window.crvAguardarEmpresa = async function (timeout = 5000) {
     !crvObterEmpresaIdGlobal() &&
     Date.now() - inicio < timeout
   ) {
-    if (typeof window.crvCarregarConfiguracoesEmpresa === "function") {
-      await window.crvCarregarConfiguracoesEmpresa();
-    }
-
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  return !!crvObterEmpresaIdGlobal();
+  if (!crvObterEmpresaIdGlobal()) {
+    return false;
+  }
+
+  if (typeof window.crvCarregarConfiguracoesEmpresa === "function") {
+    await window.crvCarregarConfiguracoesEmpresa();
+  }
+
+  return true;
 };
 
 function crvAplicarStatusCaixa(aberto, caixaData = null) {

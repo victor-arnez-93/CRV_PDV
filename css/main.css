@@ -1047,6 +1047,63 @@ select:-webkit-autofill {
   border-top: 0;
 }
 
+/* ============================================================
+   PROTEÇÃO GLOBAL DOS TÍTULOS DAS PÁGINAS
+============================================================ */
+
+.page-title-card,
+.page-header > :first-child,
+.dash-greeting > :first-child,
+.agenda-hero > :first-child,
+.comandas-header > :first-child {
+  width: fit-content;
+  max-width: min(100%, 780px);
+  flex: 0 1 auto;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="light"] .page-title-card,
+html[data-theme="light"] .page-header > :first-child,
+html[data-theme="light"] .dash-greeting > :first-child,
+html[data-theme="light"] .agenda-hero > :first-child,
+html[data-theme="light"] .comandas-header > :first-child {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="dark"] .page-title-card,
+html[data-theme="dark"] .page-header > :first-child,
+html[data-theme="dark"] .dash-greeting > :first-child,
+html[data-theme="dark"] .agenda-hero > :first-child,
+html[data-theme="dark"] .comandas-header > :first-child {
+  background: rgba(8, 15, 28, 0.72);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.18);
+}
+
+.page-title-card h1,
+.page-title-card h2,
+.page-header > :first-child h1,
+.page-header > :first-child h2,
+.dash-greeting > :first-child h1,
+.agenda-hero > :first-child h1,
+.comandas-header > :first-child h1 {
+  margin-top: 0;
+}
+
+.page-title-card p,
+.page-header > :first-child p,
+.dash-greeting > :first-child p,
+.agenda-hero > :first-child p,
+.comandas-header > :first-child p {
+  margin-bottom: 0;
+}
+
 /* ===== RESPONSIVE — MOBILE ===== */
 @media (max-width: 768px) {
   .app-shell {
@@ -1079,5 +1136,15 @@ select:-webkit-autofill {
 
   .topbar {
     padding: 0 16px;
+  }
+  
+  .page-title-card,
+  .page-header > :first-child,
+  .dash-greeting > :first-child,
+  .agenda-hero > :first-child,
+  .comandas-header > :first-child {
+    max-width: 100%;
+    padding: 10px 13px;
+    border-radius: 12px;
   }
 }
