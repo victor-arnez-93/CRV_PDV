@@ -1,8 +1,8 @@
 // ======================================================
 // CRV PDV - CAIXA / PDV
-// VersÃ£o operacional Supabase
+// Versão operacional Supabase
 // Sem produtos mockados
-// Sem dependÃªncia de localDB para operaÃ§Ã£o real
+// Sem dependência de localDB para operação real
 // ======================================================
 
 // ===== ESTADO GLOBAL =====
@@ -57,7 +57,7 @@ const CRV_CAIXA_MODO_RAPIDO_KEY = "crv-caixa-modo-rapido";
 const CRV_CAIXA_SIDEBAR_ANTERIOR_KEY = "crv-caixa-sidebar-anterior";
 
 // ======================================================
-// MODO RÃPIDO â€” APENAS APRESENTAÃ‡ÃƒO DO MESMO CAIXA
+// MODO RÁPIDO — APENAS APRESENTAÇÃO DO MESMO CAIXA
 // ======================================================
 function aplicarModoRapidoCaixa(ativo, { persistir = true } = {}) {
   const body = document.body;
@@ -74,11 +74,11 @@ function aplicarModoRapidoCaixa(ativo, { persistir = true } = {}) {
   botao.setAttribute("aria-pressed", String(modoRapidoCaixa));
   botao.title = modoRapidoCaixa
     ? "Voltar ao modo completo"
-    : "Ativar modo rÃ¡pido";
+    : "Ativar modo rápido";
 
   botao.innerHTML = modoRapidoCaixa
     ? `<i data-lucide="layout-dashboard" width="16" height="16"></i><span>Modo completo</span>`
-    : `<i data-lucide="zap" width="16" height="16"></i><span>Modo rÃ¡pido</span>`;
+    : `<i data-lucide="zap" width="16" height="16"></i><span>Modo rápido</span>`;
 
   if (modoRapidoCaixa) {
     if (!estavaAtivo && localStorage.getItem(CRV_CAIXA_SIDEBAR_ANTERIOR_KEY) === null) {
@@ -126,12 +126,8 @@ function atualizarRotuloCobrancaAvulsaCaixa() {
   const oculto = card.classList.contains("manual-card-oculto");
 
   botao.innerHTML = oculto
-    ? modoRapidoCaixa
-      ? `<i data-lucide="plus-circle"></i><span>Mais opÃ§Ãµes</span>`
-      : `<i data-lucide="plus-circle"></i><span>Mostrar cobranÃ§a avulsa</span>`
-    : modoRapidoCaixa
-      ? `<i data-lucide="minus-circle"></i><span>Ocultar opÃ§Ãµes</span>`
-      : `<i data-lucide="minus-circle"></i><span>Ocultar cobranÃ§a avulsa</span>`;
+    ? `<i data-lucide="plus-circle"></i><span>Mostrar cobrança avulsa</span>`
+    : `<i data-lucide="minus-circle"></i><span>Ocultar cobrança avulsa</span>`;
 
   if (window.lucide) {
     lucide.createIcons();
@@ -199,7 +195,7 @@ function jogadorPendenteCaixa(jogador) {
 }
 
 // Mensalista isento: cobrar_no_jogo === false E mensalista === true
-// NÃƒO entram na cobranÃ§a individual do jogo.
+// NÃO entram na cobrança individual do jogo.
 function jogadorMensalistaIsentoCaixa(jogador) {
   return (
     jogador.mensalista === true &&
@@ -241,7 +237,7 @@ const fmt = valor => {
 };
 
 function formatarHoraBrasil(data) {
-  if (!data) return "â€”";
+  if (!data) return "—";
 
   let dataNormalizada = String(data);
 
@@ -256,7 +252,7 @@ function formatarHoraBrasil(data) {
   const objetoData = new Date(dataNormalizada);
 
   if (Number.isNaN(objetoData.getTime())) {
-    return "â€”";
+    return "—";
   }
 
   return objetoData.toLocaleTimeString("pt-BR", {
@@ -267,7 +263,7 @@ function formatarHoraBrasil(data) {
 }
 
 function formatarDataHoraBrasil(data) {
-  if (!data) return "â€”";
+  if (!data) return "—";
 
   let dataNormalizada = String(data);
 
@@ -282,7 +278,7 @@ function formatarDataHoraBrasil(data) {
   const objetoData = new Date(dataNormalizada);
 
   if (Number.isNaN(objetoData.getTime())) {
-    return "â€”";
+    return "—";
   }
 
   return objetoData.toLocaleString("pt-BR", {
@@ -419,8 +415,8 @@ function logVenda(mensagem, tipo = "info") {
 }
 
 function abrirConfirmacaoCaixa({
-  titulo = "Confirmar aÃ§Ã£o",
-  mensagem = "Deseja confirmar esta aÃ§Ã£o?",
+  titulo = "Confirmar ação",
+  mensagem = "Deseja confirmar esta ação?",
   textoConfirmar = "Confirmar",
   mostrarCancelar = true
 }) {
@@ -504,7 +500,7 @@ async function salvarOffline({
     crvToast({
       titulo: "Dados salvos offline",
       mensagem:
-        "A operaÃ§Ã£o serÃ¡ sincronizada automaticamente quando a internet voltar.",
+        "A operação será sincronizada automaticamente quando a internet voltar.",
       tipo: "warn"
     });
 
@@ -558,7 +554,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const pronto = await aguardarContextoSistema();
 
   if (!pronto) {
-    logCaixa("Supabase/Auth nÃ£o ficou pronto a tempo.", "error");
+    logCaixa("Supabase/Auth não ficou pronto a tempo.", "error");
 
     caixa =
       await crvOfflineDB.obterCache("caixa_status") || null;
@@ -570,15 +566,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       crvToast({
         titulo: "Caixa mantido aberto",
         mensagem:
-          "A conexÃ£o demorou, mas o caixa aberto foi recuperado do cache local.",
+          "A conexão demorou, mas o caixa aberto foi recuperado do cache local.",
         tipo: "warn",
         tempo: 7000
       });
     } else {
       crvToast({
-        titulo: "Status do caixa nÃ£o confirmado",
+        titulo: "Status do caixa não confirmado",
         mensagem:
-          "Aguarde a conexÃ£o finalizar antes de abrir um novo caixa.",
+          "Aguarde a conexão finalizar antes de abrir um novo caixa.",
         tipo: "warn",
         tempo: 8000
       });
@@ -627,7 +623,7 @@ iniciarAvisosFimDeJogoCaixa();
 
 await processarRecebimentoAgendaAoAbrirCaixa();
 
-logCaixa("Tela pronta para operaÃ§Ã£o.", "success");
+logCaixa("Tela pronta para operação.", "success");
 });
 
 async function inicializarCaixa() {
@@ -655,7 +651,7 @@ async function carregarDadosSupabase() {
     const empresaId = obterEmpresaId();
 
     if (!empresaId) {
-      throw new Error("empresa_id nÃ£o encontrado na sessÃ£o.");
+      throw new Error("empresa_id não encontrado na sessão.");
     }
 
     logCaixa("Buscando caixa aberto...");
@@ -759,14 +755,14 @@ await crvOfflineDB.salvarCache(
       vendas = cacheVendas;
 
       logCaixa(
-        "Falha temporÃ¡ria no Supabase/Auth. Caixa aberto recuperado do cache local.",
+        "Falha temporária no Supabase/Auth. Caixa aberto recuperado do cache local.",
         "warn"
       );
 
       crvToast({
         titulo: "Caixa recuperado",
         mensagem:
-          "O sistema ainda estÃ¡ conectando, mas o caixa aberto foi mantido pela cÃ³pia local.",
+          "O sistema ainda está conectando, mas o caixa aberto foi mantido pela cópia local.",
         tipo: "warn",
         tempo: 7000
       });
@@ -780,9 +776,9 @@ await crvOfflineDB.salvarCache(
     logCaixa("Erro ao carregar dados: " + err.message, "error");
 
     crvToast({
-      titulo: "NÃ£o foi possÃ­vel confirmar o caixa",
+      titulo: "Não foi possível confirmar o caixa",
       mensagem:
-        "A conexÃ£o com o Supabase ainda nÃ£o confirmou o status do caixa. Aguarde alguns segundos antes de abrir um novo caixa.",
+        "A conexão com o Supabase ainda não confirmou o status do caixa. Aguarde alguns segundos antes de abrir um novo caixa.",
       tipo: "warn",
       tempo: 8000
     });
@@ -794,7 +790,7 @@ async function carregarProdutos() {
     const empresaId = obterEmpresaId();
 
     if (!empresaId) {
-      throw new Error("empresa_id nÃ£o encontrado para carregar produtos.");
+      throw new Error("empresa_id não encontrado para carregar produtos.");
     }
 
     const { data, error } = await sb
@@ -842,7 +838,7 @@ async function carregarTipoNegocioCaixa() {
     const empresaId = obterEmpresaId();
 
     if (!empresaId) {
-      throw new Error("empresa_id nÃ£o encontrado.");
+      throw new Error("empresa_id não encontrado.");
     }
 
     const { data, error } = await sb
@@ -1026,7 +1022,7 @@ function renderUltimoFechamentoCaixa() {
   if (dataEl) {
     dataEl.textContent = ultimoFechamentoCaixa.data_fechamento
       ? formatarDataHoraBrasil(ultimoFechamentoCaixa.data_fechamento)
-      : "Data nÃ£o informada";
+      : "Data não informada";
   }
 
   check.checked = true;
@@ -1047,15 +1043,15 @@ async function abrirCaixa() {
   if (!sistemaOnline()) {
     await alertaCaixa(
   "Sistema conectando",
-  "Sistema ainda nÃ£o estÃ¡ conectado ao Supabase. Aguarde alguns segundos e tente novamente."
+  "Sistema ainda não está conectado ao Supabase. Aguarde alguns segundos e tente novamente."
 );
     return;
   }
 
   if (caixa && caixa.status === "aberto") {
     await alertaCaixa(
-  "Caixa jÃ¡ aberto",
-  "JÃ¡ existe um caixa aberto."
+  "Caixa já aberto",
+  "Já existe um caixa aberto."
 );
     return;
   }
@@ -1183,7 +1179,7 @@ function calcularDiferenca() {
   if (!box) return;
 
   if (Math.abs(diferenca) < 0.01) {
-    box.innerHTML = `<span class="green">Caixa conferido sem diferenÃ§a.</span>`;
+    box.innerHTML = `<span class="green">Caixa conferido sem diferença.</span>`;
     return;
   }
 
@@ -1199,7 +1195,7 @@ async function fecharCaixa() {
   if (!sistemaOnline()) {
     await alertaCaixa(
       "Sistema offline",
-      "Sistema sem conexÃ£o com Supabase."
+      "Sistema sem conexão com Supabase."
     );
     return;
   }
@@ -1274,7 +1270,7 @@ function fecharModal() {
 }
 
 // ======================================================
-// PRODUTOS RÃPIDOS
+// PRODUTOS RÁPIDOS
 // ======================================================
 function renderProdutosRapidos() {
   const grid = document.getElementById("produtosRapidos");
@@ -1287,9 +1283,9 @@ function renderProdutosRapidos() {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;padding:22px;">
         <i data-lucide="package-search" width="28" height="28"></i>
-        <p>Nenhum produto rÃ¡pido cadastrado.</p>
+        <p>Nenhum produto rápido cadastrado.</p>
         <small style="color:var(--text-muted);">
-          Cadastre produtos e marque como produto rÃ¡pido.
+          Cadastre produtos e marque como produto rápido.
         </small>
       </div>
     `;
@@ -1476,15 +1472,15 @@ function renderTodosProdutosCaixa(termoBusca = "") {
 
       if (!produto) {
         await alertaCaixa(
-          "Produto nÃ£o encontrado",
-          "NÃ£o foi possÃ­vel localizar este produto."
+          "Produto não encontrado",
+          "Não foi possível localizar este produto."
         );
         return;
       }
 
       if (modoPDV === "comanda" && !comandaAtiva) {
         await alertaCaixa(
-          "Comanda nÃ£o selecionada",
+          "Comanda não selecionada",
           "Abra ou selecione uma comanda antes de adicionar produtos."
         );
         return;
@@ -1517,7 +1513,7 @@ function setupBusca() {
   input.addEventListener("input", () => {
 
     // Em modo comanda sem ativa:
-    // nÃ£o mostra sugestÃ£o ainda
+    // não mostra sugestão ainda
     if (
       modoPDV === "comanda" &&
       !comandaAtiva
@@ -1621,7 +1617,7 @@ function setupBusca() {
   });
 
   // =========================================
-  // FOCO AUTOMÃTICO
+  // FOCO AUTOMÁTICO
   // =========================================
 
   setInterval(() => {
@@ -1713,8 +1709,8 @@ async function adicionarCarrinho(produto) {
 
   if (!produto || !produto.id) {
     await alertaCaixa(
-      "Produto invÃ¡lido",
-      "Produto invÃ¡lido."
+      "Produto inválido",
+      "Produto inválido."
     );
     return;
   }
@@ -1723,8 +1719,8 @@ async function adicionarCarrinho(produto) {
 
   if (preco <= 0) {
     await alertaCaixa(
-      "PreÃ§o invÃ¡lido",
-      "Produto sem preÃ§o vÃ¡lido."
+      "Preço inválido",
+      "Produto sem preço válido."
     );
     return;
   }
@@ -1750,7 +1746,7 @@ async function adicionarCarrinho(produto) {
       `
         Estoque insuficiente para
         <strong>${produto.nome}</strong>.<br><br>
-        DisponÃ­vel: ${estoqueDisponivel}
+        Disponível: ${estoqueDisponivel}
       `
     );
       return;
@@ -1827,7 +1823,7 @@ function validarDescricaoCobrancaAvulsa(descricao) {
   if (!texto || !tokensDescricao.length) {
     return {
       permitido: false,
-      produto: "DescriÃ§Ã£o invÃ¡lida"
+      produto: "Descrição inválida"
     };
   }
 
@@ -1886,8 +1882,8 @@ async function adicionarManual() {
 
   if (!descricao || descricao.length < 5) {
     await alertaCaixa(
-      "CobranÃ§a avulsa",
-      "Informe uma descriÃ§Ã£o clara para a cobranÃ§a avulsa."
+      "Cobrança avulsa",
+      "Informe uma descrição clara para a cobrança avulsa."
     );
     return;
   }
@@ -1896,11 +1892,11 @@ async function adicionarManual() {
 
   if (!validacao.permitido) {
     await alertaCaixa(
-      "Produto jÃ¡ cadastrado",
+      "Produto já cadastrado",
       `
-        Esta cobranÃ§a parece estar relacionada a um produto cadastrado:<br><br>
+        Esta cobrança parece estar relacionada a um produto cadastrado:<br><br>
         <strong>${validacao.produto}</strong><br><br>
-        Use a busca, os produtos rÃ¡pidos ou o botÃ£o <strong>Ver todos</strong> para vender pela forma correta.
+        Use a busca, os produtos rápidos ou o botão <strong>Ver todos</strong> para vender pela forma correta.
       `
     );
     return;
@@ -1908,8 +1904,8 @@ async function adicionarManual() {
 
   if (preco <= 0) {
     await alertaCaixa(
-      "CobranÃ§a avulsa",
-      "Informe um preÃ§o vÃ¡lido."
+      "Cobrança avulsa",
+      "Informe um preço válido."
     );
     return;
   }
@@ -1989,7 +1985,7 @@ function renderCarrinho() {
       </div>
 
     <div class="cart-item-qty">
-      <button class="qty-btn qty-minus" type="button">âˆ’</button>
+      <button class="qty-btn qty-minus" type="button">−</button>
       <span class="qty-num">${item.quantidade}</span>
       <button class="qty-btn qty-plus" type="button">+</button>
     </div>
@@ -1999,7 +1995,7 @@ function renderCarrinho() {
       </div>
 
       <button class="cart-item-remove" type="button">
-        âœ•
+        ✕
       </button>
     `;
 
@@ -2036,7 +2032,7 @@ async function limparCarrinho() {
   if (modoPDV === "comanda" && comandaAtiva) {
     await alertaCaixa(
       "Comanda ativa",
-      "Para sair da comanda, use o botÃ£o <strong>Limpar</strong> do card da comanda ativa."
+      "Para sair da comanda, use o botão <strong>Limpar</strong> do card da comanda ativa."
     );
     return;
   }
@@ -2261,7 +2257,7 @@ async function validarCarrinhoComEstoque() {
     const produtoBanco = mapaProdutos.get(id);
 
     if (!produtoBanco) {
-      throw new Error("Um produto do carrinho nÃ£o foi encontrado no Supabase.");
+      throw new Error("Um produto do carrinho não foi encontrado no Supabase.");
     }
 
     if (produtoBanco.ativo !== true) {
@@ -2275,7 +2271,7 @@ async function validarCarrinhoComEstoque() {
     const estoqueAtual = Number(produtoBanco.estoque || 0);
 
     if (estoqueAtual < quantidadeCarrinho) {
-      throw new Error(`Estoque insuficiente para ${produtoBanco.nome}. DisponÃ­vel: ${estoqueAtual}`);
+      throw new Error(`Estoque insuficiente para ${produtoBanco.nome}. Disponível: ${estoqueAtual}`);
     }
 
     const produtoLocal = produtos.find(produto => produto.id === id);
@@ -2346,7 +2342,7 @@ function formatarCompetenciaCaixa(comp) {
     "",
     "janeiro",
     "fevereiro",
-    "marÃ§o",
+    "março",
     "abril",
     "maio",
     "junho",
@@ -2399,8 +2395,8 @@ async function prepararRecebimentoMensalidadeAgendaCaixa(recebimento) {
     limparRecebimentoAgendaStorage();
 
     crvToast({
-      titulo: "Mensalidade nÃ£o encontrada",
-      mensagem: "O recebimento enviado pela Agenda nÃ£o existe mais.",
+      titulo: "Mensalidade não encontrada",
+      mensagem: "O recebimento enviado pela Agenda não existe mais.",
       tipo: "warn"
     });
 
@@ -2411,8 +2407,8 @@ async function prepararRecebimentoMensalidadeAgendaCaixa(recebimento) {
     limparRecebimentoAgendaStorage();
 
     crvToast({
-      titulo: "Mensalidade jÃ¡ paga",
-      mensagem: "Este recebimento jÃ¡ foi baixado anteriormente.",
+      titulo: "Mensalidade já paga",
+      mensagem: "Este recebimento já foi baixado anteriormente.",
       tipo: "info"
     });
 
@@ -2453,7 +2449,7 @@ async function prepararRecebimentoMensalidadeAgendaCaixa(recebimento) {
     mensagem: `
       <strong>${recebimento.cliente_nome || "Mensalista"}</strong><br>
       ${recebimento.local_recurso || "Quadra/Campo"}
-      ${recebimento.hora_inicio ? ` Â· ${formatarHoraCaixa(recebimento.hora_inicio)} Ã s ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
+      ${recebimento.hora_inicio ? ` · ${formatarHoraCaixa(recebimento.hora_inicio)} às ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
       Mensalidade referente a
       <strong>${formatarCompetenciaCaixa(mensalidade.competencia)}</strong><br><br>
       Valor:
@@ -2496,8 +2492,8 @@ async function prepararRecebimentoAvulsoAgendaCaixa(recebimento) {
     limparRecebimentoAgendaStorage();
 
     crvToast({
-      titulo: "Sem cobranÃ§a pendente",
-      mensagem: "Este jogo nÃ£o possui jogadores avulsos pendentes para receber.",
+      titulo: "Sem cobrança pendente",
+      mensagem: "Este jogo não possui jogadores avulsos pendentes para receber.",
       tipo: "info"
     });
 
@@ -2528,8 +2524,8 @@ async function prepararRecebimentoAvulsoAgendaCaixa(recebimento) {
     limparRecebimentoAgendaStorage();
 
     await alertaCaixa(
-      "Valores nÃ£o informados",
-      "Os jogadores avulsos deste jogo estÃ£o sem valor de cobranÃ§a."
+      "Valores não informados",
+      "Os jogadores avulsos deste jogo estão sem valor de cobrança."
     );
 
     return;
@@ -2543,7 +2539,7 @@ async function prepararRecebimentoAvulsoAgendaCaixa(recebimento) {
     mensagem: `
       <strong>${recebimento.cliente_nome || "Jogo avulso"}</strong><br>
       ${recebimento.local_recurso || "Quadra/Campo"}
-      ${recebimento.hora_inicio ? ` Â· ${formatarHoraCaixa(recebimento.hora_inicio)} Ã s ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
+      ${recebimento.hora_inicio ? ` · ${formatarHoraCaixa(recebimento.hora_inicio)} às ${formatarHoraCaixa(recebimento.hora_fim)}` : ""}<br><br>
       Jogadores cobrados:
       <strong>${carrinho.length}</strong><br><br>
       Total:
@@ -2646,8 +2642,8 @@ if (!sistemaOnline()) {
 
   if (descontoTeste > subtotalTeste) {
     await alertaCaixa(
-      "Desconto invÃ¡lido",
-      "O desconto nÃ£o pode ser maior que o subtotal."
+      "Desconto inválido",
+      "O desconto não pode ser maior que o subtotal."
     );
     return;
   }
@@ -2777,16 +2773,16 @@ if (!sistemaOnline()) {
 
   if (desconto > subtotal) {
     await alertaCaixa(
-  "Desconto invÃ¡lido",
-  "O desconto nÃ£o pode ser maior que o subtotal."
+  "Desconto inválido",
+  "O desconto não pode ser maior que o subtotal."
 );
     return;
   }
 
   if (total <= 0) {
     await alertaCaixa(
-  "Total invÃ¡lido",
-  "Total da venda invÃ¡lido."
+  "Total inválido",
+  "Total da venda inválido."
 );
     return;
   }
@@ -2798,7 +2794,7 @@ if (!sistemaOnline()) {
   if (metodoPagamento === "dinheiro" && valorRecebido > 0 && valorRecebido < total) {
     await alertaCaixa(
       "Pagamento insuficiente",
-      "O valor recebido Ã© menor que o total da venda."
+      "O valor recebido é menor que o total da venda."
     );
     return;
   }
@@ -2857,8 +2853,8 @@ origem: itemMensalidadeAgenda
   descricao: itemMensalidadeAgenda
     ? itemMensalidadeAgenda.nome
     : itemAgendaAvulso
-      ? `Jogo avulso - ${recebimentoAgendaCaixa?.local_recurso || "Quadra/Campo"} - ${recebimentoAgendaCaixa?.cliente_nome || "ResponsÃ¡vel"}`
-      : "Venda rÃ¡pida",
+      ? `Jogo avulso - ${recebimentoAgendaCaixa?.local_recurso || "Quadra/Campo"} - ${recebimentoAgendaCaixa?.cliente_nome || "Responsável"}`
+      : "Venda rápida",
 
   data: new Date().toISOString(),
   operador_id: obterOperadorAtualId(),
@@ -2996,14 +2992,14 @@ async function baixarEstoqueProdutos() {
     const produtoOriginal = produtos.find(produto => produto.id === item.id);
 
     if (!produtoOriginal) {
-      throw new Error(`Produto nÃ£o encontrado para baixar estoque: ${item.nome}`);
+      throw new Error(`Produto não encontrado para baixar estoque: ${item.nome}`);
     }
 
     const estoqueAtual = Number(produtoOriginal.estoque || 0);
     const quantidadeVendida = Number(item.quantidade || 0);
 
     if (estoqueAtual < quantidadeVendida) {
-      throw new Error(`Estoque insuficiente para ${item.nome}. DisponÃ­vel: ${estoqueAtual}`);
+      throw new Error(`Estoque insuficiente para ${item.nome}. Disponível: ${estoqueAtual}`);
     }
 
     const novoEstoque = estoqueAtual - quantidadeVendida;
@@ -3018,7 +3014,7 @@ async function baixarEstoqueProdutos() {
       .eq("empresa_id", obterEmpresaId());
 
     if (error) {
-      throw new Error("NÃ£o foi possÃ­vel atualizar estoque de " + item.nome + ": " + error.message);
+      throw new Error("Não foi possível atualizar estoque de " + item.nome + ": " + error.message);
     }
 
     produtoOriginal.estoque = novoEstoque;
@@ -3073,7 +3069,7 @@ function limparTituloJogoHistoricoCaixa(descricao) {
   texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
 
   const matchesComanda =
-    texto.match(/[-Â·]\s*[^-Â·,]+ em comanda R\$\s*[\d.,]+/gi) || [];
+    texto.match(/[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi) || [];
 
   let qtdComanda = 0;
   let totalComanda = 0;
@@ -3094,18 +3090,18 @@ function limparTituloJogoHistoricoCaixa(descricao) {
     totalComanda += Number.isNaN(valor) ? 0 : valor;
   });
 
-  texto = texto.replace(/\s*[-Â·]\s*[^-Â·,]+ em comanda R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*[-·]\s*[^-·,]+ em comanda R\$\s*[\d.,]+/gi, "");
   texto = texto.replace(/\s*,\s*[^,]+ em comanda R\$\s*[\d.,]+/gi, "");
 
   if (qtdComanda > 0) {
-    texto += ` Â· ${qtdComanda} em comanda - ${fmt(totalComanda)}`;
+    texto += ` · ${qtdComanda} em comanda - ${fmt(totalComanda)}`;
   }
 
   return texto.trim() || "Jogo pago";
 }
 
 // ======================================================
-// HISTÃ“RICO
+// HISTÓRICO
 // ======================================================
 function renderHistorico() {
   const box = document.getElementById("historicoList");
@@ -3120,7 +3116,7 @@ function renderHistorico() {
   if (!vendas.length) {
     box.innerHTML = `
       <div class="empty-state" style="padding:16px;">
-        <p>Nenhuma movimentaÃ§Ã£o ainda</p>
+        <p>Nenhuma movimentação ainda</p>
       </div>
     `;
     return;
@@ -3168,7 +3164,7 @@ return Number(venda.total || 0) > 0;
           : (venda.descricao || "Venda finalizada");
 
     const detalhe =
-      `${String(venda.forma_pagamento || "â€”").toUpperCase()} Â· ${formatarDataHoraBrasil(venda.data)}`;
+      `${String(venda.forma_pagamento || "—").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`;
 
     const item = document.createElement("div");
 
@@ -3410,15 +3406,15 @@ async function alterarModoPDV(modo) {
 
   if (modo === "comanda" && !caixaPermiteComandas()) {
     await alertaCaixa(
-      "MÃ³dulo indisponÃ­vel",
-      "O atalho de comandas aparece apenas para negÃ³cios com esse mÃ³dulo ativo."
+      "Módulo indisponível",
+      "O atalho de comandas aparece apenas para negócios com esse módulo ativo."
     );
     return;
   }
 
   if (modo === "jogos" && !caixaPermiteJogos()) {
     await alertaCaixa(
-      "MÃ³dulo indisponÃ­vel",
+      "Módulo indisponível",
       "O atalho de jogos aparece apenas para arenas e quadras esportivas."
     );
     return;
@@ -3503,7 +3499,7 @@ function atualizarInterfaceModoPDV() {
       comandaCard.style.display = "none";
     }
 
-    inputBusca.placeholder = "Buscar produto ou cÃ³digo de barras...";
+    inputBusca.placeholder = "Buscar produto ou código de barras...";
     inputBusca.focus();
 
     renderComandasAbertasNoCaixa();
@@ -3527,7 +3523,7 @@ function atualizarInterfaceModoPDV() {
       }
     }
 
-    inputBusca.placeholder = "Selecione um jogo em andamento ou em cobranÃ§a...";
+    inputBusca.placeholder = "Selecione um jogo em andamento ou em cobrança...";
     inputBusca.focus();
 
     renderComandasAbertasNoCaixa();
@@ -3551,7 +3547,7 @@ function atualizarInterfaceModoPDV() {
       comandaCard.style.display = "none";
     }
 
-    inputBusca.placeholder = "Ler ou digitar cÃ³digo da comanda...";
+    inputBusca.placeholder = "Ler ou digitar código da comanda...";
     inputBusca.focus();
 
     renderComandasAbertasNoCaixa();
@@ -3580,7 +3576,7 @@ function atualizarInterfaceModoPDV() {
   const meta = document.getElementById("comandaMeta");
 
   if (codigo) {
-    codigo.textContent = comandaAtiva.codigo || "â€”";
+    codigo.textContent = comandaAtiva.codigo || "—";
   }
 
   if (status) {
@@ -3595,9 +3591,9 @@ function atualizarInterfaceModoPDV() {
       meta.style.display = "block";
 
       meta.innerHTML = `
-        ${nomeCliente ? `<span><strong>ResponsÃ¡vel:</strong> ${nomeCliente}</span>` : ""}
+        ${nomeCliente ? `<span><strong>Responsável:</strong> ${nomeCliente}</span>` : ""}
         ${observacoes ? `<span><strong>Origem:</strong> ${observacoes}</span>` : ""}
-        <span><strong>SituaÃ§Ã£o:</strong> comanda aberta para consumo</span>
+        <span><strong>Situação:</strong> comanda aberta para consumo</span>
       `;
     } else {
       meta.style.display = "none";
@@ -3623,7 +3619,7 @@ function atualizarInterfaceModoPDV() {
 }
 
 // ======================================================
-// SINCRONIZAÃ‡ÃƒO AUTOMÃTICA DE JOGOS PAGOS SEM VENDA
+// SINCRONIZAÇÃO AUTOMÁTICA DE JOGOS PAGOS SEM VENDA
 // ======================================================
 async function verificarJogosPendentesSincronizacaoCaixa() {
   if (!caixaPermiteJogos()) return;
@@ -3703,7 +3699,7 @@ function renderAvisoSincronizacaoJogosCaixa() {
       </strong>
 
       <span>
-        Existem cobranÃ§as da agenda que ainda nÃ£o entraram no caixa.
+        Existem cobranças da agenda que ainda não entraram no caixa.
       </span>
     </div>
 
@@ -3736,7 +3732,7 @@ async function sincronizarJogosPendentesCaixa() {
     mensagem: `
       Sincronizar
       <strong>${jogosPendentesSincronizacaoCaixa.length}</strong>
-      jogo(s) jÃ¡ pago(s) que ainda nÃ£o entraram no caixa?
+      jogo(s) já pago(s) que ainda não entraram no caixa?
     `,
     textoConfirmar: "Sincronizar tudo"
   });
@@ -3761,8 +3757,8 @@ renderJogosAtivosNoCaixa();
 atualizarInfobar();
 
     await alertaCaixa(
-      "SincronizaÃ§Ã£o concluÃ­da",
-      "Jogos pendentes foram lanÃ§ados no caixa, vendas e relatÃ³rios."
+      "Sincronização concluída",
+      "Jogos pendentes foram lançados no caixa, vendas e relatórios."
     );
 
   } catch (err) {
@@ -3770,7 +3766,7 @@ atualizarInfobar();
 
     await alertaCaixa(
       "Erro ao sincronizar",
-      err.message || "NÃ£o foi possÃ­vel sincronizar os jogos pendentes."
+      err.message || "Não foi possível sincronizar os jogos pendentes."
     );
 
   } finally {
@@ -3830,7 +3826,7 @@ function verificarAvisosFimDeJogoCaixa() {
 
         crvToast({
           titulo: "Jogo iniciado",
-          mensagem: `${jogo.local_recurso || "Quadra/Campo"} comeÃ§ou agora.`,
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} começou agora.`,
           tipo: "info",
           tempo: 8000
         });
@@ -3862,7 +3858,7 @@ function verificarAvisosFimDeJogoCaixa() {
 
         crvToast({
           titulo: "Jogo finalizado",
-          mensagem: `${jogo.local_recurso || "Quadra/Campo"} finalizou. Verifique a cobranÃ§a.`,
+          mensagem: `${jogo.local_recurso || "Quadra/Campo"} finalizou. Verifique a cobrança.`,
           tipo: "warn",
           tempo: 9000
         });
@@ -3923,8 +3919,8 @@ function setupModalSelecionarJogo() {
 async function abrirModalSelecionarJogo() {
   if (!caixaPermiteJogos()) {
     await alertaCaixa(
-      "MÃ³dulo indisponÃ­vel",
-      "Jogos ficam disponÃ­veis apenas para arenas e quadras esportivas."
+      "Módulo indisponível",
+      "Jogos ficam disponíveis apenas para arenas e quadras esportivas."
     );
     return;
   }
@@ -4011,7 +4007,7 @@ async function gerarOcorrenciasMensaisCaixa(dataAlvo) {
     .neq("status_jogo", "fechado");
 
   if (erroBase) {
-    console.warn("[CAIXA][RECORRÃŠNCIA]", erroBase);
+    console.warn("[CAIXA][RECORRÊNCIA]", erroBase);
     return;
   }
 
@@ -4064,7 +4060,7 @@ async function gerarOcorrenciasMensaisCaixa(dataAlvo) {
       .single();
 
     if (erroInsert) {
-      console.warn("[CAIXA][GERAR OCORRÃŠNCIA]", erroInsert);
+      console.warn("[CAIXA][GERAR OCORRÊNCIA]", erroInsert);
       continue;
     }
 
@@ -4184,7 +4180,7 @@ async function carregarJogosCaixa() {
           if (vinculo.agenda_jogador_id) {
             vinculosComandaJogadorCaixa[vinculo.agenda_jogador_id] = {
               comanda_id: vinculo.comanda_id,
-              codigo: vinculo.comandas?.codigo || "â€”",
+              codigo: vinculo.comandas?.codigo || "—",
               status: vinculo.comandas?.status || "aberta",
               nome_cliente: vinculo.comandas?.nome_cliente || "",
               total: Number(vinculo.comandas?.total || 0)
@@ -4230,7 +4226,7 @@ async function carregarJogosCaixa() {
     } else if (modalJogosAberto) {
       await alertaCaixa(
         "Erro ao carregar jogos",
-        "NÃ£o foi possÃ­vel carregar os jogos da agenda."
+        "Não foi possível carregar os jogos da agenda."
       );
     }
 
@@ -4328,7 +4324,7 @@ function formatarHoraCaixa(hora) {
 }
 
 function formatarDataCaixa(data) {
-  if (!data) return "â€”";
+  if (!data) return "—";
 
   const partes = String(data).slice(0, 10).split("-");
 
@@ -4387,18 +4383,18 @@ if (!jogosCaixaFiltrados.length) {
 
           <div class="jogo-caixa-local">
             ${formatarDataCaixa(jogo.data_agendamento)}
-            Â·
+            ·
             ${jogo.local_recurso || "Quadra/Campo"}
           </div>
         </div>
 
         <span class="jogo-caixa-status ${status}">
-          ${status === "cobranca" ? "cobranÃ§a" : status}
+          ${status === "cobranca" ? "cobrança" : status}
         </span>
       </div>
 
       <div class="jogo-caixa-responsavel">
-        ${jogo.cliente_nome || "ResponsÃ¡vel nÃ£o informado"}
+        ${jogo.cliente_nome || "Responsável não informado"}
       </div>
 
       <div class="jogo-caixa-valores">
@@ -4505,7 +4501,7 @@ function montarDescricaoJogoComandaCaixa(jogo, jogador) {
     jogo.local_recurso || "Quadra/Campo",
     `${formatarDataCaixa(jogo.data_agendamento)} ${formatarHoraCaixa(jogo.hora_inicio)}-${formatarHoraCaixa(jogo.hora_fim)}`,
     jogador.nome || "Jogador"
-  ].join(" Â· ");
+  ].join(" · ");
 }
 
 function abrirFinalizacaoJogoCaixa(jogoId) {
@@ -4513,8 +4509,8 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
 
 if (!jogo) {
   alertaCaixa(
-    "Jogo nÃ£o encontrado",
-    "NÃ£o foi possÃ­vel localizar este jogo."
+    "Jogo não encontrado",
+    "Não foi possível localizar este jogo."
   );
   return;
 }
@@ -4558,7 +4554,7 @@ if (!jogo) {
 
   if (subtitulo) {
     subtitulo.textContent =
-  `${formatarDataCaixa(jogo.data_agendamento)} Â· ${formatarHoraCaixa(jogo.hora_inicio)} atÃ© ${formatarHoraCaixa(jogo.hora_fim)} Â· ${jogo.cliente_nome || "ResponsÃ¡vel"} Â· Marque apenas quem estÃ¡ pagando agora.`;
+  `${formatarDataCaixa(jogo.data_agendamento)} · ${formatarHoraCaixa(jogo.hora_inicio)} até ${formatarHoraCaixa(jogo.hora_fim)} · ${jogo.cliente_nome || "Responsável"} · Marque apenas quem está pagando agora.`;
   }
 
   if (resumo) {
@@ -4602,12 +4598,12 @@ if (btnRateio) {
     if (!jogadores.length) {
       lista.innerHTML = `
         <div class="empty-state">
-          <p>Nenhum jogador lanÃ§ado neste jogo.</p>
+          <p>Nenhum jogador lançado neste jogo.</p>
         </div>
       `;
     } else {
       lista.innerHTML = jogadores.map(jogador => {
-        // Mensalista isento: exibe como linha informativa sem cobranÃ§a
+        // Mensalista isento: exibe como linha informativa sem cobrança
         if (jogadorMensalistaIsentoCaixa(jogador)) {
           return `
             <div class="jogo-caixa-jogador-row mensalista-isento" data-jogador-id="${jogador.id}" style="opacity:.6;pointer-events:none;">
@@ -4631,15 +4627,15 @@ if (btnRateio) {
         let textoStatus = "";
 
         if (statusPagamento === STATUS_JOGADOR_CAIXA.EM_COMANDA) {
-          textoStatus = ` Â· em comanda ${vinculoComanda?.codigo || "â€”"}`;
+          textoStatus = ` · em comanda ${vinculoComanda?.codigo || "—"}`;
         }
 
         if (statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_DIRETO) {
-          textoStatus = ` Â· pago direto`;
+          textoStatus = ` · pago direto`;
         }
 
         if (statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA) {
-          textoStatus = ` Â· pago em comanda ${vinculoComanda?.codigo || "â€”"}`;
+          textoStatus = ` · pago em comanda ${vinculoComanda?.codigo || "—"}`;
         }
 
         return `
@@ -4667,8 +4663,8 @@ if (btnRateio) {
 
             <select class="input jogo-caixa-pagamento" ${bloqueado ? "disabled" : ""}>
               <option value="dinheiro" ${formaAtual === "dinheiro" ? "selected" : ""}>Dinheiro</option>
-              <option value="debito" ${formaAtual === "debito" || formaAtual === "cartao" ? "selected" : ""}>DÃ©bito</option>
-              <option value="credito" ${formaAtual === "credito" ? "selected" : ""}>CrÃ©dito</option>
+              <option value="debito" ${formaAtual === "debito" || formaAtual === "cartao" ? "selected" : ""}>Débito</option>
+              <option value="credito" ${formaAtual === "credito" ? "selected" : ""}>Crédito</option>
               <option value="pix" ${formaAtual === "pix" ? "selected" : ""}>PIX</option>
             </select>
 
@@ -4753,7 +4749,7 @@ function aplicarRateioJogoCaixa() {
 
   if (totalJogo <= 0 || !linhasPendentes.length) {
     alertaCaixa(
-      "Rateio invÃ¡lido",
+      "Rateio inválido",
       "Informe o valor total do jogo e mantenha pelo menos um jogador pendente."
     );
     return;
@@ -4761,14 +4757,14 @@ function aplicarRateioJogoCaixa() {
 
   if (totalParaRatear <= 0) {
     alertaCaixa(
-      "Rateio concluÃ­do",
-      "Todo o valor do jogo jÃ¡ foi enviado para comanda ou recebido."
+      "Rateio concluído",
+      "Todo o valor do jogo já foi enviado para comanda ou recebido."
     );
     return;
   }
 
   const totalCentavos = Math.round(totalParaRatear * 100);
-    // Rateio somente entre jogadores cobrÃ¡veis (exclui mensalistas isentos)
+    // Rateio somente entre jogadores cobráveis (exclui mensalistas isentos)
     const jogadoresCobrarveisRateio = jogadoresValidos.filter(j => !jogadorMensalistaIsentoCaixa(j));
     const qtd = jogadoresCobrarveisRateio.length;
 
@@ -4832,8 +4828,8 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 
   if (!jogoSelecionadoCaixa?.id) {
     await alertaCaixa(
-      "Jogo nÃ£o selecionado",
-      "Selecione um jogo para vincular o jogador Ã  comanda."
+      "Jogo não selecionado",
+      "Selecione um jogo para vincular o jogador à comanda."
     );
     return;
   }
@@ -4846,8 +4842,8 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 
   if (!row) {
     await alertaCaixa(
-      "Jogador nÃ£o encontrado",
-      "NÃ£o foi possÃ­vel localizar a linha do jogador."
+      "Jogador não encontrado",
+      "Não foi possível localizar a linha do jogador."
     );
     return;
   }
@@ -4860,8 +4856,8 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 
   if (!jogador) {
     await alertaCaixa(
-      "Jogador nÃ£o encontrado",
-      "NÃ£o foi possÃ­vel localizar este jogador na agenda."
+      "Jogador não encontrado",
+      "Não foi possível localizar este jogador na agenda."
     );
     return;
   }
@@ -4870,10 +4866,10 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 
   if (vinculoExistente) {
     await alertaCaixa(
-      "Jogador jÃ¡ vinculado",
+      "Jogador já vinculado",
       `
-        <strong>${jogador.nome || "Jogador"}</strong> jÃ¡ estÃ¡ vinculado Ã
-        comanda <strong>${vinculoExistente.codigo || "â€”"}</strong>.
+        <strong>${jogador.nome || "Jogador"}</strong> já está vinculado à
+        comanda <strong>${vinculoExistente.codigo || "—"}</strong>.
       `
     );
     return;
@@ -4881,8 +4877,8 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 
   if (jogador.pago === true) {
     await alertaCaixa(
-      "Jogador jÃ¡ pago",
-      "Este jogador jÃ¡ foi marcado como pago."
+      "Jogador já pago",
+      "Este jogador já foi marcado como pago."
     );
     return;
   }
@@ -4893,8 +4889,8 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 
   if (valorCobrado <= 0) {
     await alertaCaixa(
-      "Valor invÃ¡lido",
-      "Informe um valor vÃ¡lido antes de enviar para comanda."
+      "Valor inválido",
+      "Informe um valor válido antes de enviar para comanda."
     );
     return;
   }
@@ -4949,8 +4945,8 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
     await carregarJogosCaixa();
 
     await alertaCaixa(
-      "Item jÃ¡ enviado",
-      "Este jogador jÃ¡ estÃ¡ vinculado a uma comanda."
+      "Item já enviado",
+      "Este jogador já está vinculado a uma comanda."
     );
 
     return;
@@ -5025,7 +5021,7 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
 
   vinculosComandaJogadorCaixa[jogador.id] = {
     comanda_id: comandaAtualizada.id,
-    codigo: comandaAtualizada.codigo || "â€”",
+    codigo: comandaAtualizada.codigo || "—",
     status: comandaAtualizada.status || "aberta",
     nome_cliente: comandaAtualizada.nome_cliente || "",
     total: Number(comandaAtualizada.total || 0)
@@ -5061,10 +5057,10 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
   abrirFinalizacaoJogoCaixa(jogo.id);
 
   await alertaCaixa(
-    "Jogador vinculado Ã  comanda",
+    "Jogador vinculado à comanda",
     `
-      <strong>${jogador.nome || "Jogador"}</strong> foi vinculado Ã
-      comanda <strong>${comandaAtualizada.codigo || "â€”"}</strong>.<br><br>
+      <strong>${jogador.nome || "Jogador"}</strong> foi vinculado à
+      comanda <strong>${comandaAtualizada.codigo || "—"}</strong>.<br><br>
       A comanda ficou aberta para consumo.
     `
   );
@@ -5081,7 +5077,7 @@ async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
 
   const lista = jogadores || [];
 
-  // Mensalistas isentos nÃ£o entram na contagem de cobranÃ§a
+  // Mensalistas isentos não entram na contagem de cobrança
   const listaCobravel = jogadoresCobraveisCaixa(lista);
 
   const pagos = listaCobravel.filter(jogador => jogadorPagoCaixa(jogador));
@@ -5096,7 +5092,7 @@ async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
     return acc + Number(jogador.valor || 0);
   }, 0);
 
-  // Jogo fecha quando todos os cobrÃ¡veis pagaram (mensalistas isentos ignorados)
+  // Jogo fecha quando todos os cobráveis pagaram (mensalistas isentos ignorados)
   const statusJogo =
     listaCobravel.length > 0 &&
     pendentes.length === 0 &&
@@ -5128,14 +5124,14 @@ async function confirmarPagamentoJogoCaixa() {
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Caixa fechado",
-      "Abra o caixa antes de finalizar cobranÃ§as da agenda."
+      "Abra o caixa antes de finalizar cobranças da agenda."
     );
     return;
   }
 
   if (!jogoSelecionadoCaixa?.id) {
     await alertaCaixa(
-      "Jogo nÃ£o selecionado",
+      "Jogo não selecionado",
       "Selecione um jogo para finalizar."
     );
     return;
@@ -5170,7 +5166,7 @@ async function confirmarPagamentoJogoCaixa() {
     const confirmarSync = await abrirConfirmacaoCaixa({
       titulo: "Sincronizar venda do jogo",
       mensagem: `
-        Este jogo jÃ¡ estÃ¡ marcado como pago na agenda, mas pode nÃ£o ter sido lanÃ§ado no caixa.<br><br>
+        Este jogo já está marcado como pago na agenda, mas pode não ter sido lançado no caixa.<br><br>
         Deseja sincronizar a venda agora?
       `,
       textoConfirmar: "Sincronizar venda"
@@ -5199,7 +5195,7 @@ async function confirmarPagamentoJogoCaixa() {
 
       await alertaCaixa(
         "Venda sincronizada",
-        "O pagamento do jogo foi lanÃ§ado no caixa, vendas e relatÃ³rios."
+        "O pagamento do jogo foi lançado no caixa, vendas e relatórios."
       );
 
       await alterarModoPDV("jogos");
@@ -5209,7 +5205,7 @@ async function confirmarPagamentoJogoCaixa() {
 
       await alertaCaixa(
         "Erro ao sincronizar jogo",
-        err.message || "NÃ£o foi possÃ­vel sincronizar a venda do jogo."
+        err.message || "Não foi possível sincronizar a venda do jogo."
       );
 
     } finally {
@@ -5240,7 +5236,7 @@ async function confirmarPagamentoJogoCaixa() {
     );
 
     if (valorCobrado <= 0) {
-      throw new Error("Informe um valor vÃ¡lido para todos os jogadores selecionados.");
+      throw new Error("Informe um valor válido para todos os jogadores selecionados.");
     }
 
     return {
@@ -5252,7 +5248,7 @@ async function confirmarPagamentoJogoCaixa() {
 
 const totalSelecionado = atualizarTotalSelecionadoJogoCaixa();
 
-// Mensalistas isentos nÃ£o entram na contagem de cobranÃ§a
+// Mensalistas isentos não entram na contagem de cobrança
 const jogadoresCobrarveis = jogadores.filter(j => !jogadorMensalistaIsentoCaixa(j));
 
 const jogadoresEmComanda = jogadoresCobrarveis.filter(jogador => {
@@ -5279,18 +5275,18 @@ const confirmar = await abrirConfirmacaoCaixa({
       <strong>${fmt(totalSelecionado)}</strong>
       para este jogo?<br><br>
 
-      ${linhasSelecionadas.length} jogador(es) serÃ£o marcados como pagos agora.<br>
-      ${jogadoresEmComanda} jogador(es) estÃ£o em comanda.<br>
-      ${Math.max(0, jogadoresPendentesAposPagamento)} jogador(es) continuarÃ£o pendentes.<br><br>
+      ${linhasSelecionadas.length} jogador(es) serão marcados como pagos agora.<br>
+      ${jogadoresEmComanda} jogador(es) estão em comanda.<br>
+      ${Math.max(0, jogadoresPendentesAposPagamento)} jogador(es) continuarão pendentes.<br><br>
 
-      O jogo continuarÃ¡ em cobranÃ§a atÃ© todos pagarem ou as comandas vinculadas serem fechadas.
+      O jogo continuará em cobrança até todos pagarem ou as comandas vinculadas serem fechadas.
     `
     : `
       Confirmar pagamento final de
       <strong>${fmt(totalSelecionado)}</strong>
       para este jogo?<br><br>
 
-      ApÃ³s confirmar, o jogo serÃ¡ finalizado e entrarÃ¡ nas atividades recentes.
+      Após confirmar, o jogo será finalizado e entrará nas atividades recentes.
     `,
 
   textoConfirmar: pagamentoParcial
@@ -5348,16 +5344,16 @@ if (pendentesAgora > 0 || emComandaAgora > 0) {
   await alertaCaixa(
     "Pagamento parcial confirmado",
     `
-      Pagamento parcial lanÃ§ado.<br><br>
+      Pagamento parcial lançado.<br><br>
       Ainda falta(m) <strong>${pendentesAgora}</strong> jogador(es) pendente(s).<br>
       <strong>${emComandaAgora}</strong> jogador(es) seguem em comanda.<br><br>
-      O jogo continuarÃ¡ em cobranÃ§a atÃ© a quitaÃ§Ã£o total.
+      O jogo continuará em cobrança até a quitação total.
     `
   );
 } else {
   await alertaCaixa(
     "Jogo finalizado",
-    "Pagamento total lanÃ§ado no caixa, vendas, relatÃ³rios e atividades recentes."
+    "Pagamento total lançado no caixa, vendas, relatórios e atividades recentes."
   );
 }
 
@@ -5368,7 +5364,7 @@ if (pendentesAgora > 0 || emComandaAgora > 0) {
 
     await alertaCaixa(
       "Erro ao finalizar jogo",
-      err.message || "NÃ£o foi possÃ­vel finalizar a cobranÃ§a do jogo."
+      err.message || "Não foi possível finalizar a cobrança do jogo."
     );
 
   } finally {
@@ -5485,13 +5481,13 @@ const { data: vendaExistente, error: erroBuscaVenda } = await sb
 
   const textoComanda =
     emComanda.length || pagosComanda.length
-      ? ` Â· Comanda: ${[...emComanda, ...pagosComanda].map(jogador => {
+      ? ` · Comanda: ${[...emComanda, ...pagosComanda].map(jogador => {
           return `${jogador.nome || "Jogador"} ${fmt(jogador.valor || 0)}`;
         }).join(", ")}`
       : "";
 
 const descricao =
-`${jogo.tipo_jogo === "mensalista" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "ResponsÃ¡vel"} | Direto: ${pagosDiretos.length} jogador${pagosDiretos.length !== 1 ? "es" : ""} Â· Comanda: ${(emComanda.length + pagosComanda.length)} jogador${(emComanda.length + pagosComanda.length) !== 1 ? "es" : ""}`;
+`${jogo.tipo_jogo === "mensalista" ? "Jogo mensal" : "Jogo avulso"} - ${jogo.local_recurso || "Quadra/Campo"} - ${jogo.cliente_nome || "Responsável"} | Direto: ${pagosDiretos.length} jogador${pagosDiretos.length !== 1 ? "es" : ""} · Comanda: ${(emComanda.length + pagosComanda.length)} jogador${(emComanda.length + pagosComanda.length) !== 1 ? "es" : ""}`;
 
   if (vendaId) {
     await sb
@@ -5700,11 +5696,11 @@ function renderComandasAbertasNoCaixa() {
           data-comanda-id="${comanda.id}"
         >
           <strong class="comanda-aberta-codigo">
-            ${comanda.codigo || "â€”"}
+            ${comanda.codigo || "—"}
           </strong>
 
           <span class="comanda-aberta-cliente">
-            ${comanda.nome_cliente || "Sem identificaÃ§Ã£o"}
+            ${comanda.nome_cliente || "Sem identificação"}
           </span>
 
           <span class="comanda-aberta-total">
@@ -5769,7 +5765,7 @@ const jogosAtivos = jogosCaixa.filter(jogo => {
   if (!jogosAtivos.length) {
     box.innerHTML = `
       <div class="jogos-ativos-header">
-        <span>Jogos em andamento / cobranÃ§a</span>
+        <span>Jogos em andamento / cobrança</span>
 
         <div class="jogos-ativos-actions">
           <small>0 ativos</small>
@@ -5786,7 +5782,7 @@ const jogosAtivos = jogosCaixa.filter(jogo => {
 
       <div class="jogos-ativos-lista">
         <div class="jogos-ativos-empty">
-          Nenhum jogo em andamento ou cobranÃ§a.
+          Nenhum jogo em andamento ou cobrança.
         </div>
       </div>
     `;
@@ -5800,7 +5796,7 @@ const jogosAtivos = jogosCaixa.filter(jogo => {
 
   box.innerHTML = `
     <div class="jogos-ativos-header">
-      <span>Jogos em andamento / cobranÃ§a</span>
+      <span>Jogos em andamento / cobrança</span>
 
       <div class="jogos-ativos-actions">
         <small>
@@ -5874,7 +5870,7 @@ const pendentes = jogadores.filter(jogador =>
             </div>
 
             <div class="jogo-ativo-middle">
-              ${jogo.cliente_nome || "ResponsÃ¡vel"}
+              ${jogo.cliente_nome || "Responsável"}
             </div>
 
             <div class="jogo-ativo-bottom">
@@ -6031,7 +6027,7 @@ async function carregarComandasCaixa(opcoes = {}) {
     if (!comandasCaixa.length) {
       await alertaCaixa(
         "Erro ao carregar comandas",
-        "NÃ£o foi possÃ­vel carregar as comandas disponÃ­veis."
+        "Não foi possível carregar as comandas disponíveis."
       );
     } else {
       crvToast({
@@ -6098,11 +6094,11 @@ function renderComandasCaixa() {
     btn.innerHTML = `
       <div>
         <strong class="comanda-caixa-codigo">
-          ${comanda.codigo || "â€”"}
+          ${comanda.codigo || "—"}
         </strong>
 
 <span class="comanda-caixa-cliente">
-  ${comanda.nome_cliente || "Sem identificaÃ§Ã£o"}
+  ${comanda.nome_cliente || "Sem identificação"}
 </span>
 
 ${comanda.observacoes ? `
@@ -6163,7 +6159,7 @@ function abrirModalIdentificacaoComandaCaixa(comanda) {
             <div>
               <h2 id="tituloIdentificarComanda">Identificar Comanda</h2>
               <p class="modal-subtitle">
-                Informe um nome, apelido ou referÃªncia para localizar rÃ¡pido depois.
+                Informe um nome, apelido ou referência para localizar rápido depois.
               </p>
             </div>
 
@@ -6174,12 +6170,12 @@ function abrirModalIdentificacaoComandaCaixa(comanda) {
 
           <div class="modal-body">
             <div class="input-group">
-              <label class="input-label">IdentificaÃ§Ã£o</label>
+              <label class="input-label">Identificação</label>
               <input
                 type="text"
                 class="input"
                 id="inputIdentificacaoComanda"
-                placeholder="Ex: AndrÃ©, Mesa 3, Camisa azul..."
+                placeholder="Ex: André, Mesa 3, Camisa azul..."
                 autocomplete="off"
               >
             </div>
@@ -6187,7 +6183,7 @@ function abrirModalIdentificacaoComandaCaixa(comanda) {
 
           <div class="modal-footer">
             <button class="btn-secondary" type="button" id="btnAbrirSemIdentificacao">
-              Abrir sem identificaÃ§Ã£o
+              Abrir sem identificação
             </button>
 
             <button class="btn-primary" type="button" id="btnConfirmarIdentificacaoComanda">
@@ -6207,7 +6203,7 @@ function abrirModalIdentificacaoComandaCaixa(comanda) {
     const btnConfirmar = document.getElementById("btnConfirmarIdentificacaoComanda");
 
     if (titulo) {
-      titulo.textContent = `Abrir Comanda ${comanda?.codigo || "â€”"}`;
+      titulo.textContent = `Abrir Comanda ${comanda?.codigo || "—"}`;
     }
 
 if (input) {
@@ -6362,7 +6358,7 @@ async function selecionarComandaCaixa(comanda) {
   } catch (err) {
     await alertaCaixa(
       "Erro ao abrir comanda",
-      "NÃ£o foi possÃ­vel abrir esta comanda no caixa."
+      "Não foi possível abrir esta comanda no caixa."
     );
 
     console.error(err);
@@ -6412,8 +6408,8 @@ async function processarLeituraProduto(codigoLido) {
 
     if (!produto) {
       await alertaCaixa(
-        "Produto nÃ£o encontrado",
-        "Produto nÃ£o encontrado."
+        "Produto não encontrado",
+        "Produto não encontrado."
       );
 
       if (input) {
@@ -6450,8 +6446,8 @@ async function processarLeituraProduto(codigoLido) {
 
     if (preco <= 0) {
       await alertaCaixa(
-        "PreÃ§o invÃ¡lido",
-        `Produto sem preÃ§o vÃ¡lido: <strong>${produto.nome}</strong>`
+        "Preço inválido",
+        `Produto sem preço válido: <strong>${produto.nome}</strong>`
       );
 
       return;
@@ -6544,7 +6540,7 @@ if (!sistemaOnline()) {
       data?.[0] || null;
 
     // =========================================
-    // NÃƒO EXISTE
+    // NÃO EXISTE
     // =========================================
 
     if (!comanda) {
@@ -6553,7 +6549,7 @@ if (!sistemaOnline()) {
         await abrirConfirmacaoCaixa({
           titulo: "Criar comanda",
           mensagem: `
-            Comanda <strong>${codigo}</strong> nÃ£o existe.<br><br>
+            Comanda <strong>${codigo}</strong> não existe.<br><br>
             Deseja criar agora?
           `,
           textoConfirmar: "Criar comanda"
@@ -6640,7 +6636,7 @@ const { data: aberta, error: erroAbrir } =
 
       await alertaCaixa(
         "Comanda fechada",
-        `Comanda <strong>${codigo}</strong> jÃ¡ estÃ¡ fechada.`
+        `Comanda <strong>${codigo}</strong> já está fechada.`
       );
 
       if (input) {
@@ -6695,8 +6691,8 @@ async function adicionarProdutoNaComanda(produto) {
 
   if (preco <= 0) {
     await alertaCaixa(
-      "PreÃ§o invÃ¡lido",
-      `Produto sem preÃ§o vÃ¡lido: <strong>${produto.nome}</strong>`
+      "Preço inválido",
+      `Produto sem preço válido: <strong>${produto.nome}</strong>`
     );
     return;
   }
@@ -6720,7 +6716,7 @@ async function adicionarProdutoNaComanda(produto) {
       if (novaQtd > estoque) {
         await alertaCaixa(
           "Estoque insuficiente",
-          `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>DisponÃ­vel: ${estoque}`
+          `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>Disponível: ${estoque}`
         );
         return;
       }
@@ -6820,7 +6816,7 @@ async function adicionarProdutoNaComanda(produto) {
     if (novaQtd > estoque) {
       await alertaCaixa(
         "Estoque insuficiente",
-        `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>DisponÃ­vel: ${estoque}`
+        `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>Disponível: ${estoque}`
       );
       return;
     }
@@ -6959,7 +6955,7 @@ async function adicionarItemManualNaComanda({
   } catch (err) {
     await alertaCaixa(
       "Erro na comanda",
-      "NÃ£o foi possÃ­vel adicionar o item manual na comanda."
+      "Não foi possível adicionar o item manual na comanda."
     );
 
     console.error(err);
@@ -7091,7 +7087,7 @@ async function limparComandaAtiva() {
   const confirmar = await abrirConfirmacaoCaixa({
     titulo: "Sair da comanda",
     mensagem: `
-      Deseja sair da comanda <strong>${comandaAtiva.codigo || "â€”"}</strong>?
+      Deseja sair da comanda <strong>${comandaAtiva.codigo || "—"}</strong>?
     `,
     textoConfirmar: "Sair"
   });
@@ -7291,8 +7287,8 @@ exibirModalSucesso(total, troco);
     const confirmarVazia = await abrirConfirmacaoCaixa({
       titulo: "Fechar comanda vazia",
       mensagem: `
-        Esta comanda nÃ£o possui itens.<br><br>
-        Deseja liberar a comanda <strong>${comandaAtiva.codigo || "â€”"}</strong> sem gerar venda?
+        Esta comanda não possui itens.<br><br>
+        Deseja liberar a comanda <strong>${comandaAtiva.codigo || "—"}</strong> sem gerar venda?
       `,
       textoConfirmar: "Liberar comanda"
     });
@@ -7356,16 +7352,16 @@ const totalComandaExtra = Math.max(0, subtotalComandaExtra - desconto);
 
 if (desconto > subtotal) {
   await alertaCaixa(
-    "Desconto invÃ¡lido",
-    "O desconto nÃ£o pode ser maior que o subtotal."
+    "Desconto inválido",
+    "O desconto não pode ser maior que o subtotal."
   );
   return;
 }
 
   if (total <= 0) {
     await alertaCaixa(
-  "Total invÃ¡lido",
-  "Total da comanda invÃ¡lido."
+  "Total inválido",
+  "Total da comanda inválido."
 );
     return;
   }
@@ -7537,7 +7533,7 @@ if (vendaData) {
 } else {
   await alertaCaixa(
     "Comanda fechada",
-    "Comanda fechada sem venda extra. O valor do jogo foi mantido na cobranÃ§a da agenda."
+    "Comanda fechada sem venda extra. O valor do jogo foi mantido na cobrança da agenda."
   );
 }
 
@@ -7610,8 +7606,8 @@ async function removerItemCarrinho(index) {
 
     if (!item.comanda_item_id) {
       await alertaCaixa(
-        "Item invÃ¡lido",
-        "Item da comanda sem identificaÃ§Ã£o."
+        "Item inválido",
+        "Item da comanda sem identificação."
       );
       return;
     }
@@ -7682,7 +7678,7 @@ async function alterarQuantidadeCarrinho(index, delta) {
     if (novaQuantidade > estoqueDisponivel) {
       await alertaCaixa(
         "Estoque insuficiente",
-        `Estoque insuficiente para <strong>${item.nome}</strong>.<br><br>DisponÃ­vel: ${estoqueDisponivel}`
+        `Estoque insuficiente para <strong>${item.nome}</strong>.<br><br>Disponível: ${estoqueDisponivel}`
       );
       return;
     }
@@ -7692,8 +7688,8 @@ async function alterarQuantidadeCarrinho(index, delta) {
 
     if (!item.comanda_item_id) {
       await alertaCaixa(
-        "Item invÃ¡lido",
-        "Item da comanda sem identificaÃ§Ã£o."
+        "Item inválido",
+        "Item da comanda sem identificação."
       );
       return;
     }
