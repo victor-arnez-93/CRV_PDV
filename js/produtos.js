@@ -90,17 +90,25 @@ const categoriasPorSegmento = {
 
   padaria: ["paes", "salgados", "doces", "bolos", "bebidas", "refrigerantes", "frios", "laticinios", "alimentos", "combos", "outros"],
 
+  padaria_confeitaria: ["paes", "salgados", "doces", "bolos", "bebidas", "refrigerantes", "frios", "laticinios", "alimentos", "combos", "outros"],
+
   restaurante: ["pratos", "porcoes", "sobremesas", "bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "combos", "outros"],
 
   bar_adega: ["bebidas_alcoolicas", "bebidas", "refrigerantes", "alimentos", "petiscos", "combos", "outros"],
 
   lanchonete: ["lanches", "salgados", "porcoes", "bebidas", "refrigerantes", "sobremesas", "alimentos", "combos", "outros"],
 
+  lanchonete_cafeteria: ["cafes", "bebidas_quentes", "lanches", "salgados", "doces", "bolos", "porcoes", "bebidas", "refrigerantes", "sobremesas", "alimentos", "combos", "outros"],
+
   cafeteria_doceria: ["cafes", "bebidas_quentes", "bebidas", "doces", "bolos", "salgados", "alimentos", "combos", "outros"],
 
   mercado_mercearia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "combos", "outros"],
 
+  mercado_conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "salgados", "doces", "utilidades", "combos", "outros"],
+
   loja_conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "salgados", "doces", "tabacaria", "utilidades", "combos", "outros"],
+
+  conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "salgados", "doces", "tabacaria", "utilidades", "combos", "outros"],
 
   arena_esportiva: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "lanches", "salgados", "combos", "outros"],
 
@@ -108,7 +116,15 @@ const categoriasPorSegmento = {
 
   quadras_esportivas: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "lanches", "salgados", "combos", "outros"],
 
-  servicos: ["servicos", "pacotes", "mensalidades", "produtos", "outros"]
+  arena_quadras: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "lanches", "salgados", "combos", "outros"],
+
+  servicos: ["servicos", "pacotes", "mensalidades", "produtos", "outros"],
+
+  servicos_gerais: ["servicos", "pacotes", "produtos", "outros"],
+
+  servicos_agendados: ["servicos", "pacotes", "mensalidades", "produtos", "outros"],
+
+  assistencia_tecnica: ["servicos", "produtos", "outros"]
 };
 
 // ======================================================

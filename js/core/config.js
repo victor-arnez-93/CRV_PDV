@@ -6,11 +6,42 @@ window.CRV_CONFIG = {
   empresa: null,
   segmento: null,
   modulos: {},
-  modulosLista: []
+  modulosLista: [],
+  features: {},
+  featuresLista: []
 };
 
 window.CRV_SEGMENTO = null;
 window.CRV_MODULOS = {};
+window.CRV_FEATURES = {};
+
+const CRV_FUNDOS_PRESET = Object.freeze({
+  classico: {
+    nome: "Classico CRV",
+    claro: "assets/imgfundo.webp",
+    escuro: "assets/imgfundo1.webp"
+  },
+  grafico: {
+    nome: "Gestao",
+    claro: "assets/fundo1.webp",
+    escuro: "assets/fundo2.webp"
+  },
+  financeiro: {
+    nome: "Financeiro",
+    claro: "assets/fundo_5.webp",
+    escuro: "assets/fundo_4.webp"
+  },
+  circuito: {
+    nome: "Circuito",
+    claro: "assets/fundo_6.webp",
+    escuro: "assets/fundo_1.1.webp"
+  },
+  conexoes: {
+    nome: "Conexoes",
+    claro: "assets/fundo_7.webp",
+    escuro: "assets/fundo_9.webp"
+  }
+});
 
 // ======================================================
 // CARREGAR CONFIG EMPRESA
@@ -25,7 +56,7 @@ async function crvCarregarConfiguracoesEmpresa() {
     const { data: empresa, error: empresaError } = await sb
       .from("empresas")
       .select("*")
-      .eq("id", APP_EMPRESA_ID)
+      .eq("id", window.APP_EMPRESA_ID)
       .single();
 
     if (empresaError) throw empresaError;
@@ -35,6 +66,7 @@ async function crvCarregarConfiguracoesEmpresa() {
     window.CRV_SEGMENTO = window.CRV_CONFIG.segmento;
 
     await crvCarregarModulosSegmento(window.CRV_SEGMENTO);
+    await crvCarregarFeaturesEmpresa();
 
     aplicarConfiguracoesSistema(empresa);
 
@@ -42,7 +74,8 @@ async function crvCarregarConfiguracoesEmpresa() {
       detail: {
         empresa,
         segmento: window.CRV_SEGMENTO,
-        modulos: window.CRV_MODULOS
+        modulos: window.CRV_MODULOS,
+        features: window.CRV_FEATURES
       }
     }));
 
@@ -51,6 +84,43 @@ async function crvCarregarConfiguracoesEmpresa() {
   } catch (err) {
     console.error("[CRV CONFIG GLOBAL]", err);
     return null;
+  }
+}
+
+// ======================================================
+// CARREGAR FEATURES EFETIVAS DA EMPRESA
+// Padrao do tipo de negocio + excecoes manuais.
+// ======================================================
+
+async function crvCarregarFeaturesEmpresa() {
+  try {
+    const { data, error } = await sb.rpc("get_features_empresa");
+
+    if (error) throw error;
+
+    const lista = Array.isArray(data)
+      ? data.filter(feature => feature && feature.ativo !== false)
+      : [];
+
+    const mapa = {};
+
+    lista.forEach(feature => {
+      mapa[feature.codigo] = true;
+    });
+
+    window.CRV_CONFIG.featuresLista = lista;
+    window.CRV_CONFIG.features = mapa;
+    window.CRV_FEATURES = mapa;
+
+    return mapa;
+  } catch (err) {
+    console.error("[CRV FEATURES]", err);
+
+    window.CRV_CONFIG.featuresLista = [];
+    window.CRV_CONFIG.features = {};
+    window.CRV_FEATURES = {};
+
+    return window.CRV_FEATURES;
   }
 }
 
@@ -128,6 +198,10 @@ function crvModuloAtivo(codigo) {
   return window.CRV_MODULOS?.[codigo] === true;
 }
 
+function crvFeatureAtiva(codigo) {
+  return window.CRV_FEATURES?.[codigo] === true;
+}
+
 function crvSegmentoUsaAgenda() {
   return crvModuloAtivo("agenda");
 }
@@ -136,12 +210,53 @@ function crvSegmentoAtual() {
   return window.CRV_SEGMENTO || window.CRV_CONFIG?.empresa?.tipo_negocio || "";
 }
 
+function crvSegmentoArena() {
+  const tipo = String(crvSegmentoAtual() || "").toLowerCase().trim();
+
+  return [
+    "arena_quadras",
+    "arena",
+    "society",
+    "arena_society",
+    "arena_esportiva",
+    "arena_beach",
+    "beach_sports",
+    "beach_tennis",
+    "futvolei",
+    "futevolei",
+    "volei_areia",
+    "quadra",
+    "quadras",
+    "quadras_esportivas",
+    "esportes"
+  ].includes(tipo);
+}
+
+function crvAplicarFundoPreset(codigoPreset = "classico") {
+  const codigo = CRV_FUNDOS_PRESET[codigoPreset]
+    ? codigoPreset
+    : "classico";
+
+  const preset = CRV_FUNDOS_PRESET[codigo];
+  const root = document.documentElement;
+  const fundoClaro = new URL(preset.claro, document.baseURI).href;
+  const fundoEscuro = new URL(preset.escuro, document.baseURI).href;
+
+  root.style.setProperty("--app-bg-light", `url("${fundoClaro}")`);
+  root.style.setProperty("--app-bg-dark", `url("${fundoEscuro}")`);
+  root.dataset.backgroundPreset = codigo;
+
+  return codigo;
+}
+
 // ======================================================
 // APLICAR CONFIGURAÇÕES
 // ======================================================
 
 function aplicarConfiguracoesSistema(cfg) {
   if (!cfg) return;
+
+  crvAplicarFundoPreset(cfg.fundo_preset || "classico");
 
   const logosSistema = document.querySelectorAll(".sidebar-logo-img");
 
@@ -246,7 +361,12 @@ function crvBloquearPaginaSemModulo(codigoModulo) {
 
 window.crvCarregarConfiguracoesEmpresa = crvCarregarConfiguracoesEmpresa;
 window.crvCarregarModulosSegmento = crvCarregarModulosSegmento;
+window.crvCarregarFeaturesEmpresa = crvCarregarFeaturesEmpresa;
 window.crvModuloAtivo = crvModuloAtivo;
+window.crvFeatureAtiva = crvFeatureAtiva;
 window.crvSegmentoUsaAgenda = crvSegmentoUsaAgenda;
 window.crvSegmentoAtual = crvSegmentoAtual;
+window.crvSegmentoArena = crvSegmentoArena;
+window.crvAplicarFundoPreset = crvAplicarFundoPreset;
+window.CRV_FUNDOS_PRESET = CRV_FUNDOS_PRESET;
 window.crvBloquearPaginaSemModulo = crvBloquearPaginaSemModulo;

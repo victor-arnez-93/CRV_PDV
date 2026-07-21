@@ -259,10 +259,6 @@
 
   <select id="cfgCategoriaNegocio">
     <option value="">Selecione a categoria</option>
-    <option value="comercio">Comércio</option>
-    <option value="alimentacao">Alimentação</option>
-    <option value="servicos">Serviços</option>
-    <option value="esportes">Esportes</option>
   </select>
 </div>
 
@@ -316,6 +312,35 @@
     <small class="config-muted">
       Recomenda-se PNG com fundo transparente.
     </small>
+  </div>
+
+  <div class="card config-card fundo-config-card">
+    <div>
+      <h2>Fundo do sistema</h2>
+      <p class="config-muted">
+        Cada opção possui uma imagem própria para os temas claro e escuro.
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label for="cfgFundoPreset">Estilo visual</label>
+      <select id="cfgFundoPreset">
+        <option value="classico">Clássico CRV</option>
+        <option value="grafico">Gestão</option>
+        <option value="financeiro">Financeiro</option>
+        <option value="circuito">Circuito</option>
+        <option value="conexoes">Conexões</option>
+      </select>
+    </div>
+
+    <div class="fundo-preview-grid" id="cfgFundoPreview" aria-live="polite">
+      <div class="fundo-preview-item fundo-preview-claro">
+        <span>Tema claro</span>
+      </div>
+      <div class="fundo-preview-item fundo-preview-escuro">
+        <span>Tema escuro</span>
+      </div>
+    </div>
   </div>
 
   <div class="config-save-bottom">

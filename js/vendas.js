@@ -567,6 +567,7 @@ function empresaUsaAgendaVendas() {
     "";
 
   const tiposArena = [
+    "arena_quadras",
     "arena",
     "arena_society",
     "society",

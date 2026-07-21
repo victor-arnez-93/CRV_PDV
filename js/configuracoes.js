@@ -4,135 +4,93 @@
 
 let CONFIG_EMPRESA = null;
 
-const TIPOS_NEGOCIO_POR_CATEGORIA = {
-  comercio: [
-    ["comercio_geral", "Comércio geral"],
-    ["mercado_mercearia", "Mercado / Mercearia"],
-    ["conveniencia", "Loja de conveniência"]
-  ],
-
-  alimentacao: [
-    ["padaria", "Padaria"],
-    ["panificadora", "Panificadora"],
-    ["confeitaria", "Confeitaria"],
-    ["cafeteria_padaria", "Cafeteria / Padaria"],
-    ["doceria", "Doceria"],
-    ["restaurante", "Restaurante"],
-    ["bar_adega", "Bar / Adega"],
-    ["lanchonete", "Lanchonete"],
-    ["cafeteria_doceria", "Cafeteria / Doceria"]
-  ],
-
-  servicos: [
-    ["servicos", "Serviços"],
-    ["barbearia", "Barbearia"],
-    ["salao", "Salão de beleza"],
-    ["assistencia", "Assistência técnica"]
-  ],
-
-  esportes: [
-    ["arena_esportiva", "Arena esportiva"],
-    ["arena_beach", "Arena de areia / Beach sports"],
-    ["quadras_esportivas", "Quadras esportivas"]
-  ]
-};
-
-const SEGMENTOS_CONFIG = {
-  comercio_geral: {
-    titulo: "Comércio geral",
-    modulos: ["Caixa / PDV", "Produtos", "Clientes", "Relatórios"]
+const CATALOGO_NEGOCIOS_FALLBACK = [
+  {
+    codigo: "comercio",
+    nome: "Comércio",
+    ordem: 10,
+    tipos: [
+      { codigo: "comercio_geral", nome: "Comércio geral / Loja", ordem: 10 },
+      { codigo: "mercado_conveniencia", nome: "Mercado / Mercearia / Conveniência", ordem: 20 }
+    ]
   },
-
-  mercado_mercearia: {
-    titulo: "Mercado / Mercearia",
-    modulos: ["Código de barras", "Balança", "Estoque mínimo", "Fiado", "Relatórios"]
+  {
+    codigo: "alimentacao",
+    nome: "Alimentação",
+    ordem: 20,
+    tipos: [
+      { codigo: "padaria_confeitaria", nome: "Padaria / Confeitaria", ordem: 10 },
+      { codigo: "lanchonete_cafeteria", nome: "Lanchonete / Cafeteria / Doceria", ordem: 20 },
+      { codigo: "restaurante", nome: "Restaurante", ordem: 30 },
+      { codigo: "bar_adega", nome: "Bar / Adega", ordem: 40 }
+    ]
   },
-
-  conveniencia: {
-    titulo: "Loja de conveniência",
-    modulos: ["Caixa rápido", "Código de barras", "Comandas opcionais", "Produtos", "Relatórios"]
+  {
+    codigo: "servicos",
+    nome: "Serviços",
+    ordem: 30,
+    tipos: [
+      { codigo: "servicos_gerais", nome: "Serviços gerais", ordem: 10 },
+      { codigo: "servicos_agendados", nome: "Serviços com agendamento", ordem: 20 },
+      { codigo: "assistencia_tecnica", nome: "Assistência técnica", ordem: 30 }
+    ]
   },
-
-  padaria: {
-    titulo: "Padaria",
-    modulos: ["Caixa rápido", "Produtos por peso", "Comandas opcionais", "Fiado", "Relatórios"]
-  },
-
-  panificadora: {
-    titulo: "Panificadora",
-    modulos: ["Caixa rápido", "Balança", "Produtos", "Comandas", "Relatórios"]
-  },
-
-  confeitaria: {
-    titulo: "Confeitaria",
-    modulos: ["Produtos", "Combos", "Encomendas futuras", "Clientes", "Relatórios"]
-  },
-
-  cafeteria_padaria: {
-    titulo: "Cafeteria / Padaria",
-    modulos: ["Comandas", "Mesas futuras", "Produtos", "Caixa", "Relatórios"]
-  },
-
-  doceria: {
-    titulo: "Doceria",
-    modulos: ["Produtos", "Combos", "Fiado", "Clientes", "Relatórios"]
-  },
-
-  restaurante: {
-    titulo: "Restaurante",
-    modulos: ["Comandas", "Caixa", "Produtos", "Relatórios"]
-  },
-
-  bar_adega: {
-    titulo: "Bar / Adega",
-    modulos: ["Comandas", "Caixa", "Bebidas", "Relatórios"]
-  },
-
-  lanchonete: {
-    titulo: "Lanchonete",
-    modulos: ["Caixa", "Comandas", "Produtos", "Delivery futuro", "Relatórios"]
-  },
-
-  cafeteria_doceria: {
-    titulo: "Cafeteria / Doceria",
-    modulos: ["Caixa", "Comandas", "Produtos", "Clientes", "Relatórios"]
-  },
-
-  servicos: {
-    titulo: "Serviços",
-    modulos: ["Caixa", "Clientes", "Ordem de serviço futura", "Relatórios"]
-  },
-
-  barbearia: {
-    titulo: "Barbearia",
-    modulos: ["Agenda futura", "Clientes", "Produtos", "Caixa", "Comissões futuras"]
-  },
-
-  salao: {
-    titulo: "Salão de beleza",
-    modulos: ["Agenda futura", "Clientes", "Serviços", "Caixa", "Relatórios"]
-  },
-
-  assistencia: {
-    titulo: "Assistência técnica",
-    modulos: ["Ordem de serviço futura", "Clientes", "Produtos", "Caixa", "Relatórios"]
-  },
-
-  arena_esportiva: {
-    titulo: "Arena esportiva",
-    modulos: ["Agenda esportiva", "Controle de jogos", "Cobrança por jogador", "Relatórios"]
-  },
-
-  arena_beach: {
-    titulo: "Arena de areia / Beach sports",
-    modulos: ["Quadras", "Agenda", "Jogos", "Cobrança por jogador"]
-  },
-
-  quadras_esportivas: {
-    titulo: "Quadras esportivas",
-    modulos: ["Reservas", "Agenda", "Controle de horários", "Relatórios"]
+  {
+    codigo: "esportes_lazer",
+    nome: "Esportes e lazer",
+    ordem: 40,
+    tipos: [
+      { codigo: "arena_quadras", nome: "Arena / Campos / Quadras", ordem: 10 }
+    ]
   }
+];
+
+const PREVIEW_NEGOCIOS_FALLBACK = {
+  comercio_geral: ["Caixa / PDV", "Produtos", "Código de barras", "Estoque mínimo", "Clientes", "Relatórios"],
+  mercado_conveniencia: ["Caixa / PDV", "Código de barras", "Estoque mínimo", "Clientes", "Relatórios"],
+  padaria_confeitaria: ["Caixa / PDV", "Combos", "Comandas", "Código de barras", "Estoque mínimo", "Relatórios"],
+  lanchonete_cafeteria: ["Caixa / PDV", "Comandas", "Combos", "Código de barras", "Relatórios"],
+  restaurante: ["Caixa / PDV", "Comandas", "Clientes", "Produtos", "Relatórios"],
+  bar_adega: ["Caixa / PDV", "Comandas", "Código de barras", "Estoque mínimo", "Relatórios"],
+  servicos_gerais: ["Caixa / PDV", "Clientes", "Produtos", "Vendas", "Relatórios"],
+  servicos_agendados: ["Caixa / PDV", "Clientes", "Produtos", "Vendas", "Relatórios"],
+  assistencia_tecnica: ["Caixa / PDV", "Clientes", "Produtos", "Vendas", "Relatórios"],
+  arena_quadras: ["Agenda esportiva", "Quadras / Campos", "Mensalistas", "Jogadores", "Relatórios"]
 };
+
+const ALIASES_TIPOS_NEGOCIO = {
+  mercado: "mercado_conveniencia",
+  mercado_mercearia: "mercado_conveniencia",
+  conveniencia: "mercado_conveniencia",
+  loja_conveniencia: "mercado_conveniencia",
+  padaria: "padaria_confeitaria",
+  panificadora: "padaria_confeitaria",
+  confeitaria: "padaria_confeitaria",
+  cafeteria_padaria: "padaria_confeitaria",
+  lanchonete: "lanchonete_cafeteria",
+  cafeteria: "lanchonete_cafeteria",
+  cafeteria_doceria: "lanchonete_cafeteria",
+  doceria: "lanchonete_cafeteria",
+  bar: "bar_adega",
+  servicos: "servicos_gerais",
+  barbearia: "servicos_agendados",
+  salao: "servicos_agendados",
+  assistencia: "assistencia_tecnica",
+  arena: "arena_quadras",
+  society: "arena_quadras",
+  arena_society: "arena_quadras",
+  arena_esportiva: "arena_quadras",
+  arena_beach: "arena_quadras",
+  beach_sports: "arena_quadras",
+  beach_tennis: "arena_quadras",
+  futvolei: "arena_quadras",
+  volei_areia: "arena_quadras",
+  quadras: "arena_quadras",
+  quadras_esportivas: "arena_quadras"
+};
+
+let catalogoNegocios = CATALOGO_NEGOCIOS_FALLBACK;
+let previewNegocios = { ...PREVIEW_NEGOCIOS_FALLBACK };
 
 // ======================================================
 // HELPERS
@@ -177,14 +135,46 @@ function valor(id) {
   return el ? String(el.value || "").trim() : "";
 }
 
+function normalizarTipoNegocio(tipo) {
+  const codigo = String(tipo || "").trim();
+  return ALIASES_TIPOS_NEGOCIO[codigo] || codigo;
+}
+
 function categoriaPorTipoNegocio(tipo) {
-  for (const [categoria, tipos] of Object.entries(TIPOS_NEGOCIO_POR_CATEGORIA)) {
-    if (tipos.some(([codigo]) => codigo === tipo)) {
-      return categoria;
+  const tipoNormalizado = normalizarTipoNegocio(tipo);
+
+  for (const categoria of catalogoNegocios) {
+    if (categoria.tipos.some(item => item.codigo === tipoNormalizado)) {
+      return categoria.codigo;
     }
   }
 
   return "";
+}
+
+function renderizarCategoriasNegocio() {
+  const select = document.getElementById("cfgCategoriaNegocio");
+
+  if (!select) return;
+
+  const valorAtual = select.value;
+  select.replaceChildren();
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecione a categoria";
+  select.appendChild(placeholder);
+
+  [...catalogoNegocios]
+    .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0))
+    .forEach(categoria => {
+      const option = document.createElement("option");
+      option.value = categoria.codigo;
+      option.textContent = categoria.nome;
+      select.appendChild(option);
+    });
+
+  select.value = valorAtual;
 }
 
 function carregarTiposDaCategoria(categoria, tipoSelecionado = "") {
@@ -192,24 +182,110 @@ function carregarTiposDaCategoria(categoria, tipoSelecionado = "") {
 
   if (!selectTipo) return;
 
-  const tipos = TIPOS_NEGOCIO_POR_CATEGORIA[categoria] || [];
+  const grupo = catalogoNegocios.find(item => item.codigo === categoria);
+  const tipos = grupo?.tipos || [];
 
   if (!categoria || !tipos.length) {
-    selectTipo.innerHTML = `<option value="">Selecione primeiro a categoria</option>`;
+    selectTipo.replaceChildren();
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Selecione primeiro a categoria";
+    selectTipo.appendChild(placeholder);
     selectTipo.disabled = true;
     return;
   }
 
   selectTipo.disabled = false;
+  selectTipo.replaceChildren();
 
-  selectTipo.innerHTML = `
-    <option value="">Selecione o tipo de negócio</option>
-    ${tipos.map(([codigo, label]) => `
-      <option value="${codigo}">${label}</option>
-    `).join("")}
-  `;
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecione o tipo de negócio";
+  selectTipo.appendChild(placeholder);
 
-  selectTipo.value = tipoSelecionado || "";
+  [...tipos]
+    .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0))
+    .forEach(tipo => {
+      const option = document.createElement("option");
+      option.value = tipo.codigo;
+      option.textContent = tipo.nome;
+      selectTipo.appendChild(option);
+    });
+
+  selectTipo.value = normalizarTipoNegocio(tipoSelecionado);
+}
+
+async function carregarCatalogoNegocios() {
+  try {
+    const [categoriasResp, tiposResp, modulosResp, vinculosModulosResp, featuresResp, vinculosFeaturesResp] =
+      await Promise.all([
+        sb.from("categorias_negocio").select("codigo, nome, ordem, ativo").eq("ativo", true).order("ordem"),
+        sb.from("tipos_negocio").select("codigo, nome, categoria_codigo, ordem, ativo, selecionavel").eq("ativo", true).eq("selecionavel", true).order("ordem"),
+        sb.from("modulos_sistema").select("codigo, nome, ordem, ativo").eq("ativo", true).order("ordem"),
+        sb.from("tipos_negocio_modulos").select("tipo_negocio, modulo_codigo, ativo").eq("ativo", true),
+        sb.from("features_sistema").select("codigo, nome, categoria, ativo, implementada").eq("ativo", true).eq("implementada", true),
+        sb.from("tipos_negocio_features").select("tipo_negocio, feature_codigo, ativo").eq("ativo", true)
+      ]);
+
+    const respostas = [
+      categoriasResp,
+      tiposResp,
+      modulosResp,
+      vinculosModulosResp,
+      featuresResp,
+      vinculosFeaturesResp
+    ];
+
+    const erro = respostas.find(resposta => resposta.error)?.error;
+    if (erro) throw erro;
+
+    const categorias = categoriasResp.data || [];
+    const tipos = tiposResp.data || [];
+
+    catalogoNegocios = categorias.map(categoria => ({
+      ...categoria,
+      tipos: tipos.filter(tipo => tipo.categoria_codigo === categoria.codigo)
+    })).filter(categoria => categoria.tipos.length > 0);
+
+    const nomesModulos = new Map(
+      (modulosResp.data || []).map(modulo => [modulo.codigo, modulo.nome])
+    );
+
+    const nomesFeatures = new Map(
+      (featuresResp.data || []).map(feature => [feature.codigo, feature.nome])
+    );
+
+    const novoPreview = {};
+
+    tipos.forEach(tipo => {
+      const itens = new Set();
+
+      (vinculosModulosResp.data || [])
+        .filter(vinculo => vinculo.tipo_negocio === tipo.codigo)
+        .forEach(vinculo => {
+          const nome = nomesModulos.get(vinculo.modulo_codigo);
+          if (nome) itens.add(nome);
+        });
+
+      (vinculosFeaturesResp.data || [])
+        .filter(vinculo => vinculo.tipo_negocio === tipo.codigo)
+        .forEach(vinculo => {
+          const nome = nomesFeatures.get(vinculo.feature_codigo);
+          if (nome) itens.add(nome);
+        });
+
+      novoPreview[tipo.codigo] = [...itens];
+    });
+
+    previewNegocios = novoPreview;
+  } catch (err) {
+    console.warn("[CRV CATALOGO NEGOCIOS] Usando catalogo compativel local.", err);
+    catalogoNegocios = CATALOGO_NEGOCIOS_FALLBACK;
+    previewNegocios = { ...PREVIEW_NEGOCIOS_FALLBACK };
+  }
+
+  renderizarCategoriasNegocio();
 }
 
 // ======================================================
@@ -334,7 +410,7 @@ function preencherFormulario(data) {
   document.getElementById("cfgUf").value =
     data.uf || "";
 
-const tipoNegocio = data.tipo_negocio || "";
+const tipoNegocio = normalizarTipoNegocio(data.tipo_negocio || "");
 const categoriaNegocio = categoriaPorTipoNegocio(tipoNegocio);
 
 document.getElementById("cfgCategoriaNegocio").value = categoriaNegocio;
@@ -342,6 +418,13 @@ document.getElementById("cfgCategoriaNegocio").value = categoriaNegocio;
 carregarTiposDaCategoria(categoriaNegocio, tipoNegocio);
 
 atualizarPreviewSegmento();
+
+  const fundoPreset = document.getElementById("cfgFundoPreset");
+  if (fundoPreset) {
+    fundoPreset.value = data.fundo_preset || "classico";
+  }
+
+  atualizarPreviewFundo();
 
   atualizarPreviewLogo();
   aplicarBloqueioConfiguracao();
@@ -360,11 +443,14 @@ function atualizarPreviewSegmento() {
 
   if (!select || !title || !content) return;
 
-  const tipo = select.value;
+  const tipo = normalizarTipoNegocio(select.value);
+  const grupo = catalogoNegocios.find(categoria =>
+    categoria.tipos.some(item => item.codigo === tipo)
+  );
+  const tipoInfo = grupo?.tipos.find(item => item.codigo === tipo);
+  const itens = previewNegocios[tipo] || [];
 
-  const cfg = SEGMENTOS_CONFIG[tipo];
-
-  if (!cfg) {
+  if (!tipoInfo) {
 
     title.textContent =
       "Configure o segmento do negócio";
@@ -378,15 +464,53 @@ function atualizarPreviewSegmento() {
     return;
   }
 
-  title.textContent = cfg.titulo;
+  title.textContent = tipoInfo.nome;
+  content.replaceChildren();
 
-  content.innerHTML =
-    cfg.modulos.map(modulo => `
-      <div class="segment-module">
-        <i class="fa-solid fa-circle-check"></i>
-        <span>${modulo}</span>
-      </div>
-    `).join("");
+  if (!itens.length) {
+    const vazio = document.createElement("div");
+    vazio.className = "segment-empty";
+    vazio.textContent = "Os recursos deste tipo serão carregados após salvar.";
+    content.appendChild(vazio);
+    return;
+  }
+
+  itens.forEach(item => {
+    const linha = document.createElement("div");
+    linha.className = "segment-module";
+
+    const icone = document.createElement("i");
+    icone.className = "fa-solid fa-circle-check";
+
+    const texto = document.createElement("span");
+    texto.textContent = item;
+
+    linha.append(icone, texto);
+    content.appendChild(linha);
+  });
+}
+
+function atualizarPreviewFundo() {
+  const select = document.getElementById("cfgFundoPreset");
+  const preview = document.getElementById("cfgFundoPreview");
+
+  if (!select || !preview) return;
+
+  const presets = window.CRV_FUNDOS_PRESET || {};
+  const codigo = presets[select.value] ? select.value : "classico";
+  const preset = presets[codigo];
+
+  if (!preset) return;
+
+  const claro = preview.querySelector(".fundo-preview-claro");
+  const escuro = preview.querySelector(".fundo-preview-escuro");
+
+  if (claro) claro.style.backgroundImage = `url("${preset.claro}")`;
+  if (escuro) escuro.style.backgroundImage = `url("${preset.escuro}")`;
+
+  if (window.crvAplicarFundoPreset) {
+    window.crvAplicarFundoPreset(codigo);
+  }
 }
 
 // ======================================================
@@ -476,7 +600,7 @@ async function enviarLogoEmpresa(empresaId) {
 // ======================================================
 function liberarEdicaoConfiguracao() {
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgLogoFile"
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset, #cfgLogoFile"
   ).forEach(el => {
     el.disabled = false;
   });
@@ -500,6 +624,13 @@ async function salvarConfiguracoes() {
       return;
     }
 
+    const tipoNegocio = normalizarTipoNegocio(valor("cfgTipoNegocio"));
+
+    if (!tipoNegocio) {
+      cfgFeedback("Selecione o tipo de negócio.", "erro");
+      return;
+    }
+
     const logoUrl = await enviarLogoEmpresa(empresaId);
 
     const payload = {
@@ -513,61 +644,59 @@ async function salvarConfiguracoes() {
       cidade: valor("cfgCidade"),
       uf: valor("cfgUf"),
       logo_url: logoUrl,
-      tipo_negocio:
-  valor("cfgTipoNegocio"),
-
-configuracao_inicial_concluida: true,
-
-configuracao_inicial_em:
-  new Date().toISOString(),
+      tipo_negocio: tipoNegocio,
+      fundo_preset: valor("cfgFundoPreset") || "classico",
+      configuracao_inicial_concluida: true,
+      configuracao_inicial_em: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-const { data, error } = await sb
-  .from("empresas")
-  .update(payload)
-  .eq("id", empresaId)
-  .select("*")
-  .maybeSingle();
+    const { data, error } = await sb
+      .from("empresas")
+      .update(payload)
+      .eq("id", empresaId)
+      .select("*")
+      .maybeSingle();
 
-if (error) throw error;
+    if (error) throw error;
 
-if (!data) {
-  throw new Error(
-    "Nenhuma empresa foi atualizada. Verifique se o usuário tem permissão para editar esta empresa."
-  );
-}
+    if (!data) {
+      throw new Error(
+        "Nenhuma empresa foi atualizada. Verifique se o usuário tem permissão para editar esta empresa."
+      );
+    }
 
-CONFIG_EMPRESA = data;
+    CONFIG_EMPRESA = data;
 
-atualizarPreviewLogo();
+    atualizarPreviewLogo();
+    atualizarPreviewFundo();
 
-aplicarBloqueioConfiguracao();
+    aplicarBloqueioConfiguracao();
 
-const logoInput = document.getElementById("cfgLogoFile");
-const fileName = document.getElementById("cfgLogoFileName");
+    const logoInput = document.getElementById("cfgLogoFile");
+    const fileName = document.getElementById("cfgLogoFileName");
 
-if (logoInput) {
-  logoInput.value = "";
-}
+    if (logoInput) {
+      logoInput.value = "";
+    }
 
-if (fileName) {
-  fileName.textContent = "Nenhum arquivo selecionado";
-}
+    if (fileName) {
+      fileName.textContent = "Nenhum arquivo selecionado";
+    }
 
     if (window.crvCarregarConfiguracoesEmpresa) {
       await crvCarregarConfiguracoesEmpresa();
     }
 
-if (window.crvAplicarLogoEmpresaTopbar) {
-  window.crvAplicarLogoEmpresaTopbar(data.logo_url);
-}
+    if (window.crvAplicarLogoEmpresaTopbar) {
+      window.crvAplicarLogoEmpresaTopbar(data.logo_url);
+    }
 
-const logoHeader = document.querySelector(".empresa-logo-header");
+    const logoHeader = document.querySelector(".empresa-logo-header");
 
-if (logoHeader && data.logo_url) {
-  logoHeader.src = data.logo_url;
-}
+    if (logoHeader && data.logo_url) {
+      logoHeader.src = data.logo_url;
+    }
 
     cfgFeedback("Configurações salvas com sucesso.", "sucesso");
     if (sessionStorage.getItem("crv_primeira_configuracao") === "1") {
@@ -584,7 +713,7 @@ if (logoHeader && data.logo_url) {
     }
   } catch (err) {
     console.error("[CRV CONFIG]", err);
-    cfgFeedback("Erro ao salvar configurações.", "erro");
+    cfgFeedback(err?.message || "Erro ao salvar configurações.", "erro");
   }
 }
 
@@ -663,7 +792,7 @@ function aplicarBloqueioConfiguracao() {
   if (!CONFIG_EMPRESA?.configuracao_inicial_concluida) return;
 
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio"
+    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset"
   ).forEach(el => {
     el.disabled = true;
   });
@@ -743,6 +872,7 @@ async function aguardarEmpresaECarregarConfiguracoes() {
     return;
   }
 
+  await carregarCatalogoNegocios();
   await carregarConfiguracoes();
 
   if (window.crvCarregarConfiguracoesEmpresa) {
@@ -763,6 +893,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSalvar = document.getElementById("btnSalvarConfiguracoes");
   const logoInput = document.getElementById("cfgLogoFile");
   const btnRemoverLogo = document.getElementById("btnRemoverLogoEmpresa");
+  const fundoPreset = document.getElementById("cfgFundoPreset");
 
   initMascaras();
   initFeedbackLink();
@@ -863,6 +994,10 @@ if (tipoNegocio) {
     "change",
     atualizarPreviewSegmento
   );
+}
+
+if (fundoPreset) {
+  fundoPreset.addEventListener("change", atualizarPreviewFundo);
 }
 
 const setupModal = document.getElementById("setupModalObrigatorio");

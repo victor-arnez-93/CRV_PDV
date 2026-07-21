@@ -1300,21 +1300,16 @@ select.dispatchEvent(new Event("change"));
       feedback.style.color = "var(--text-secondary)";
 
       const { data, error } = await sb
-        .from("operadores_internos")
-        .select("id, nome, usuario, perfil, senha, ativo")
-        .eq("empresa_id", crvObterEmpresaIdGlobal())
-        .eq("id", operadorId)
-        .eq("ativo", true)
+        .rpc("validar_operador_interno", {
+          p_operador_id: operadorId,
+          p_senha: senha
+        })
         .maybeSingle();
 
       if (error) throw error;
 
       if (!data) {
-        throw new Error("Operador não encontrado ou inativo.");
-      }
-
-      if (String(data.senha || "") !== senha) {
-        throw new Error("Senha interna incorreta.");
+        throw new Error("Operador, senha ou status inválido.");
       }
 
       crvSalvarOperadorAtual(data);
@@ -1322,15 +1317,6 @@ select.dispatchEvent(new Event("change"));
       await crvCarregarPermissoesOperadorAtual();
       crvAplicarPermissoesInterface();
       crvValidarPermissaoPaginaAtual();
-
-      await sb
-        .from("operadores_internos")
-        .update({
-          ultimo_login_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
-        })
-        .eq("id", data.id)
-        .eq("empresa_id", crvObterEmpresaIdGlobal());
 
       fechar();
 

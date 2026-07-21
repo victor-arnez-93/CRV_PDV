@@ -757,6 +757,7 @@ function caixaPermiteJogos() {
     .trim();
 
   return [
+    "arena_quadras",
     "arena",
     "arena_esportiva",
     "arena_beach",

@@ -129,7 +129,7 @@ window.crvPermissoes = (() => {
 
       const { data, error } = await sb
         .from("operadores_internos")
-        .select("*")
+        .select("id, empresa_id, nome, usuario, perfil, ativo, criado_em, atualizado_em, ultimo_login_em")
         .eq("empresa_id", empresaId)
         .order("nome");
 
@@ -327,41 +327,19 @@ window.crvPermissoes = (() => {
         return;
       }
 
-      const payload = {
-        empresa_id: empresaId,
-        nome,
-        usuario,
-        perfil,
-        ativo: true,
-        atualizado_em: new Date().toISOString()
-      };
+      const { data: operadorId, error } = await sb.rpc(
+        "salvar_operador_interno",
+        {
+          p_id: id || null,
+          p_nome: nome,
+          p_usuario: usuario,
+          p_senha: senha || null,
+          p_perfil: perfil
+        }
+      );
 
-      if (senha) {
-        payload.senha = senha;
-      }
-
-      let operadorId = id;
-
-      if (id) {
-        const { error } = await sb
-          .from("operadores_internos")
-          .update(payload)
-          .eq("id", id)
-          .eq("empresa_id", empresaId);
-
-        if (error) throw error;
-
-      } else {
-        const { data, error } = await sb
-          .from("operadores_internos")
-          .insert([payload])
-          .select("id")
-          .single();
-
-        if (error) throw error;
-
-        operadorId = data.id;
-      }
+      if (error) throw error;
+      if (!operadorId) throw new Error("O operador não foi salvo.");
 
       await aplicarPermissoesPadrao(operadorId, perfil);
 

@@ -378,6 +378,7 @@ function empresaUsaAgendaEsportivaDashboard() {
     .trim();
 
   return [
+    "arena_quadras",
     "arena",
     "society",
     "arena_society",

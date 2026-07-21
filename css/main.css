@@ -679,7 +679,7 @@ body::after {
 
 /* ===== TEMA CLARO ===== */
 html[data-theme="light"] body::before {
-  background-image: url("../assets/imgfundo.png");
+  background-image: var(--app-bg-light, url("../assets/imgfundo.png"));
 }
 
 html[data-theme="light"] body::after {
@@ -688,7 +688,7 @@ html[data-theme="light"] body::after {
 
 /* ===== TEMA ESCURO ===== */
 html[data-theme="dark"] body::before {
-  background-image: url("../assets/imgfundo1.png");
+  background-image: var(--app-bg-dark, url("../assets/imgfundo1.png"));
 }
 
 html[data-theme="dark"] body::after {

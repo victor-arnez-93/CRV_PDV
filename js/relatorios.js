@@ -20,6 +20,7 @@ let agendaFechadaData = [];
 let nomeFantasiaRelatorio = "empresa";
 
 const TIPOS_COM_AGENDA_ESPORTIVA = [
+  "arena_quadras",
   "arena",
   "society",
   "arena_society",
