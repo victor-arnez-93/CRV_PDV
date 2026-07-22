@@ -1750,82 +1750,18 @@ html[data-theme="light"] .step-card > span {
   color: var(--landing-green);
 }
 
-/* ======================================================
-   BOTÃO — QUERO CONTRATAR
-====================================================== */
-
-.price-card .price-button {
+.price-button {
   position: relative;
-  isolation: isolate;
 
-  width: 100%;
+  width: min(100%, 240px);
   min-height: 48px;
-  padding: 0 22px;
+  padding: 0 20px;
+  margin: 20px auto 0;
 
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-
-  border: 1px solid var(--landing-green);
-  border-radius: 14px;
-
-  background: var(--landing-green);
-  background-image: none;
-
-  color: #081700;
-  font-family: var(--font-display);
-  font-size: 0.92rem;
-  font-weight: 800;
-  line-height: 1;
-  text-align: center;
-
-  box-shadow: 0 10px 26px rgba(84, 205, 22, 0.2);
-  overflow: hidden;
-  cursor: pointer;
-
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.price-card .price-button::before,
-.price-card .price-button::after {
-  display: none;
-  content: none;
-}
-
-.price-card .price-button:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
-  box-shadow: 0 14px 32px rgba(84, 205, 22, 0.3);
-}
-
-.price-card .price-button:active {
-  transform: translateY(0);
-}
-
-.price-card .price-button i,
-.price-card .price-button svg {
-  position: relative;
-  z-index: 1;
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-}
-
-.price-card .price-button span {
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 680px) {
-  .price-card .price-button {
-    min-height: 46px;
-    padding: 0 18px;
-    font-size: 0.88rem;
-  }
 }
 
 .assisted-label {
@@ -2039,6 +1975,13 @@ html[data-theme="light"] .step-card > span {
 
   .footer-copy {
     max-width: 280px;
+  }
+
+  .price-button {
+    width: min(100%, 220px);
+    min-height: 46px;
+    padding: 0 18px;
+    font-size: 0.88rem;
   }
 }
 
