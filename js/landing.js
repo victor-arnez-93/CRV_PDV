@@ -65,9 +65,6 @@
   });
 
   fecharPrelogin.addEventListener("click", fecharModalPrelogin);
-  preloginModal.addEventListener("click", event => {
-    if (event.target === preloginModal) fecharModalPrelogin();
-  });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !preloginModal.classList.contains("hidden")) fecharModalPrelogin();
   });
