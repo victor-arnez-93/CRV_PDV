@@ -14,7 +14,7 @@ let produtos = [];
 let produtosRapidos = [];
 let metodoPagamento = "dinheiro";
 let modoPDV = "venda";
-let modoRapidoCaixa = false;
+let modoBalcaoCaixa = false;
 let comandaAtiva = null;
 let comandaOculta = false;
 let caixaInicializado = false;
@@ -53,37 +53,64 @@ const STATUS_JOGADOR_CAIXA = {
   PAGO_EM_COMANDA: "pago_em_comanda"
 };
 
-const CRV_CAIXA_MODO_RAPIDO_KEY = "crv-caixa-modo-rapido";
-const CRV_CAIXA_SIDEBAR_ANTERIOR_KEY = "crv-caixa-sidebar-anterior";
+const CRV_CAIXA_MODO_BALCAO_KEY = "crv-caixa-modo-balcao";
+const CRV_CAIXA_BALCAO_SIDEBAR_KEY = "crv-caixa-balcao-sidebar-anterior";
+const CRV_CAIXA_MODO_RAPIDO_LEGADO_KEY = "crv-caixa-modo-rapido";
+const CRV_CAIXA_SIDEBAR_LEGADO_KEY = "crv-caixa-sidebar-anterior";
 
 // ======================================================
-// MODO RÁPIDO — APENAS APRESENTAÇÃO DO MESMO CAIXA
+// MODO BALCÃO — OPERAÇÃO DIRETA NO MESMO CAIXA
 // ======================================================
-function aplicarModoRapidoCaixa(ativo, { persistir = true } = {}) {
+function migrarPreferenciasModoBalcaoCaixa() {
+  const modoLegado = localStorage.getItem(CRV_CAIXA_MODO_RAPIDO_LEGADO_KEY);
+  const sidebarLegada = localStorage.getItem(CRV_CAIXA_SIDEBAR_LEGADO_KEY);
+
+  if (
+    localStorage.getItem(CRV_CAIXA_MODO_BALCAO_KEY) === null &&
+    modoLegado !== null
+  ) {
+    localStorage.setItem(CRV_CAIXA_MODO_BALCAO_KEY, modoLegado);
+  }
+
+  if (
+    localStorage.getItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY) === null &&
+    sidebarLegada !== null
+  ) {
+    localStorage.setItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY, sidebarLegada);
+  }
+
+  localStorage.removeItem(CRV_CAIXA_MODO_RAPIDO_LEGADO_KEY);
+  localStorage.removeItem(CRV_CAIXA_SIDEBAR_LEGADO_KEY);
+}
+
+function aplicarModoBalcaoCaixa(ativo, { persistir = true } = {}) {
   const body = document.body;
   const shell = document.querySelector(".app-shell");
-  const botao = document.getElementById("btnModoRapido");
+  const botao = document.getElementById("btnModoBalcao");
 
   if (!body || !shell || !botao) return;
 
-  const estavaAtivo = modoRapidoCaixa;
-  modoRapidoCaixa = ativo === true;
+  const estavaAtivo = modoBalcaoCaixa;
+  modoBalcaoCaixa = ativo === true;
 
-  body.classList.toggle("caixa-modo-rapido", modoRapidoCaixa);
-  botao.classList.toggle("active", modoRapidoCaixa);
-  botao.setAttribute("aria-pressed", String(modoRapidoCaixa));
-  botao.title = modoRapidoCaixa
+  body.classList.toggle("caixa-modo-balcao", modoBalcaoCaixa);
+  botao.classList.toggle("active", modoBalcaoCaixa);
+  botao.setAttribute("aria-pressed", String(modoBalcaoCaixa));
+  botao.title = modoBalcaoCaixa
     ? "Voltar ao modo completo"
-    : "Ativar modo rápido";
+    : "Ativar modo balcão";
 
-  botao.innerHTML = modoRapidoCaixa
+  botao.innerHTML = modoBalcaoCaixa
     ? `<i data-lucide="layout-dashboard" width="16" height="16"></i><span>Modo completo</span>`
-    : `<i data-lucide="zap" width="16" height="16"></i><span>Modo rápido</span>`;
+    : `<i data-lucide="calculator" width="16" height="16"></i><span>Modo balcão</span>`;
 
-  if (modoRapidoCaixa) {
-    if (!estavaAtivo && localStorage.getItem(CRV_CAIXA_SIDEBAR_ANTERIOR_KEY) === null) {
+  if (modoBalcaoCaixa) {
+    if (
+      !estavaAtivo &&
+      localStorage.getItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY) === null
+    ) {
       localStorage.setItem(
-        CRV_CAIXA_SIDEBAR_ANTERIOR_KEY,
+        CRV_CAIXA_BALCAO_SIDEBAR_KEY,
         shell.classList.contains("sidebar-collapsed") ? "1" : "0"
       );
     }
@@ -91,16 +118,16 @@ function aplicarModoRapidoCaixa(ativo, { persistir = true } = {}) {
     shell.classList.add("sidebar-collapsed");
   } else if (estavaAtivo) {
     const sidebarAnterior =
-      localStorage.getItem(CRV_CAIXA_SIDEBAR_ANTERIOR_KEY) === "1";
+      localStorage.getItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY) === "1";
 
     shell.classList.toggle("sidebar-collapsed", sidebarAnterior);
-    localStorage.removeItem(CRV_CAIXA_SIDEBAR_ANTERIOR_KEY);
+    localStorage.removeItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY);
   }
 
   if (persistir) {
     localStorage.setItem(
-      CRV_CAIXA_MODO_RAPIDO_KEY,
-      modoRapidoCaixa ? "1" : "0"
+      CRV_CAIXA_MODO_BALCAO_KEY,
+      modoBalcaoCaixa ? "1" : "0"
     );
   }
 
@@ -110,7 +137,7 @@ function aplicarModoRapidoCaixa(ativo, { persistir = true } = {}) {
 
   atualizarRotuloCobrancaAvulsaCaixa();
 
-  if (modoRapidoCaixa) {
+  if (modoBalcaoCaixa) {
     requestAnimationFrame(() => {
       document.getElementById("inputBusca")?.focus();
     });
@@ -134,20 +161,22 @@ function atualizarRotuloCobrancaAvulsaCaixa() {
   }
 }
 
-function setupModoRapidoCaixa() {
-  const botao = document.getElementById("btnModoRapido");
+function setupModoBalcaoCaixa() {
+  const botao = document.getElementById("btnModoBalcao");
 
   if (!botao || botao.dataset.ready === "1") return;
 
+  migrarPreferenciasModoBalcaoCaixa();
+
   botao.dataset.ready = "1";
   botao.addEventListener("click", () => {
-    aplicarModoRapidoCaixa(!modoRapidoCaixa);
+    aplicarModoBalcaoCaixa(!modoBalcaoCaixa);
   });
 
   const modoSalvo =
-    localStorage.getItem(CRV_CAIXA_MODO_RAPIDO_KEY) === "1";
+    localStorage.getItem(CRV_CAIXA_MODO_BALCAO_KEY) === "1";
 
-  aplicarModoRapidoCaixa(modoSalvo, { persistir: false });
+  aplicarModoBalcaoCaixa(modoSalvo, { persistir: false });
 }
 
 document.addEventListener("crv:config-pronta", () => {
@@ -549,7 +578,7 @@ async function aguardarContextoSistema() {
 document.addEventListener("DOMContentLoaded", async () => {
   logCaixa("Inicializando...");
 
-  setupModoRapidoCaixa();
+  setupModoBalcaoCaixa();
 
   const pronto = await aguardarContextoSistema();
 
@@ -3267,6 +3296,7 @@ if (chkUltimoFechamento && inputValorInicial) {
   });
 }
   setupCobrancaAvulsaToggle();
+  setupAtividadesRecentesToggle();
 }
 
 function setupAtalhos() {
@@ -7757,6 +7787,51 @@ function setupCobrancaAvulsaToggle() {
   if (window.lucide) {
     lucide.createIcons();
   }
+}
+
+function atualizarRotuloAtividadesRecentesCaixa() {
+  const botao = document.getElementById("btnToggleAtividadesRecentes");
+  const card = document.querySelector(".pdv-atividade");
+
+  if (!botao || !card) return;
+
+  const oculto = card.classList.contains("atividade-card-oculto");
+
+  botao.innerHTML = oculto
+    ? `<i data-lucide="plus-circle"></i><span>Mostrar atividades recentes</span>`
+    : `<i data-lucide="minus-circle"></i><span>Ocultar atividades recentes</span>`;
+
+  botao.setAttribute("aria-expanded", String(!oculto));
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function setupAtividadesRecentesToggle() {
+  const card = document.querySelector(".pdv-atividade");
+
+  if (!card || document.getElementById("btnToggleAtividadesRecentes")) {
+    return;
+  }
+
+  card.classList.add("atividade-card-oculto");
+
+  const botao = document.createElement("button");
+
+  botao.id = "btnToggleAtividadesRecentes";
+  botao.type = "button";
+  botao.className =
+    "btn-secondary btn-toggle-manual btn-toggle-atividade";
+  botao.setAttribute("aria-controls", "historicoList");
+
+  card.insertAdjacentElement("beforebegin", botao);
+  atualizarRotuloAtividadesRecentesCaixa();
+
+  botao.addEventListener("click", () => {
+    card.classList.toggle("atividade-card-oculto");
+    atualizarRotuloAtividadesRecentesCaixa();
+  });
 }
 
 setTimeout(() => {

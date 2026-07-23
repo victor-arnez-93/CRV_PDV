@@ -664,6 +664,17 @@ body::before {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+
+  filter: blur(var(--app-bg-blur, 0px));
+  transform: scale(var(--app-bg-scale, 1));
+  transform-origin: center;
+
+  transition:
+    filter 0.28s ease,
+    transform 0.28s ease,
+    background-image 0.28s ease;
+
+  will-change: filter, transform;
 }
 
 body::after {

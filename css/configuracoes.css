@@ -1845,3 +1845,51 @@
     min-height: 120px;
   }
 }
+
+/* ======================================================
+   PROTEÇÃO VISUAL — CONFIGURAÇÕES
+====================================================== */
+
+.config-tabs,
+.config-section.active {
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+}
+
+.config-tabs {
+  padding: 7px 14px;
+  margin-bottom: 14px;
+}
+
+.config-section.active {
+  padding: 16px;
+}
+
+html[data-theme="light"] .config-tabs,
+html[data-theme="light"] .config-section.active {
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(255, 255, 255, 0.76);
+}
+
+html[data-theme="dark"] .config-tabs,
+html[data-theme="dark"] .config-section.active {
+  background: rgba(8, 15, 28, 0.68);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 680px) {
+  .config-tabs {
+    padding: 6px 9px;
+    border-radius: 13px;
+  }
+
+  .config-section.active {
+    padding: 10px;
+    border-radius: 13px;
+  }
+}

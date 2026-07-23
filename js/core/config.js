@@ -19,27 +19,37 @@ const CRV_FUNDOS_PRESET = Object.freeze({
   classico: {
     nome: "Classico CRV",
     claro: "assets/imgfundo.png",
-    escuro: "assets/imgfundo1.png"
+    escuro: "assets/imgfundo1.png",
+    blur: "0px",
+    escala: "1"
   },
   grafico: {
     nome: "Gestao",
     claro: "assets/fundo1.png",
-    escuro: "assets/fundo2.png"
+    escuro: "assets/fundo2.png",
+    blur: "1.2px",
+    escala: "1.012"
   },
   financeiro: {
     nome: "Financeiro",
     claro: "assets/fundo_5.png",
-    escuro: "assets/fundo_4.png"
+    escuro: "assets/fundo_4.png",
+    blur: "1.4px",
+    escala: "1.014"
   },
   circuito: {
     nome: "Circuito",
     claro: "assets/fundo_6.png",
-    escuro: "assets/fundo_1.1.png"
+    escuro: "assets/fundo_1.1.png",
+    blur: "1.8px",
+    escala: "1.018"
   },
   conexoes: {
     nome: "Conexoes",
     claro: "assets/fundo_7.png",
-    escuro: "assets/fundo_9.png"
+    escuro: "assets/fundo_9.png",
+    blur: "1.4px",
+    escala: "1.014"
   }
 });
 
@@ -253,6 +263,8 @@ function crvAplicarFundoPreset(codigoPreset = "classico") {
 
   root.style.setProperty("--app-bg-light", `url("${fundoClaro}")`);
   root.style.setProperty("--app-bg-dark", `url("${fundoEscuro}")`);
+  root.style.setProperty("--app-bg-blur", preset.blur || "0px");
+  root.style.setProperty("--app-bg-scale", preset.escala || "1");
   root.dataset.backgroundPreset = codigo;
 
   return codigo;
