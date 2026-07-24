@@ -36,6 +36,7 @@ body {
   background: var(--bg-primary);
 }
 
+/* Azul CRV — tema claro */
 ::-webkit-scrollbar-thumb {
   background: #003887;
   border-radius: 999px;
@@ -45,13 +46,14 @@ body {
   background: #0052b8;
 }
 
+/* Dourado CRV — tema escuro */
 html[data-theme="dark"] * {
-  scrollbar-color: #D4A843 var(--bg-primary);
+  scrollbar-color: #d4a843 var(--bg-primary);
 }
 
 html[data-theme="dark"]::-webkit-scrollbar-thumb,
 html[data-theme="dark"] *::-webkit-scrollbar-thumb {
-  background: #D4A843;
+  background: #d4a843;
 }
 
 html[data-theme="dark"]::-webkit-scrollbar-thumb:hover,
