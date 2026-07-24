@@ -245,15 +245,25 @@ produtosBaixo = produtosBaixoData || [];
 if (empresaUsaAgendaEsportivaDashboard()) {
   const hojeLocal = obterHojeLocalDashboard();
 
-  const { data: jogosData, error: jogosError } = await sb
-    .from("agenda")
-    .select("id,status,data")
-    .eq("empresa_id", APP_EMPRESA_ID)
-    .eq("data", hojeLocal);
+  try {
+    const { data: jogosData, error: jogosError } = await sb
+      .from("agenda")
+      .select("id,status_jogo,data_agendamento")
+      .eq("empresa_id", APP_EMPRESA_ID)
+      .eq("data_agendamento", hojeLocal)
+      .neq("status_jogo", "cancelado");
 
-  if (jogosError) throw jogosError;
+    if (jogosError) throw jogosError;
 
-  jogosHoje = jogosData || [];
+    jogosHoje = jogosData || [];
+  } catch (erroAgenda) {
+    jogosHoje = [];
+
+    console.warn(
+      "[CRV PDV][DASHBOARD][AGENDA]",
+      erroAgenda
+    );
+  }
 }
 
       await crvOfflineDB.salvarCache("dashboard_vendas", vendas);
