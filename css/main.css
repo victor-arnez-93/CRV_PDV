@@ -22,9 +22,20 @@ body {
 }
 
 /* ===== SCROLLBAR ===== */
+:root,
+html[data-theme="dark"] {
+  --scrollbar-thumb: #D4A843;
+  --scrollbar-thumb-hover: #E4BD58;
+}
+
+html[data-theme="light"] {
+  --scrollbar-thumb: #003887;
+  --scrollbar-thumb-hover: #0052B8;
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: #003887 var(--bg-primary);
+  scrollbar-color: var(--scrollbar-thumb) var(--bg-primary);
 }
 
 ::-webkit-scrollbar {
@@ -36,29 +47,13 @@ body {
   background: var(--bg-primary);
 }
 
-/* Azul CRV — tema claro */
 ::-webkit-scrollbar-thumb {
-  background: #003887;
+  background: var(--scrollbar-thumb) !important;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0052b8;
-}
-
-/* Dourado CRV — tema escuro */
-html[data-theme="dark"] * {
-  scrollbar-color: #d4a843 var(--bg-primary);
-}
-
-html[data-theme="dark"]::-webkit-scrollbar-thumb,
-html[data-theme="dark"] *::-webkit-scrollbar-thumb {
-  background: #d4a843;
-}
-
-html[data-theme="dark"]::-webkit-scrollbar-thumb:hover,
-html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
-  background: #e4bd58;
+  background: var(--scrollbar-thumb-hover) !important;
 }
 
 /* ===== TIPOGRAFIA ===== */
