@@ -106,6 +106,8 @@ function itemEhJogoVendas(item) {
 
   return (
     origem === "agenda" ||
+    origem === "agenda_avulso" ||
+    origem === "agenda_mensalidade" ||
     Boolean(item.agenda_id) ||
     Boolean(item.agenda_jogador_id) ||
     nome.includes("jogo -") ||
@@ -116,9 +118,22 @@ function itemEhJogoVendas(item) {
 }
 
 function vendaTemJogoVendas(venda) {
+  const origem = String(venda.origem || "").toLowerCase();
+
   return (
-    String(venda.origem || "").toLowerCase() === "agenda" ||
+    ["agenda", "agenda_avulso", "agenda_mensalidade"].includes(origem) ||
     (venda.itens || []).some(item => itemEhJogoVendas(item))
+  );
+}
+
+function vendaEhMensalidadeVendas(venda) {
+  const origemVenda = String(venda.origem || "").toLowerCase();
+
+  return (
+    origemVenda === "agenda_mensalidade" ||
+    (venda.itens || []).some(item => {
+      return String(item.origem || "").toLowerCase() === "agenda_mensalidade";
+    })
   );
 }
 
@@ -799,7 +814,9 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
   <span>Origem</span>
   <span>${
     vendaTemJogoVendas(venda)
-      ? vendaEhComandaVendas(venda)
+      ? vendaEhMensalidadeVendas(venda)
+        ? "Agenda / Mensalidade"
+        : vendaEhComandaVendas(venda)
         ? "Comanda / Jogo"
         : "Agenda / Jogo"
       : "Comanda"

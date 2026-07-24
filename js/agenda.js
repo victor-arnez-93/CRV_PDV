@@ -169,6 +169,23 @@ function formatarDataCurtaAgenda(dataISO) {
   return `${partes[2]}/${partes[1]}`;
 }
 
+function formatarDataCompletaAgenda(dataISO) {
+  if (!dataISO) return "-";
+
+  const partes = String(dataISO).slice(0, 10).split("-");
+  if (partes.length !== 3) return dataISO;
+
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+function obterPagamentoPrevistoMensalidadeAgenda(datas = []) {
+  if (!Array.isArray(datas) || !datas.length) return null;
+
+  // A mensalidade do horário costuma ser recebida no segundo jogo do mês,
+  // quando a data já passou do dia 5. A previsão é somente informativa.
+  return datas[1] || datas[0] || null;
+}
+
 function mensalidadeVencidaParaAvisoAgenda(jogo, mensalidade) {
   if (!jogo || !mensalidade) return false;
   if (mensalidade.status === "pago") return false;
@@ -5051,12 +5068,6 @@ function abrirModalSemanaAgenda() {
     .getElementById("btnFecharSemanaAgenda")
     ?.addEventListener("click", () => modal.remove());
 
-  modal.addEventListener("click", event => {
-    if (event.target.id === "modalSemanaAgenda") {
-      modal.remove();
-    }
-  });
-
   document
     .getElementById("agendaGerenciarData")
     ?.addEventListener("change", event => {
@@ -5159,7 +5170,9 @@ function renderizarMensaisDoMesAgenda(dataISO) {
           mensalidade,
           jogo,
           horario,
-          datas
+          datas,
+          pagamentoPrevisto:
+            obterPagamentoPrevistoMensalidadeAgenda(datas)
         };
       })
       .filter(Boolean)
@@ -5195,7 +5208,13 @@ function renderizarMensaisDoMesAgenda(dataISO) {
 
     ${
       itens.length
-        ? itens.map(({ mensalidade, jogo, horario, datas }) => `
+        ? itens.map(({
+            mensalidade,
+            jogo,
+            horario,
+            datas,
+            pagamentoPrevisto
+          }) => `
           <div
             class="agenda-mensal-item"
             data-id="${jogo.id}"
@@ -5216,6 +5235,20 @@ function renderizarMensaisDoMesAgenda(dataISO) {
                   ? datas.map(formatarDataCurtaAgenda).join(" • ")
                   : "sem datas previstas"
               }
+            </div>
+
+            <div class="agenda-mensal-pagamento">
+              <i data-lucide="calendar-clock" width="15" height="15"></i>
+              <span>
+                Pagamento previsto:
+                <strong>
+                  ${
+                    pagamentoPrevisto
+                      ? formatarDataCompletaAgenda(pagamentoPrevisto)
+                      : "sem previsão"
+                  }
+                </strong>
+              </span>
             </div>
           </div>
         `).join("")

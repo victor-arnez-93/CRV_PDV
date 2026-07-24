@@ -701,6 +701,8 @@ function itemEhPagamentoJogo(item) {
 
   return (
     origem === "agenda" ||
+    origem === "agenda_avulso" ||
+    origem === "agenda_mensalidade" ||
     Boolean(item.agenda_id) ||
     Boolean(item.agenda_jogador_id) ||
     nome.startsWith("pagamento de jogo") ||
@@ -843,7 +845,11 @@ function renderRecebimentosJogos(vendas) {
           ·
           ${item.forma}
           ·
-          Direto: ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}
+          ${
+            item.ehMensalidade
+              ? "Mensalidade do horário"
+              : `Direto: ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}`
+          }
           ·
           Comanda: ${item.qtdComanda} jogador${item.qtdComanda !== 1 ? "es" : ""}
         </small>
@@ -968,13 +974,16 @@ function quebrarDescricaoJogoRelatorio(descricao) {
   let tipo = "Jogo";
   let nome = texto;
 
-  if (lower.includes("mensal")) {
+  if (lower.includes("mensalidade")) {
+    tipo = "Mensalidade";
+  } else if (lower.includes("mensal")) {
     tipo = "Mensal";
   } else if (lower.includes("avulso")) {
     tipo = "Avulso";
   }
 
   nome = texto
+    .replace(/^mensalidade\s*[-–—]?\s*/i, "")
     .replace(/^jogo\s*mensal\s*-\s*/i, "")
     .replace(/^jogo\s*avulso\s*-\s*/i, "")
     .replace(/^jogo\s*-\s*/i, "")
@@ -1005,6 +1014,12 @@ function montarRecebimentosJogosAgrupados(vendas) {
 
   vendas.forEach(venda => {
     const origemVenda = String(venda.origem || "").toLowerCase();
+    const vendaMensalidade =
+      origemVenda === "agenda_mensalidade" ||
+      (venda.itens || []).some(item => {
+        return String(item.origem || "").toLowerCase() ===
+          "agenda_mensalidade";
+      });
 
     const itensJogo =
       (venda.itens || []).filter(item => itemEhPagamentoJogo(item));
@@ -1050,9 +1065,13 @@ const chave =
         totalComanda: 0,
         qtdDireto: 0,
         qtdComanda: 0,
-        qtdMensalistas: 0           // ← ADICIONAR: mensalistas isentos participantes
+        qtdMensalistas: 0,
+        ehMensalidade: false
       };
     }
+
+    mapa[chave].ehMensalidade =
+      mapa[chave].ehMensalidade || vendaMensalidade;
 
     if (new Date(venda.data) > new Date(mapa[chave].data)) {
       mapa[chave].data = venda.data;
@@ -1069,7 +1088,9 @@ if (vendaDiretaJogo) {
     extrairResumoJogoDescricaoRelatorio(venda.descricao);
 
   const qtdDireto =
-    resumoDescricao.qtdDireto !== null
+    vendaMensalidade
+      ? 0
+      : resumoDescricao.qtdDireto !== null
       ? resumoDescricao.qtdDireto
       : itensJogo.filter(item => {
           return String(item.origem || "").toLowerCase() === "agenda";
@@ -1289,7 +1310,9 @@ function exportarExcel() {
         jogo.tipo,
         jogo.nome,
         jogo.forma,
-        `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${fmt(jogo.totalDireto)}`,
+        jogo.ehMensalidade
+          ? `Mensalidade do horário - ${fmt(jogo.totalDireto)}`
+          : `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${fmt(jogo.totalDireto)}`,
         `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${fmt(jogo.totalComanda)}`,
         jogo.qtdMensalistas > 0 ? jogo.qtdMensalistas : 0,
         Number(jogo.total || 0)

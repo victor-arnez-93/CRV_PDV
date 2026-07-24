@@ -1072,7 +1072,7 @@ body.light .agenda-alteracao-info {
 
 .agenda-campo-inline-item {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 100px 44px 44px;
+  grid-template-columns: minmax(180px, 1fr) 100px 44px;
   gap: 10px;
   align-items: center;
   padding: 10px 14px 10px 10px;
@@ -1100,6 +1100,7 @@ body.light .agenda-alteracao-info {
   min-height: 38px;
   padding: 0;
   border-radius: 999px;
+  justify-self: end;
 }
 
 .agenda-inline-action.salvar {
@@ -2313,8 +2314,31 @@ body.light .agenda-alteracao-info {
   width: 40px !important;
   height: 40px !important;
   min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
   border-radius: 999px !important;
-  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+}
+
+.agenda-campo-inline-item {
+  grid-template-columns: minmax(180px, 1fr) 120px 48px;
+  padding: 10px 14px;
+}
+
+.agenda-campo-inline-item .agenda-inline-action {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  border-radius: 999px;
 }
 
 .agenda-config-actions-final {
@@ -2390,6 +2414,32 @@ body.light .agenda-alteracao-info {
     line-height:1.5;
 }
 
+.agenda-mensal-pagamento {
+    display:flex;
+    align-items:center;
+    gap:7px;
+    width:max-content;
+    max-width:100%;
+    margin-top:8px;
+    padding:7px 10px;
+    border:1px solid rgba(84,205,22,.28);
+    border-radius:999px;
+    background:rgba(84,205,22,.08);
+    color:var(--text-secondary);
+    font-size:.78rem;
+    font-weight:700;
+}
+
+.agenda-mensal-pagamento svg {
+    flex:0 0 auto;
+    color:#54CD16;
+}
+
+.agenda-mensal-pagamento strong {
+    color:#54CD16;
+    font-weight:900;
+}
+
 [data-theme="light"] .agenda-mensal-item{
     background:#fff;
     border-color:rgba(0,56,135,.14);
@@ -2442,7 +2492,7 @@ body.light .agenda-alteracao-info {
   }
 
   .agenda-campo-inline-item {
-    grid-template-columns: 1fr 76px 38px 38px;
+    grid-template-columns: minmax(0, 1fr) 76px 44px;
   }
 }
 
@@ -2675,15 +2725,30 @@ body.light .agenda-alteracao-info {
   }
 
   .agenda-campo-inline-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 76px 44px;
     gap: 8px;
     padding: 10px;
   }
 
   .agenda-campo-inline-item .agenda-inline-action {
-    width: 100%;
-    max-width: 180px;
-    margin: 0 auto;
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    margin: 0;
+    justify-self: end;
+  }
+
+  .agenda-valor-inline-item {
+    grid-template-columns: minmax(0, 1fr) 44px !important;
+  }
+
+  .agenda-valor-inline-item .input {
+    grid-column: 1 / -1;
+  }
+
+  .agenda-valor-inline-item .agenda-inline-action {
+    grid-column: 2;
+    justify-self: end;
   }
 
   .agenda-inline-toolbar {
@@ -3033,7 +3098,13 @@ body.light .agenda-alteracao-info {
   }
 
   .agenda-campo-inline-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 72px 42px;
+  }
+
+  .agenda-mensal-pagamento {
+    width:100%;
+    justify-content:center;
+    border-radius:14px;
   }
 
   .agenda-inline-table {

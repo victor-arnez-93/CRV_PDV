@@ -32,6 +32,7 @@ let tipoNegocioCaixa = "";
 let jogosCaixa = [];
 let jogosCaixaFiltrados = [];
 let jogadoresCaixaPorAgenda = {};
+let mensalidadesCaixa = [];
 let filtroStatusJogosCaixa = "todos";
 let jogoSelecionadoCaixa = null;
 let avisosJogosCaixaEmitidos = new Set();
@@ -241,10 +242,64 @@ function jogadoresCobraveisCaixa(lista = []) {
   });
 }
 
+function jogoMensalCaixa(jogo) {
+  if (!jogo) return false;
+
+  return (
+    String(jogo.tipo_jogo || "").toLowerCase() === "mensalista" ||
+    String(jogo.recorrencia || "").toLowerCase() === "mensal" ||
+    Boolean(jogo.recorrencia_origem_id)
+  );
+}
+
+function buscarMensalidadeCaixa(jogo) {
+  if (!jogo || !jogoMensalCaixa(jogo)) return null;
+
+  const origemId = jogo.recorrencia_origem_id || jogo.id;
+  const dataJogo = String(jogo.data_agendamento || "").slice(0, 10);
+  const competencia = dataJogo.slice(0, 7);
+
+  return mensalidadesCaixa.find(mensalidade => {
+    if (
+      String(mensalidade.agenda_origem_id || "") !== String(origemId) ||
+      String(mensalidade.status || "").toLowerCase() === "cancelado"
+    ) {
+      return false;
+    }
+
+    const inicio = String(mensalidade.data_inicio || "").slice(0, 10);
+    const fim = String(mensalidade.data_fim || "").slice(0, 10);
+
+    if (inicio && fim && dataJogo) {
+      return dataJogo >= inicio && dataJogo <= fim;
+    }
+
+    return (
+      competencia &&
+      String(mensalidade.competencia || "") === competencia
+    );
+  }) || null;
+}
+
+function mensalidadePagaCaixa(mensalidade) {
+  return String(mensalidade?.status || "").toLowerCase() === "pago";
+}
+
 function jogoQuitadoCaixa(jogo) {
   const jogadores = jogadoresCobraveisCaixa(
     jogadoresCaixaPorAgenda[jogo.id] || []
   );
+
+  if (jogoMensalCaixa(jogo)) {
+    const mensalidade = buscarMensalidadeCaixa(jogo);
+
+    if (!mensalidadePagaCaixa(mensalidade)) return false;
+
+    const temPendente = jogadores.some(jogadorPendenteCaixa);
+    const temEmComanda = jogadores.some(jogadorEmComandaCaixa);
+
+    return !temPendente && !temEmComanda;
+  }
 
   if (!jogadores.length) return false;
 
@@ -2495,6 +2550,75 @@ async function prepararRecebimentoMensalidadeAgendaCaixa(recebimento) {
   });
 }
 
+async function receberMensalidadeJogoCaixa(jogoId, mensalidadeId) {
+  if (!caixa || caixa.status !== "aberto") {
+    await alertaCaixa(
+      "Caixa fechado",
+      "Abra o caixa antes de receber a mensalidade do horário."
+    );
+    return;
+  }
+
+  const jogo = jogosCaixa.find(item => {
+    return String(item.id) === String(jogoId);
+  });
+
+  const mensalidade = mensalidadesCaixa.find(item => {
+    return String(item.id) === String(mensalidadeId);
+  });
+
+  if (!jogo || !mensalidade) {
+    await alertaCaixa(
+      "Mensalidade não encontrada",
+      "Atualize os jogos e tente novamente."
+    );
+    return;
+  }
+
+  if (mensalidadePagaCaixa(mensalidade)) {
+    await alertaCaixa(
+      "Mensalidade já paga",
+      "A mensalidade deste horário já foi recebida."
+    );
+    return;
+  }
+
+  const agendaOrigemId =
+    mensalidade.agenda_origem_id ||
+    jogo.recorrencia_origem_id ||
+    jogo.id;
+
+  const recebimento = {
+    tipo: "agenda_mensalidade",
+    mensalidade_id: mensalidade.id,
+    agenda_id: agendaOrigemId,
+    origem_id: mensalidade.id,
+    cliente_nome: jogo.cliente_nome || "Mensalista",
+    local_recurso: jogo.local_recurso || "",
+    hora_inicio: jogo.hora_inicio || "",
+    hora_fim: jogo.hora_fim || "",
+    competencia: mensalidade.competencia || "",
+    valor: Number(mensalidade.valor || jogo.valor_mensal || 0),
+    descricao:
+      `Mensalidade ${jogo.cliente_nome || "Mensalista"} - ` +
+      formatarCompetenciaCaixa(mensalidade.competencia)
+  };
+
+  fecharModalFinalizarJogoCaixa();
+  fecharModalSelecionarJogo();
+
+  try {
+    await prepararRecebimentoMensalidadeAgendaCaixa(recebimento);
+  } catch (err) {
+    console.error("[CAIXA][RECEBER MENSALIDADE]", err);
+
+    await alertaCaixa(
+      "Erro ao preparar mensalidade",
+      err?.message || "Não foi possível abrir o recebimento da mensalidade."
+    );
+  }
+}
+
 async function prepararRecebimentoAvulsoAgendaCaixa(recebimento) {
   const agendaId = recebimento.agenda_id || recebimento.origem_id;
 
@@ -2606,6 +2730,19 @@ async function atualizarMensalidadeAgendaAposVenda(vendaId) {
     .eq("empresa_id", obterEmpresaId());
 
   if (error) throw error;
+
+  const mensalidadeLocal = mensalidadesCaixa.find(item => {
+    return String(item.id) === String(recebimento.mensalidade_id);
+  });
+
+  if (mensalidadeLocal) {
+    mensalidadeLocal.status = "pago";
+    mensalidadeLocal.forma_pagamento = metodoPagamento;
+    mensalidadeLocal.pago_em = new Date().toISOString();
+    mensalidadeLocal.venda_id = vendaId;
+    mensalidadeLocal.caixa_id = caixa?.id || null;
+    mensalidadeLocal.agenda_id = recebimento.agenda_id || null;
+  }
 
   limparRecebimentoAgendaStorage();
 }
@@ -2850,6 +2987,17 @@ const itensAgendaAvulso =
 
 const itemAgendaAvulso =
   itensAgendaAvulso[0] || null;
+
+if (
+  itemMensalidadeAgenda &&
+  carrinho.some(item => String(item.origem || "") !== "agenda_mensalidade")
+) {
+  await alertaCaixa(
+    "Finalize separadamente",
+    "A mensalidade do horário deve ser recebida sozinha. Finalize-a primeiro e depois registre produtos ou outras cobranças."
+  );
+  return;
+}
 
 const vendaPayload = {
   empresa_id: empresaId,
@@ -4162,6 +4310,15 @@ async function carregarJogosCaixa() {
 
     if (erroJogos) throw erroJogos;
 
+    const { data: mensalidades, error: erroMensalidades } = await sb
+      .from("agenda_mensalidades")
+      .select("*")
+      .eq("empresa_id", obterEmpresaId())
+      .neq("status", "cancelado")
+      .order("criado_em", { ascending: false });
+
+    if (erroMensalidades) throw erroMensalidades;
+
     const idsAgenda = (jogos || []).map(jogo => jogo.id);
 
     let jogadores = [];
@@ -4180,12 +4337,18 @@ async function carregarJogosCaixa() {
     }
 
     jogosCaixa = Array.isArray(jogos) ? jogos : [];
+    mensalidadesCaixa =
+      Array.isArray(mensalidades) ? mensalidades : [];
     jogadoresCaixaPorAgenda = agruparJogadoresCaixa(jogadores);
 
     vinculosComandaJogadorCaixa = {};
 
     await crvOfflineDB.salvarCache("caixa_jogos", jogosCaixa);
     await crvOfflineDB.salvarCache("caixa_jogadores_agenda", jogadores);
+    await crvOfflineDB.salvarCache(
+      "caixa_mensalidades_agenda",
+      mensalidadesCaixa
+    );
 
     const idsJogadores = jogadores.map(jogador => jogador.id);
 
@@ -4236,10 +4399,14 @@ async function carregarJogosCaixa() {
     const cacheJogadores =
       await crvOfflineDB.obterCache("caixa_jogadores_agenda") || [];
 
+    const cacheMensalidades =
+      await crvOfflineDB.obterCache("caixa_mensalidades_agenda") || [];
+
     const cacheVinculos =
       await crvOfflineDB.obterCache("caixa_vinculos_comanda_jogador") || {};
 
     jogosCaixa = cacheJogos;
+    mensalidadesCaixa = cacheMensalidades;
     jogadoresCaixaPorAgenda = agruparJogadoresCaixa(cacheJogadores);
     vinculosComandaJogadorCaixa = cacheVinculos;
 
@@ -4387,15 +4554,30 @@ if (!jogosCaixaFiltrados.length) {
 
   jogosCaixaFiltrados.forEach(jogo => {
     const status = calcularStatusJogoCaixa(jogo);
-    const jogadores = jogadoresCaixaPorAgenda[jogo.id] || [];
+    const jogadores =
+      jogadoresCobraveisCaixa(jogadoresCaixaPorAgenda[jogo.id] || []);
+    const mensalidade = buscarMensalidadeCaixa(jogo);
+    const valorMensalidade = Number(mensalidade?.valor || 0);
 
     const recebido = jogadores
-      .filter(jogador => jogador.pago)
-      .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+      .filter(jogadorPagoCaixa)
+      .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0) +
+      (mensalidadePagaCaixa(mensalidade) ? valorMensalidade : 0);
 
     const pendente = jogadores
-      .filter(jogador => !jogador.pago && !jogadorMensalistaIsentoCaixa(jogador))
-      .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+      .filter(jogadorPendenteCaixa)
+      .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0) +
+      (
+        mensalidade && !mensalidadePagaCaixa(mensalidade)
+          ? valorMensalidade
+          : 0
+      );
+
+    const textoMensalidade = mensalidade
+      ? `Mensalidade ${mensalidadePagaCaixa(mensalidade) ? "paga" : "pendente"}`
+      : jogoMensalCaixa(jogo)
+        ? "Mensalidade não localizada"
+        : "";
 
     const btn = document.createElement("button");
 
@@ -4425,6 +4607,11 @@ if (!jogosCaixaFiltrados.length) {
 
       <div class="jogo-caixa-responsavel">
         ${jogo.cliente_nome || "Responsável não informado"}
+        ${
+          textoMensalidade
+            ? `<small>${textoMensalidade}</small>`
+            : ""
+        }
       </div>
 
       <div class="jogo-caixa-valores">
@@ -4537,17 +4724,17 @@ function montarDescricaoJogoComandaCaixa(jogo, jogador) {
 function abrirFinalizacaoJogoCaixa(jogoId) {
   const jogo = jogosCaixa.find(item => String(item.id) === String(jogoId));
 
-if (!jogo) {
-  alertaCaixa(
-    "Jogo não encontrado",
-    "Não foi possível localizar este jogo."
-  );
-  return;
-}
+  if (!jogo) {
+    alertaCaixa(
+      "Jogo não encontrado",
+      "Não foi possível localizar este jogo."
+    );
+    return;
+  }
 
   jogoSelecionadoCaixa = jogo;
 
-  const jogadores = (jogadoresCaixaPorAgenda[jogo.id] || [])
+  const todosJogadores = (jogadoresCaixaPorAgenda[jogo.id] || [])
     .filter(jogador => jogador.removido !== true)
     .sort((a, b) => {
       const statusA = statusPagamentoJogadorCaixa(a);
@@ -4564,27 +4751,115 @@ if (!jogo) {
       return (peso[statusA] || 9) - (peso[statusB] || 9);
     });
 
+  const jogadores = jogadoresCobraveisCaixa(todosJogadores);
+  const qtdMensalistas =
+    todosJogadores.filter(jogadorMensalistaIsentoCaixa).length;
+  const mensalidade = buscarMensalidadeCaixa(jogo);
+  const ehMensal = jogoMensalCaixa(jogo);
+  const mensalidadePaga = mensalidadePagaCaixa(mensalidade);
+  const valorMensalidade = Number(mensalidade?.valor || 0);
+  const jogadoresPendentes = jogadores.filter(jogadorPendenteCaixa);
+  const temCobrancaIndividualPendente = jogadoresPendentes.length > 0;
+
   const modal = document.getElementById("modalFinalizarJogoCaixa");
   const titulo = document.getElementById("finalizarJogoTitulo");
   const subtitulo = document.getElementById("finalizarJogoSubtitulo");
+  const painelMensalidade = document.getElementById("jogoCaixaMensalidade");
   const resumo = document.getElementById("jogoCaixaResumo");
   const lista = document.getElementById("jogoCaixaJogadores");
+  const rateio = document.querySelector(
+    "#modalFinalizarJogoCaixa .jogo-caixa-rateio"
+  );
+  const totalizador = document.querySelector(
+    "#modalFinalizarJogoCaixa .jogo-caixa-totalizador"
+  );
+  const btnConfirmar = document.getElementById("btnConfirmarFinalizarJogo");
 
   const recebido = jogadores
-    .filter(jogador => jogadorPagoCaixa(jogador) && !jogadorMensalistaIsentoCaixa(jogador))
-    .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+    .filter(jogadorPagoCaixa)
+    .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0) +
+    (mensalidadePaga ? valorMensalidade : 0);
 
   const pendente = jogadores
-    .filter(jogador => jogadorPendenteCaixa(jogador) && !jogadorMensalistaIsentoCaixa(jogador))
-    .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
+    .filter(jogadorPendenteCaixa)
+    .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0) +
+    (mensalidade && !mensalidadePaga ? valorMensalidade : 0);
 
   if (titulo) {
     titulo.textContent = `Jogo - ${jogo.local_recurso || "Quadra/Campo"}`;
   }
 
   if (subtitulo) {
-    subtitulo.textContent =
-  `${formatarDataCaixa(jogo.data_agendamento)} · ${formatarHoraCaixa(jogo.hora_inicio)} até ${formatarHoraCaixa(jogo.hora_fim)} · ${jogo.cliente_nome || "Responsável"} · Marque apenas quem está pagando agora.`;
+    subtitulo.textContent = ehMensal
+      ? `${formatarDataCaixa(jogo.data_agendamento)} · ${formatarHoraCaixa(jogo.hora_inicio)} até ${formatarHoraCaixa(jogo.hora_fim)} · ${jogo.cliente_nome || "Responsável"} · Receba a mensalidade do horário e, separadamente, apenas convidados ou suplentes avulsos.`
+      : `${formatarDataCaixa(jogo.data_agendamento)} · ${formatarHoraCaixa(jogo.hora_inicio)} até ${formatarHoraCaixa(jogo.hora_fim)} · ${jogo.cliente_nome || "Responsável"} · Marque apenas quem está pagando agora.`;
+  }
+
+  if (painelMensalidade) {
+    if (!ehMensal) {
+      painelMensalidade.style.display = "none";
+      painelMensalidade.innerHTML = "";
+    } else if (!mensalidade) {
+      painelMensalidade.style.display = "flex";
+      painelMensalidade.className =
+        "jogo-caixa-mensalidade mensalidade-nao-localizada";
+      painelMensalidade.innerHTML = `
+        <div class="jogo-caixa-mensalidade-info">
+          <span class="jogo-caixa-mensalidade-rotulo">
+            Mensalidade do horário
+          </span>
+          <strong>Registro mensal não localizado</strong>
+          <small>
+            Confira a mensalidade deste mês na Agenda. Nenhum valor foi criado
+            ou alterado pelo Caixa.
+          </small>
+        </div>
+      `;
+    } else {
+      painelMensalidade.style.display = "flex";
+      painelMensalidade.className =
+        `jogo-caixa-mensalidade ${mensalidadePaga ? "mensalidade-paga" : "mensalidade-pendente"}`;
+      painelMensalidade.innerHTML = `
+        <div class="jogo-caixa-mensalidade-info">
+          <span class="jogo-caixa-mensalidade-rotulo">
+            Mensalidade do horário · ${formatarCompetenciaCaixa(mensalidade.competencia)}
+          </span>
+          <strong>${fmt(valorMensalidade)}</strong>
+          <small>
+            ${qtdMensalistas}
+            mensalista${qtdMensalistas !== 1 ? "s" : ""}
+            · responsável: ${jogo.cliente_nome || "não informado"}
+          </small>
+        </div>
+
+        <div class="jogo-caixa-mensalidade-acao">
+          <span class="jogo-caixa-mensalidade-status">
+            ${mensalidadePaga ? "Pago" : "Pendente"}
+          </span>
+
+          ${
+            mensalidadePaga
+              ? ""
+              : `
+                <button
+                  class="btn-secondary"
+                  type="button"
+                  id="btnReceberMensalidadeJogo"
+                >
+                  <i data-lucide="wallet-cards" width="15" height="15"></i>
+                  <span>Receber mensalidade</span>
+                </button>
+              `
+          }
+        </div>
+      `;
+
+      document
+        .getElementById("btnReceberMensalidadeJogo")
+        ?.addEventListener("click", () => {
+          receberMensalidadeJogoCaixa(jogo.id, mensalidade.id);
+        });
+    }
   }
 
   if (resumo) {
@@ -4600,51 +4875,64 @@ if (!jogo) {
       </div>
 
       <div>
-        <span>Jogadores</span>
+        <span>${ehMensal ? "Avulsos extras" : "Jogadores"}</span>
         <strong>${jogadores.length}</strong>
       </div>
     `;
   }
 
   const inputRateio = document.getElementById("valorTotalJogoCaixa");
-const btnRateio = document.getElementById("btnAplicarRateioJogo");
+  const btnRateio = document.getElementById("btnAplicarRateioJogo");
 
-if (inputRateio) {
-  const totalPrevisto = Number(jogo.valor_total || jogo.valor_previsto || 0);
+  if (rateio) {
+    rateio.style.display = temCobrancaIndividualPendente ? "grid" : "none";
+  }
 
-  inputRateio.value = totalPrevisto > 0
-    ? totalPrevisto.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })
-    : "";
-}
+  if (totalizador) {
+    totalizador.style.display =
+      temCobrancaIndividualPendente ? "flex" : "none";
+  }
 
-if (btnRateio) {
-  btnRateio.onclick = aplicarRateioJogoCaixa;
-}
+  if (btnConfirmar) {
+    btnConfirmar.style.display =
+      temCobrancaIndividualPendente ? "inline-flex" : "none";
+  }
+
+  if (inputRateio) {
+    const totalPrevisto = ehMensal
+      ? jogadoresPendentes.reduce((acc, item) => {
+          return acc + Number(item.valor || 0);
+        }, 0)
+      : Number(jogo.valor_total || jogo.valor_previsto || 0);
+
+    inputRateio.value = totalPrevisto > 0
+      ? totalPrevisto.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })
+      : "";
+  }
+
+  if (btnRateio) {
+    btnRateio.onclick = aplicarRateioJogoCaixa;
+  }
 
   if (lista) {
     if (!jogadores.length) {
       lista.innerHTML = `
-        <div class="empty-state">
-          <p>Nenhum jogador lançado neste jogo.</p>
+        <div class="empty-state jogo-caixa-sem-avulsos">
+          <i data-lucide="${ehMensal ? "users-round" : "user-x"}" width="22" height="22"></i>
+          <p>
+            ${
+              ehMensal
+                ? "Nenhum convidado ou suplente avulso foi lançado. A mensalidade do horário é recebida acima."
+                : "Nenhum jogador lançado neste jogo."
+            }
+          </p>
         </div>
       `;
     } else {
       lista.innerHTML = jogadores.map(jogador => {
-        // Mensalista isento: exibe como linha informativa sem cobrança
-        if (jogadorMensalistaIsentoCaixa(jogador)) {
-          return `
-            <div class="jogo-caixa-jogador-row mensalista-isento" data-jogador-id="${jogador.id}" style="opacity:.6;pointer-events:none;">
-              <span class="jogo-caixa-jogador-nome" style="grid-column:1/-1;font-style:italic;">
-                <i data-lucide="user-check" width="13" height="13" style="display:inline;margin-right:4px;"></i>
-                ${jogador.nome || "Jogador"} &mdash; <small>mensalista (isento de cobran&ccedil;a individual)</small>
-              </span>
-            </div>
-          `;
-        }
-
         const statusPagamento = statusPagamentoJogadorCaixa(jogador);
         const pago = jogadorPagoCaixa(jogador);
         const emComanda = jogadorEmComandaCaixa(jogador);
@@ -4669,7 +4957,7 @@ if (btnRateio) {
         }
 
         return `
-            <div class="jogo-caixa-jogador-row ${bloqueado ? "pago" : ""}" data-jogador-id="${jogador.id}">
+          <div class="jogo-caixa-jogador-row ${bloqueado ? "pago" : ""}" data-jogador-id="${jogador.id}">
             <input
               type="checkbox"
               class="jogo-caixa-check"
@@ -4699,13 +4987,13 @@ if (btnRateio) {
             </select>
 
             <button
-                            class="btn-ghost jogo-caixa-btn-comanda ${emComanda || statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA ? "vinculado" : ""}"
+              class="btn-ghost jogo-caixa-btn-comanda ${emComanda || statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA ? "vinculado" : ""}"
               type="button"
               data-jogador-id="${jogador.id}"
               ${bloqueado ? "disabled" : ""}
             >
               <i data-lucide="ticket" width="14" height="14"></i>
-                            <span>${emComanda || statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA ? "Vinculado" : "Comanda"}</span>
+              <span>${emComanda || statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA ? "Vinculado" : "Comanda"}</span>
             </button>
           </div>
         `;
@@ -4749,9 +5037,15 @@ if (btnRateio) {
 
 function fecharModalFinalizarJogoCaixa() {
   const modal = document.getElementById("modalFinalizarJogoCaixa");
+  const painelMensalidade = document.getElementById("jogoCaixaMensalidade");
 
   if (modal) {
     modal.style.display = "none";
+  }
+
+  if (painelMensalidade) {
+    painelMensalidade.style.display = "none";
+    painelMensalidade.innerHTML = "";
   }
 
   jogoSelecionadoCaixa = null;
@@ -4761,13 +5055,6 @@ function aplicarRateioJogoCaixa() {
   const inputRateio = document.getElementById("valorTotalJogoCaixa");
 
   const totalJogo = normalizarNumero(inputRateio?.value || 0);
-
-  const jogadores =
-    jogadoresCaixaPorAgenda[jogoSelecionadoCaixa?.id] || [];
-
-  const jogadoresValidos = jogadores.filter(jogador => {
-    return jogador.removido !== true;
-  });
 
   const totalParaRatear = totalJogo;
 
@@ -4794,9 +5081,8 @@ function aplicarRateioJogoCaixa() {
   }
 
   const totalCentavos = Math.round(totalParaRatear * 100);
-    // Rateio somente entre jogadores cobráveis (exclui mensalistas isentos)
-    const jogadoresCobrarveisRateio = jogadoresValidos.filter(j => !jogadorMensalistaIsentoCaixa(j));
-    const qtd = jogadoresCobrarveisRateio.length;
+  // As linhas exibidas já contêm somente cobranças individuais válidas.
+  const qtd = linhasPendentes.length;
 
   const baseCentavos = Math.floor(totalCentavos / qtd);
   let restoCentavos = totalCentavos - (baseCentavos * qtd);
@@ -5849,31 +6135,47 @@ const jogosAtivos = jogosCaixa.filter(jogo => {
       ${jogosAtivos.map(jogo => {
 
         const status = calcularStatusJogoCaixa(jogo);
+        const todosJogadores =
+          jogadoresCaixaPorAgenda[jogo.id] || [];
+        const jogadores =
+          jogadoresCobraveisCaixa(todosJogadores);
+        const qtdMensalistas =
+          todosJogadores.filter(jogadorMensalistaIsentoCaixa).length;
+        const mensalidade = buscarMensalidadeCaixa(jogo);
+        const ehMensal = jogoMensalCaixa(jogo);
+        const mensalidadePaga = mensalidadePagaCaixa(mensalidade);
+        const valorMensalidade = Number(mensalidade?.valor || 0);
 
-const jogadores =
-  jogadoresCobraveisCaixa(jogadoresCaixaPorAgenda[jogo.id] || []);
-
-const pagos = jogadores.filter(jogador =>
-  jogadorPagoCaixa(jogador)
-);
-
-const emComanda = jogadores.filter(jogador =>
-  jogadorEmComandaCaixa(jogador)
-);
-
-const pendentes = jogadores.filter(jogador =>
-  jogadorPendenteCaixa(jogador)
-);
+        const pagos = jogadores.filter(jogadorPagoCaixa);
+        const emComanda = jogadores.filter(jogadorEmComandaCaixa);
+        const pendentes = jogadores.filter(jogadorPendenteCaixa);
 
         const valorPendente =
           pendentes.reduce((acc, j) => {
             return acc + Number(j.valor || 0);
-          }, 0);
+          }, 0) +
+          (
+            mensalidade && !mensalidadePaga
+              ? valorMensalidade
+              : 0
+          );
 
         let statusVisual = status;
         let textoStatus = status;
 
-        if (
+        if (ehMensal && !mensalidade) {
+          statusVisual = "cobranca";
+          textoStatus = "mensalidade não localizada";
+        } else if (ehMensal && !mensalidadePaga) {
+          statusVisual = pagos.length > 0 ? "parcial" : "cobranca";
+          textoStatus = "mensalidade pendente";
+        } else if (ehMensal && pendentes.length > 0) {
+          statusVisual = "parcial";
+          textoStatus = "avulsos pendentes";
+        } else if (ehMensal && emComanda.length > 0) {
+          statusVisual = "parcial";
+          textoStatus = "avulsos em comanda";
+        } else if (
           status === "cobranca" &&
           pagos.length > 0 &&
           pendentes.length > 0
@@ -5881,6 +6183,36 @@ const pendentes = jogadores.filter(jogador =>
           statusVisual = "parcial";
           textoStatus = "pagamento parcial";
         }
+
+        const detalhesPagamento = ehMensal
+          ? `
+              <span>
+                ${qtdMensalistas}
+                mensalista${qtdMensalistas !== 1 ? "s" : ""}
+              </span>
+
+              <span>
+                ${pendentes.length}
+                avulso${pendentes.length !== 1 ? "s" : ""} pendente${pendentes.length !== 1 ? "s" : ""}
+              </span>
+
+              <span>
+                Mensalidade ${mensalidadePaga ? "paga" : "pendente"}
+              </span>
+            `
+          : `
+              <span>
+                ${pagos.length} pago${pagos.length !== 1 ? "s" : ""}
+              </span>
+
+              <span>
+                ${pendentes.length} pendente${pendentes.length !== 1 ? "s" : ""}
+              </span>
+
+              <span>
+                ${emComanda.length} comanda
+              </span>
+            `;
 
         return `
           <button
@@ -5905,17 +6237,7 @@ const pendentes = jogadores.filter(jogador =>
 
             <div class="jogo-ativo-bottom">
 
-              <span>
-                ${pagos.length} pago${pagos.length !== 1 ? "s" : ""}
-              </span>
-
-              <span>
-                ${pendentes.length} pendente${pendentes.length !== 1 ? "s" : ""}
-              </span>
-
-              <span>
-                ${emComanda.length} comanda
-              </span>
+              ${detalhesPagamento}
 
               <strong>
                 ${fmt(valorPendente)}
