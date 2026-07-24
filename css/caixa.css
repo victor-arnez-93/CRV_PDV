@@ -2523,6 +2523,11 @@ body.light .jogo-caixa-status.cobranca {
   stroke: #ffffff !important;
 }
 
+/* Número branco no contador do carrinho — tema claro */
+[data-theme="light"] .cart-count {
+  color: #ffffff !important;
+}
+
 /* ======================================================
    RESPONSIVE — CAIXA / PDV
 ====================================================== */
