@@ -2515,15 +2515,24 @@ body.light .jogo-caixa-status.cobranca {
   flex: 0 0 275px;
 }
 
-/* Texto e ícone brancos no botão ativo — tema claro */
+/* Botão Modo balcão — texto e ícone brancos no ativo e hover */
 [data-theme="light"] #btnModoBalcao.active,
 [data-theme="light"] #btnModoBalcao.active span,
-[data-theme="light"] #btnModoBalcao.active svg {
+[data-theme="light"] #btnModoBalcao.active i,
+[data-theme="light"] #btnModoBalcao.active svg,
+[data-theme="light"] #btnModoBalcao:hover,
+[data-theme="light"] #btnModoBalcao:hover span,
+[data-theme="light"] #btnModoBalcao:hover i,
+[data-theme="light"] #btnModoBalcao:hover svg {
   color: #ffffff !important;
+}
+
+[data-theme="light"] #btnModoBalcao.active svg,
+[data-theme="light"] #btnModoBalcao:hover svg {
   stroke: #ffffff !important;
 }
 
-/* Número branco no contador do carrinho — tema claro */
+/* Número branco no contador do carrinho */
 [data-theme="light"] .cart-count {
   color: #ffffff !important;
 }
