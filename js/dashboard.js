@@ -187,8 +187,18 @@ async function initDashboard() {
     let caixaAtual = null;
     let produtosBaixo = [];
     let jogosHoje = [];
+    let dadosRemotosCarregados = false;
 
-    if (APP_STATUS.online && APP_STATUS.supabase_ok) {
+    const navegadorOnline =
+      typeof navigator === "undefined" ||
+      navigator.onLine !== false;
+
+    const podeConsultarSupabase =
+      navegadorOnline &&
+      Boolean(window.sb);
+
+    if (podeConsultarSupabase) {
+      try {
       logSistema("DASHBOARD", "Buscando dados do Supabase...");
 
       const { data: vendasData, error: vendasError } = await sb
@@ -250,8 +260,24 @@ if (empresaUsaAgendaEsportivaDashboard()) {
       await crvOfflineDB.salvarCache("dashboard_itens", itens);
       await crvOfflineDB.salvarCache("dashboard_caixa", caixaAtual);
 
+      dadosRemotosCarregados = true;
+
       logSistema("DASHBOARD", "Dados carregados do Supabase", "success");
-    } else {
+      } catch (erroSupabase) {
+        console.warn(
+          "[CRV PDV][DASHBOARD][SUPABASE]",
+          erroSupabase
+        );
+
+        logSistema(
+          "DASHBOARD",
+          "Supabase indisponível - usando dados offline",
+          "warn"
+        );
+      }
+    }
+
+    if (!dadosRemotosCarregados) {
       logSistema("DASHBOARD", "Modo offline - usando IndexedDB", "warn");
 
       const dadosOffline =

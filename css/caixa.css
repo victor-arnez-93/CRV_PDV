@@ -2515,6 +2515,14 @@ body.light .jogo-caixa-status.cobranca {
   flex: 0 0 275px;
 }
 
+/* Texto e ícone brancos no botão ativo — tema claro */
+[data-theme="light"] #btnModoBalcao.active,
+[data-theme="light"] #btnModoBalcao.active span,
+[data-theme="light"] #btnModoBalcao.active svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 /* ======================================================
    RESPONSIVE — CAIXA / PDV
 ====================================================== */
