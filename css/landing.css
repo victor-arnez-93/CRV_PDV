@@ -922,28 +922,44 @@ html[data-theme="dark"] body::before {
   font-size: .88rem;
 }
 
-.prelogin-card .btn-primary {
+.prelogin-card form {
   width: 100%;
   max-width: 100%;
   min-width: 0;
 
-  height: 40px;
-  min-height: 40px;
+  margin: 0;
+  padding: 0;
 
-  display: flex;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.prelogin-card .btn-primary,
+.prelogin-card #btnValidarPrelogin {
+  position: relative;
+  isolation: isolate;
+
+  width: min(100%, 280px) !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  height: 44px;
+  min-height: 44px;
+
+  margin: 14px auto 0 !important;
+  padding: 0 16px !important;
+
+  display: flex !important;
   align-items: center;
   justify-content: center;
 
-  padding: 0 20px;
-  margin-top: 8px;
-}
+  box-sizing: border-box;
+  overflow: hidden;
 
-.prelogin-card #btnValidarPrelogin {
-  width: 100%;
-  max-width: 280px;
-  min-width: 0;
-  margin: 14px auto 0;
-  display: flex;
+  border-radius: var(--landing-radius-pill);
+
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* ======================================================
@@ -1963,14 +1979,42 @@ html[data-theme="light"] .step-card > span {
   }
 
   .cta-actions {
+    width: 100%;
+    display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    gap: 10px;
   }
 
-  .cta-actions .btn {
-    width: 100%;
-    max-width: 260px;
+  .cta-actions .btn,
+  .cta-actions .btn-primary,
+  .cta-actions .btn-secondary {
+    position: relative;
+    width: min(100%, 220px) !important;
+    max-width: 220px !important;
+    min-width: 0 !important;
+    height: 40px;
+    min-height: 40px;
+    margin: 0 auto !important;
+    padding: 0 14px !important;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    border-radius: var(--landing-radius-pill);
+    font-size: .78rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .cta-actions .btn i,
+  .cta-actions .btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
 
   .footer-copy {
