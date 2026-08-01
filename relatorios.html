@@ -1,354 +1,39 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="js/core/boot.js"></script>
-  <title>CRV PDV — Relatórios</title>
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/relatorios.css" />
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FLUUX — Relatórios.">
+  <meta name="theme-color" content="#090d10">
+  <title>FLUUX — Relatórios</title>
+  <script>document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";</script>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/relatorios.css">
+  
 </head>
-<body>
-
-<div class="app-shell">
-
-  <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar">
-<div class="sidebar-logo">
-  <div class="sidebar-logo-img-wrap">
-    <img src="assets/logo1.png" alt="CRV PDV" class="sidebar-logo-img" />
-  </div>
-  <span class="sidebar-logo-sub"></span>
-</div>
-
-<nav class="sidebar-nav">
-
-  <span class="nav-section-label">
-    Principal
-  </span>
-
-  <a href="dashboard.html" class="nav-item">
-    <i data-lucide="layout-dashboard" class="nav-icon"></i>
-    Dashboard
-  </a>
-
-  <a href="caixa.html" class="nav-item">
-    <i data-lucide="wallet" class="nav-icon"></i>
-    Caixa / PDV
-  </a>
-
-  <a href="comandas.html" class="nav-item">
-    <i data-lucide="ticket" class="nav-icon"></i>
-    Comandas
-  </a>
-
-  <a href="agenda.html" class="nav-item">
-    <i data-lucide="calendar-days" class="nav-icon"></i>
-    Agenda
-  </a>
-
-  <a href="vendas.html" class="nav-item">
-    <i data-lucide="shopping-cart" class="nav-icon"></i>
-    Vendas
-  </a>
-
-  <span class="nav-section-label">
-    Cadastros
-  </span>
-
-  <a href="produtos.html" class="nav-item">
-    <i data-lucide="package" class="nav-icon"></i>
-    Produtos
-  </a>
-
-  <a href="clientes.html" class="nav-item">
-    <i data-lucide="users" class="nav-icon"></i>
-    Clientes
-  </a>
-
-  <span class="nav-section-label">
-    Relatórios
-  </span>
-
-  <a href="relatorios.html" class="nav-item active">
-    <i data-lucide="bar-chart-2" class="nav-icon"></i>
-    Relatórios
-  </a>
-
-  <span class="nav-section-label">
-    Sistema
-  </span>
-
-  <a href="configuracoes.html" class="nav-item">
-    <i data-lucide="settings" class="nav-icon"></i>
-    Configurações
-  </a>
-
-</nav>
-    <div class="sidebar-footer">
-  <a href="https://crvsolucoesti.com" target="_blank" rel="noopener" class="sidebar-footer-link">
-    <span class="sidebar-footer-label">Desenvolvido por</span>
-    <img src="assets/logo2.png" alt="CRV Soluções TI" class="sidebar-footer-logo" />
-  </a>
-</div>
-
-  </aside>
-
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <div style="display:flex;flex-direction:column;min-height:100vh;">
-
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn-menu" id="btnMenu"><i data-lucide="menu" width="22" height="22"></i></button>
-        <span class="topbar-title">Relatórios</span>
-      </div>
-      <div class="topbar-actions">
-        <div class="caixa-status" id="caixaStatus">
-          <span class="status-dot closed" id="statusDot"></span>
-          <span id="statusText">Verificando caixa...</span>
-        </div>
-        <div class="topbar-datetime" id="topbarDatetime"></div>
-        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon" id="iconTheme"></i></button>
-        <div class="topbar-avatar">
-  <i class="fa-solid fa-user"></i>
-</div>
-      </div>
-    </header>
-
-    <!-- MAIN -->
-    <main class="main-content">
-
-<!-- PAGE HEADER -->
-<div class="page-header">
-  <div>
-    <h2>Relatórios</h2>
-    <p id="subtitleRelatorio">Resumo do período atual</p>
-  </div>
-
-  <div class="header-actions">
-    <button class="btn-primary" id="btnExportPDF">
-      <i data-lucide="file-text" width="15" height="15"></i>
-      <span>Exportar PDF</span>
-    </button>
-
-    <button class="btn-primary" onclick="exportarExcel()">
-      <i data-lucide="file-spreadsheet" width="15" height="15"></i>
-      <span>Exportar Excel</span>
-    </button>
-  </div>
-</div>
-
-      <!-- PERÍODO -->
-      <div class="relatorio-periodo card">
-        <span class="periodo-label">Período</span>
-        <div class="periodo-btns">
-          <button class="periodo-btn active" data-periodo="hoje" onclick="setPeriodo(this,'hoje')">Hoje</button>
-          <button class="periodo-btn" data-periodo="semana" onclick="setPeriodo(this,'semana')">7 dias</button>
-          <button class="periodo-btn" data-periodo="mes" onclick="setPeriodo(this,'mes')">30 dias</button>
-        </div>
-        <div class="periodo-custom">
-          <input class="input" type="date" id="dataInicio" style="height:36px;font-size:0.85rem;" />
-          <span style="color:var(--text-muted);font-size:0.8rem;">até</span>
-          <input class="input" type="date" id="dataFim" style="height:36px;font-size:0.85rem;" />
-          <button class="btn-ghost" style="padding:7px 14px;font-size:0.8rem;" onclick="aplicarPeriodo()">
-            Filtrar
-          </button>
-        </div>
-      </div>
-
-      <!-- CARDS RESUMO -->
-<div class="relatorio-cards">
-
-  <div class="card relatorio-card">
-    <div class="card-title">
-      <i data-lucide="trending-up" width="13" height="13"></i>
-      Faturamento
-    </div>
-    <div class="card-value" id="relFaturamento">R$ 0,00</div>
-    <div class="card-delta" id="relFaturamentoDelta">—</div>
-  </div>
-
-  <div class="card relatorio-card">
-    <div class="card-title">
-      <i data-lucide="coins" width="13" height="13"></i>
-      Lucro Bruto
-    </div>
-    <div class="card-value lucro" id="relLucro">R$ 0,00</div>
-    <div class="card-delta" id="relMargem">Margem: 0%</div>
-  </div>
-
-  <div class="card relatorio-card">
-    <div class="card-title">
-      <i data-lucide="shopping-bag" width="13" height="13"></i>
-      Vendas
-    </div>
-    <div class="card-value" id="relVendas">0</div>
-    <div class="card-delta">transações</div>
-  </div>
-
-  <div class="card relatorio-card">
-    <div class="card-title">
-      <i data-lucide="receipt" width="13" height="13"></i>
-      Ticket Médio
-    </div>
-    <div class="card-value" id="relTicket">R$ 0,00</div>
-    <div class="card-delta">por venda</div>
-  </div>
-
-</div>
-
-      <!-- GRÁFICOS -->
-      <div class="relatorio-graficos">
-
-        <!-- Faturamento por hora -->
-        <div class="card grafico-card">
-          <div class="grafico-header">
-            <h3>Vendas por hora</h3>
-            <span class="badge badge-info" id="badgePeriodo">Hoje</span>
-          </div>
-          <div class="grafico-wrap">
-            <canvas id="chartHoras"></canvas>
-          </div>
-        </div>
-
-        <!-- Formas de pagamento -->
-        <div class="card grafico-card grafico-card-sm">
-          <div class="grafico-header">
-            <h3>Formas de pagamento</h3>
-          </div>
-          <div class="grafico-wrap grafico-donut-wrap">
-            <canvas id="chartPagamentos"></canvas>
-          </div>
-          <div class="pagamento-legenda" id="pagamentoLegenda"></div>
-        </div>
-
-      </div>
-
-<!-- TOP PRODUTOS -->
-<div class="relatorio-top-grid">
-
-  <div class="card relatorio-top">
-    <div class="grafico-header" style="margin-bottom:16px;">
-      <h3>Produtos mais vendidos</h3>
-      <span class="badge badge-warning" id="badgeTopQtd">0 itens</span>
-    </div>
-    <div id="topProdutos"></div>
-  </div>
-
-  <div class="card relatorio-top">
-    <div class="grafico-header" style="margin-bottom:16px;">
-      <h3>Produtos mais lucrativos</h3>
-      <span class="badge badge-success" id="badgeTopLucro">0 itens</span>
-    </div>
-    <div id="topProdutosLucro"></div>
-  </div>
-
-</div>
-
-      <!-- JOGOS / AGENDA -->
-<div class="card relatorio-jogos" id="cardRelatorioJogos" style="display:none;">
-  <div class="grafico-header" style="margin-bottom:16px;">
-    <h3>Recebimentos de jogos</h3>
-    <span class="badge badge-info" id="badgeJogosQtd">0 registro(s)</span>
-  </div>
-
-  <div id="listaJogosRelatorio"></div>
-</div>
-
-      <!-- HISTÓRICO DE CAIXAS -->
-      <div class="card relatorio-caixas">
-        <div class="grafico-header" style="margin-bottom:16px;">
-          <h3>Histórico de caixas</h3>
-        </div>
-        <div id="historicoCaixas"></div>
-      </div>
-
+<body data-page="relatorios" data-page-label="Relatórios">
+  <a class="skip-link" href="#mainContent">Pular para o conteúdo</a>
+  <div class="boot-screen" id="bootScreen"><div class="boot-logo"><img src="assets/img/logo.png" alt="FLUUX"></div><span class="spinner"></span><p>Conectando ao sistema...</p></div>
+  <div class="app-shell" id="appShell" hidden>
+    <main class="main-content" id="mainContent" tabindex="-1">
+      <div class="page-heading"><div><span class="eyebrow">CONSOLIDAÇÃO</span><h1>Relatórios</h1><p>Filtre, revise e exporte informações para acompanhamento e apresentação.</p></div><div class="header-actions"><button class="btn-secondary" id="exportExcelButton" type="button"><i class="fa-regular fa-file-excel"></i> Exportar Excel</button><button class="btn-primary" id="exportPdfButton" type="button"><i class="fa-regular fa-file-pdf"></i> Gerar PDF</button></div></div>
+      <section class="panel report-filter-panel"><div class="report-periods"><button data-report-period="today">Hoje</button><button data-report-period="7">7 dias</button><button class="active" data-report-period="30">30 dias</button><button data-report-period="month">Mês atual</button><button data-report-period="year">Ano</button><button data-report-period="custom">Personalizado</button></div><div class="report-filter-grid" id="reportFilterGrid"><label class="field custom-date"><span>De</span><input id="reportStartDate" type="date"></label><label class="field custom-date"><span>Até</span><input id="reportEndDate" type="date"></label><label class="field"><span>Status</span><select id="reportStatus"><option value="">Todos</option><option>Pendente</option><option>Em andamento</option><option>Aguardando retorno</option><option>Concluída</option><option>Atrasada</option><option>Cancelada</option></select></label><label class="field"><span>Prioridade</span><select id="reportPriority"><option value="">Todas</option><option>Baixa</option><option>Normal</option><option>Alta</option><option>Urgente</option></select></label><label class="field"><span>Gestor</span><select id="reportManager"><option value="">Todos</option></select></label><label class="field"><span>Categoria</span><select id="reportCategory"><option value="">Todas</option></select></label><label class="field"><span>Responsável</span><input id="reportResponsible" type="search" placeholder="Nome do responsável"></label></div></section>
+      <section class="report-cards"><article class="report-card"><small>Total de demandas</small><strong id="reportTotal">0</strong><p id="reportPeriodLabel">Últimos 30 dias</p></article><article class="report-card"><small>Concluídas</small><strong id="reportDone">0</strong><p id="reportDoneRate">0% de conclusão</p></article><article class="report-card"><small>Em andamento</small><strong id="reportProgress">0</strong><p>demandas ativas</p></article><article class="report-card"><small>Atrasadas</small><strong id="reportOverdue">0</strong><p>prazo vencido</p></article><article class="report-card"><small>Horas estimadas</small><strong id="reportEstimatedHours">0h</strong><p>esforço previsto</p></article><article class="report-card"><small>Horas realizadas</small><strong id="reportActualHours">0h</strong><p id="reportHoursRate">0% do estimado</p></article></section>
+      <section class="table-shell report-section"><div class="panel-head"><div><small>DETALHAMENTO</small><h2>Demandas do relatório</h2></div><strong id="reportDemandCount">0 registros</strong></div><div class="report-table-scroll"><table class="report-demands-table"><thead><tr><th>Código</th><th>Demanda</th><th>Gestor</th><th>Responsável</th><th>Categoria</th><th>Prioridade</th><th>Status</th><th>Entrada</th><th>Prazo</th><th>Est.</th><th>Real.</th></tr></thead><tbody id="reportBody"><tr><td colspan="11" class="empty-table">Carregando relatório...</td></tr></tbody></table></div></section>
+      <section class="table-shell report-section"><div class="panel-head"><div><small>SUSTENTAÇÃO</small><h2>Conversores de mídia no período</h2></div><strong id="reportConverterSummary">0 trocas</strong></div><div class="converter-summary-grid"><article class="converter-summary-item"><small>Atendimentos</small><strong id="reportConverterRecords">0</strong></article><article class="converter-summary-item"><small>Conversores trocados</small><strong id="reportConverterQuantity">0</strong></article><article class="converter-summary-item"><small>Local com mais ocorrências</small><strong id="reportConverterTopLocation">—</strong></article></div><div class="report-table-scroll"><table class="report-converters-table"><thead><tr><th>Código</th><th>Data</th><th>Local</th><th>Ponto</th><th>Atendimento</th><th>Conversão</th><th>Qtd.</th><th>Motivo</th><th>Status</th></tr></thead><tbody id="reportConvertersBody"><tr><td colspan="9" class="empty-table">Carregando conversores...</td></tr></tbody></table></div></section>
     </main>
   </div>
-</div>
-
-<!-- MODAL USUÁRIO -->
-<div class="modal-overlay hidden" id="userModal">
-  <div class="user-modal">
-
-    <!-- HEADER -->
-    <div class="user-modal-header">
-      <div class="user-info">
-        <div class="user-avatar">
-          <i class="fa-solid fa-user"></i>
-        </div>
-        <div>
-          <strong>admin</strong>
-          <span>admin@admin.com</span>
-        </div>
-      </div>
-
-      <button class="modal-close" id="closeUserModal">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <!-- BODY -->
-    <div class="user-modal-body">
-
-      <div class="user-row">
-        <span>Último acesso:</span>
-        <strong>24/03/2026, 20:42:33</strong>
-      </div>
-
-      <div class="user-row">
-        <span>Perfil:</span>
-        <strong>Operador</strong>
-      </div>
-
-      <div class="user-row">
-        <span>Sessão ativa há:</span>
-        <strong>0 min</strong>
-      </div>
-
-      <!-- BOTÕES -->
-      <div class="user-actions">
-        <button class="btn-secondary"><span>Configurações</span></button>
-        <button class="btn-secondary"><span>Alterar Senha</span></button>
-        <button class="btn-primary">Sair do Sistema</button>
-      </div>
-
-    </div>
-
-    <!-- FOOTER -->
-    <div class="user-modal-footer">
-      Sistema seguro • CRV PDV
-    </div>
-
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script src="js/supabase.js"></script>
-<script src="js/auth.js"></script>
-
-<script src="js/core/user.js"></script>
-<script src="js/core/config.js"></script>
-
-<!-- CORE OFFLINE -->
-<script src="js/core/logger.js"></script>
-<script src="js/core/offline-db.js"></script>
-<script src="js/core/sync.js"></script>
-<script src="js/core/network.js"></script>
-
-<script src="js/app.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-<!-- JS DA PÁGINA -->
-<script src="js/relatorios.js"></script>
-
+  <div class="fatal-layer" id="fatalLayer" hidden><section><i class="fa-solid fa-plug-circle-xmark"></i><h1>Não foi possível iniciar o FLUUX</h1><p id="fatalMessage">Confira a configuração e tente novamente.</p><button class="btn-primary" type="button" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Tentar novamente</button><a href="index.html">Voltar ao login</a></section></div>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="assets/js/env.js"></script>
+  <script type="module" src="assets/js/relatorios.js"></script>
 </body>
 </html>
