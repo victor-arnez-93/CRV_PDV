@@ -1,5 +1,5 @@
 // ======================================================
-// CRV PDV - RELATÃ“RIOS GERENCIAIS
+// CRV PDV - RELATÓRIOS GERENCIAIS
 // Supabase real + lucro + PDF + Excel/CSV formatado
 // ======================================================
 
@@ -36,10 +36,10 @@ function normalizarFormaPagamentoRelatorio(forma) {
   const valor = String(forma || "").toLowerCase().trim();
 
   if (valor === "cartao") return "debito";
-  if (valor === "dÃ©bito") return "debito";
-  if (valor === "crÃ©dito") return "credito";
+  if (valor === "débito") return "debito";
+  if (valor === "crédito") return "credito";
 
-  return valor || "â€”";
+  return valor || "—";
 }
 
 function labelFormaPagamentoRelatorio(forma) {
@@ -47,12 +47,12 @@ function labelFormaPagamentoRelatorio(forma) {
 
   const labels = {
     dinheiro: "Dinheiro",
-    debito: "DÃ©bito",
-    credito: "CrÃ©dito",
+    debito: "Débito",
+    credito: "Crédito",
     pix: "PIX",
     misto: "Misto",
     comanda: "Comanda",
-    "â€”": "â€”"
+    "—": "—"
   };
 
   return labels[valor] || valor.toUpperCase();
@@ -67,7 +67,7 @@ function empresaUsaAgendaEsportiva() {
 }
 
 // ======================================================
-// OFFLINE RELATÃ“RIOS
+// OFFLINE RELATÓRIOS
 // ======================================================
 
 async function obterDadosOfflineRelatorios() {
@@ -180,7 +180,7 @@ async function carregarDados() {
     const empresaId = obterEmpresaId();
 
     if (!empresaId) {
-      console.warn("[RELATÃ“RIOS] empresa_id nÃ£o encontrado.");
+      console.warn("[RELATÓRIOS] empresa_id não encontrado.");
       return;
     }
 
@@ -262,7 +262,7 @@ produtos = Array.isArray(produtosSupabase)
     } else {
 
       crvLog(
-        "RELATÃ“RIOS",
+        "RELATÓRIOS",
         "Modo offline - usando IndexedDB",
         "warn"
       );
@@ -331,13 +331,13 @@ produtos = Array.isArray(produtosSupabase)
     console.error(err);
 
     crvLog(
-      "RELATÃ“RIOS",
+      "RELATÓRIOS",
       err.message,
       "error"
     );
 
     mostrarModalAviso(
-      "NÃ£o foi possÃ­vel carregar os relatÃ³rios agora."
+      "Não foi possível carregar os relatórios agora."
     );
 
     vendasData = [];
@@ -349,7 +349,7 @@ produtos = Array.isArray(produtosSupabase)
 }
 
 // ======================================================
-// PERÃODO
+// PERÍODO
 // ======================================================
 
 function setPeriodo(btn, periodo) {
@@ -376,8 +376,8 @@ function getPeriodoDetalhado() {
 function getPeriodoLabel() {
   return {
     hoje: "Hoje",
-    semana: "Ãšltimos 7 dias",
-    mes: "Ãšltimos 30 dias",
+    semana: "Últimos 7 dias",
+    mes: "Últimos 30 dias",
     custom: "Personalizado"
   }[periodoAtivo] || "Hoje";
 }
@@ -420,18 +420,18 @@ function dataVendaRelatorio(data) {
 
   const valor = String(data).trim();
 
-  // Se jÃ¡ vier ISO completo com timezone, respeita
+  // Se já vier ISO completo com timezone, respeita
   if (/z$/i.test(valor) || /[+-]\d{2}:\d{2}$/.test(valor)) {
     return new Date(valor);
   }
 
-  // Se vier sem timezone, trata como horÃ¡rio local do sistema
+  // Se vier sem timezone, trata como horário local do sistema
   return new Date(valor.replace(" ", "T"));
 }
 
 function formatarDataVendaRelatorio(data) {
   const d = dataVendaRelatorio(data);
-  if (!d) return "â€”";
+  if (!d) return "—";
 
   return d.toLocaleDateString("pt-BR", {
     timeZone: "America/Sao_Paulo"
@@ -440,7 +440,7 @@ function formatarDataVendaRelatorio(data) {
 
 function formatarHoraVendaRelatorio(data) {
   const d = dataVendaRelatorio(data);
-  if (!d) return "â€”";
+  if (!d) return "—";
 
   return d.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
@@ -522,15 +522,15 @@ const vendasAnterior = vendasData.filter(venda => {
   }, 0);
 
   if (faturamentoAnterior <= 0) {
-    delta.textContent = "sem perÃ­odo anterior";
+    delta.textContent = "sem período anterior";
     delta.className = "card-sub";
     return;
   }
 
   const variacao = ((faturamentoAtual - faturamentoAnterior) / faturamentoAnterior) * 100;
-  const sinal = variacao >= 0 ? "â†‘" : "â†“";
+  const sinal = variacao >= 0 ? "↑" : "↓";
 
-  delta.textContent = `${sinal} ${Math.abs(variacao).toFixed(1)}% vs perÃ­odo anterior`;
+  delta.textContent = `${sinal} ${Math.abs(variacao).toFixed(1)}% vs período anterior`;
   delta.className = variacao >= 0 ? "card-sub relatorio-delta positivo" : "card-sub relatorio-delta negativo";
 }
 
@@ -589,7 +589,7 @@ function renderProdutosEstoqueBaixo() {
 }
 
 // ======================================================
-// GRÃFICO HORAS
+// GRÁFICO HORAS
 // ======================================================
 
 function renderGraficoHoras(vendas) {
@@ -634,7 +634,7 @@ vendas.forEach(venda => {
 }
 
 // ======================================================
-// GRÃFICO PAGAMENTOS
+// GRÁFICO PAGAMENTOS
 // ======================================================
 function renderGraficoPagamentos(vendas) {
   const totais = {
@@ -661,7 +661,7 @@ function renderGraficoPagamentos(vendas) {
   chartPagtos = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: ["Dinheiro", "DÃ©bito", "CrÃ©dito", "PIX", "Misto"],
+      labels: ["Dinheiro", "Débito", "Crédito", "PIX", "Misto"],
       datasets: [{
         data: [
           totais.dinheiro,
@@ -684,8 +684,8 @@ function renderGraficoPagamentos(vendas) {
   if (legenda) {
     legenda.innerHTML = `
       <div class="legenda-item"><span>Dinheiro</span><strong>${fmt(totais.dinheiro)}</strong></div>
-      <div class="legenda-item"><span>DÃ©bito</span><strong>${fmt(totais.debito)}</strong></div>
-      <div class="legenda-item"><span>CrÃ©dito</span><strong>${fmt(totais.credito)}</strong></div>
+      <div class="legenda-item"><span>Débito</span><strong>${fmt(totais.debito)}</strong></div>
+      <div class="legenda-item"><span>Crédito</span><strong>${fmt(totais.credito)}</strong></div>
       <div class="legenda-item"><span>PIX</span><strong>${fmt(totais.pix)}</strong></div>
       <div class="legenda-item"><span>Misto</span><strong>${fmt(totais.misto)}</strong></div>
     `;
@@ -805,7 +805,7 @@ function renderTopProdutosLucro(vendas) {
       <div class="top-rank">${index + 1}</div>
       <div class="top-produto-info">
         <div class="top-produto-nome">${p.nome}</div>
-        <div class="top-produto-qtd">${p.qtd} unidade(s) Â· ${fmt(p.total)} vendido</div>
+        <div class="top-produto-qtd">${p.qtd} unidade(s) · ${fmt(p.total)} vendido</div>
       </div>
       <div class="top-bar-wrap">
         <div class="top-bar" style="width:${((p.lucro / max) * 100).toFixed(1)}%"></div>
@@ -842,15 +842,15 @@ function renderRecebimentosJogos(vendas) {
         <strong>${item.descricao}</strong>
         <small>
           ${formatarDataVendaRelatorio(item.data)}
-          Â·
+          ·
           ${item.forma}
-          Â·
+          ·
           ${
             item.ehMensalidade
-              ? "Mensalidade do horÃ¡rio"
+              ? "Mensalidade do horário"
               : `Direto: ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}`
           }
-          Â·
+          ·
           Comanda: ${item.qtdComanda} jogador${item.qtdComanda !== 1 ? "es" : ""}
         </small>
       </div>
@@ -861,7 +861,7 @@ function renderRecebimentosJogos(vendas) {
 }
 
 // ======================================================
-// HISTÃ“RICO DE CAIXAS
+// HISTÓRICO DE CAIXAS
 // ======================================================
 function renderHistoricoCaixas() {
   const container = document.getElementById("historicoCaixas");
@@ -905,7 +905,7 @@ function renderHistoricoCaixas() {
 }
 
 function formatarDataHoraCaixa(data) {
-  if (!data) return "â€”";
+  if (!data) return "—";
 
   return new Date(data).toLocaleString("pt-BR", {
     day: "2-digit",
@@ -917,7 +917,7 @@ function formatarDataHoraCaixa(data) {
 }
 
 function formatarHora(data) {
-  if (!data) return "â€”";
+  if (!data) return "—";
 
   return new Date(data).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
@@ -935,7 +935,7 @@ function limparNomeArquivo(texto) {
 }
 
 function limparResponsavelJogoRelatorio(texto) {
-  let valor = String(texto || "ResponsÃ¡vel").trim();
+  let valor = String(texto || "Responsável").trim();
 
   if (valor.includes("|")) {
     valor = valor.split("|")[0].trim();
@@ -946,11 +946,11 @@ function limparResponsavelJogoRelatorio(texto) {
     valor = partes[partes.length - 1].trim();
   }
 
-  return valor || "ResponsÃ¡vel";
+  return valor || "Responsável";
 }
 
 function obterResponsavelJogoRelatorio(venda) {
-  return limparResponsavelJogoRelatorio(venda.descricao || "ResponsÃ¡vel");
+  return limparResponsavelJogoRelatorio(venda.descricao || "Responsável");
 }
 
 function limparDescricaoJogoRelatorio(descricao) {
@@ -959,7 +959,7 @@ function limparDescricaoJogoRelatorio(descricao) {
   texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
   texto = texto.replace(/\s*\|\s*Direto\s*R\$\s*[\d.,]+/gi, "");
   texto = texto.replace(/\s*\|\s*Comanda\s*R\$\s*[\d.,]+/gi, "");
-  texto = texto.replace(/\s*Â·\s*Comanda:\s*.*/gi, "");
+  texto = texto.replace(/\s*·\s*Comanda:\s*.*/gi, "");
 
   return texto.trim() || "Jogo";
 }
@@ -983,7 +983,7 @@ function quebrarDescricaoJogoRelatorio(descricao) {
   }
 
   nome = texto
-    .replace(/^mensalidade\s*[-â€“â€”]?\s*/i, "")
+    .replace(/^mensalidade\s*[-–—]?\s*/i, "")
     .replace(/^jogo\s*mensal\s*-\s*/i, "")
     .replace(/^jogo\s*avulso\s*-\s*/i, "")
     .replace(/^jogo\s*-\s*/i, "")
@@ -1053,7 +1053,7 @@ const chave =
       const jogoInfo = quebrarDescricaoJogoRelatorio(descricaoLimpa);
 
       mapa[chave] = {
-        chave: chave,               // â† ADICIONAR: necessÃ¡rio para cruzar com agendaFechadaData
+        chave: chave,               // ← ADICIONAR: necessário para cruzar com agendaFechadaData
         responsavel: obterResponsavelJogoRelatorio(venda),
         descricao: descricaoLimpa,
         nome: jogoInfo.nome,
@@ -1129,7 +1129,7 @@ if (vendaDiretaJogo) {
       item.forma =
         item.formas.size > 1
           ? "MISTO"
-          : [...item.formas][0] || "â€”";
+          : [...item.formas][0] || "—";
 
       // Cruzar com agendaFechadaData para contar mensalistas isentos
       const jogoAgenda = agendaFechadaData.find(j =>
@@ -1147,7 +1147,7 @@ if (vendaDiretaJogo) {
 }
 
 // ======================================================
-// EXPORTAR EXCEL COMPATÃVEL
+// EXPORTAR EXCEL COMPATÍVEL
 // ======================================================
 function exportarExcel() {
   const vendas = getVendasFiltradas();
@@ -1158,7 +1158,7 @@ function exportarExcel() {
   }
 
   if (typeof XLSX === "undefined") {
-    mostrarModalAviso("Biblioteca de Excel nÃ£o carregada.");
+    mostrarModalAviso("Biblioteca de Excel não carregada.");
     return;
   }
 
@@ -1182,16 +1182,16 @@ function exportarExcel() {
   // ABA RESUMO
   // =========================
   const resumo = [
-    ["RELATÃ“RIO FINANCEIRO - CRV PDV"],
+    ["RELATÓRIO FINANCEIRO - CRV PDV"],
     [`Empresa: ${nomeFantasiaRelatorio}`],
-    [`PerÃ­odo: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
+    [`Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
     [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
     [],
     ["Indicador", "Valor"],
     ["Faturamento", Number(faturamento || 0)],
     ["Lucro bruto", Number(lucro || 0)],
     ["Total de vendas", Number(qtd || 0)],
-    ["Ticket mÃ©dio", Number(ticket || 0)],
+    ["Ticket médio", Number(ticket || 0)],
     ["Margem", Number(margem || 0) / 100]
   ];
 
@@ -1208,7 +1208,7 @@ function exportarExcel() {
   // ABA VENDAS
   // =========================
   const vendasLinhas = [
-    ["Data", "Hora", "Pagamento", "Subtotal", "Desconto", "Total", "Lucro bruto", "Margem", "Origem", "DescriÃ§Ã£o"]
+    ["Data", "Hora", "Pagamento", "Subtotal", "Desconto", "Total", "Lucro bruto", "Margem", "Origem", "Descrição"]
   ];
 
   vendas.forEach(v => {
@@ -1226,7 +1226,7 @@ function exportarExcel() {
       lucroVenda,
       margemVenda,
       v.origem || "venda",
-      v.descricao || "â€”"
+      v.descricao || "—"
     ]);
   });
 
@@ -1311,7 +1311,7 @@ function exportarExcel() {
         jogo.nome,
         jogo.forma,
         jogo.ehMensalidade
-          ? `Mensalidade do horÃ¡rio - ${fmt(jogo.totalDireto)}`
+          ? `Mensalidade do horário - ${fmt(jogo.totalDireto)}`
           : `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${fmt(jogo.totalDireto)}`,
         `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${fmt(jogo.totalComanda)}`,
         jogo.qtdMensalistas > 0 ? jogo.qtdMensalistas : 0,
@@ -1410,7 +1410,7 @@ function aplicarEstilosBasicosExcel(ws, config = {}) {
 }
 
 // ======================================================
-// EXPORTAR PDF / IMPRESSÃƒO PROFISSIONAL
+// EXPORTAR PDF / IMPRESSÃO PROFISSIONAL
 // ======================================================
 function exportarPDF() {
   const vendas = getVendasFiltradas();
@@ -1575,13 +1575,13 @@ function exportarPDF() {
         <img src="assets/logo1.png">
       </div>
 
-      <h1>RelatÃ³rio Financeiro</h1>
+      <h1>Relatório Financeiro</h1>
 
       <div class="subtitulo">
-        PerÃ­odo: ${getPeriodoLabel()} (${getPeriodoDetalhado()}) â€¢ Gerado em ${new Date().toLocaleString("pt-BR")}
+        Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()}) • Gerado em ${new Date().toLocaleString("pt-BR")}
       </div>
 
-      <h2>Resumo do perÃ­odo</h2>
+      <h2>Resumo do período</h2>
 
       <div class="resumo">
         <div class="box">
@@ -1600,13 +1600,13 @@ function exportarPDF() {
         </div>
 
         <div class="box">
-          <div class="label">Ticket mÃ©dio</div>
+          <div class="label">Ticket médio</div>
           <div class="valor">${fmt(ticket)}</div>
         </div>
       </div>
 
       <p>
-        O faturamento representa o valor total vendido no perÃ­odo selecionado. O lucro bruto considera os custos cadastrados nos produtos no momento da venda. A margem bruta estimada do perÃ­odo foi de ${margem.toFixed(1)}%.
+        O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos produtos no momento da venda. A margem bruta estimada do período foi de ${margem.toFixed(1)}%.
       </p>
 
 <h2>Formas de pagamento</h2>
@@ -1745,7 +1745,7 @@ function exportarPDF() {
       }
 
       <div class="footer">
-        CRV PDV â€¢ RelatÃ³rio gerado automaticamente pelo sistema
+        CRV PDV • Relatório gerado automaticamente pelo sistema
       </div>
     </body>
     </html>

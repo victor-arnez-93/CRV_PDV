@@ -10,7 +10,7 @@
 .page-header h2 { font-size: 1.6rem; margin-bottom: 4px; }
 .page-header p  { font-size: 0.85rem; color: var(--text-muted); }
 
-/* ===== PERÃODO ===== */
+/* ===== PERÍODO ===== */
 .relatorio-periodo {
   display: flex;
   align-items: center;
@@ -79,7 +79,7 @@
 .relatorio-card:hover { transform: translateY(-2px); }
 .relatorio-card .card-title { display: flex; align-items: center; gap: 5px; }
 
-/* ===== GRÃFICOS ===== */
+/* ===== GRÁFICOS ===== */
 .relatorio-graficos {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -297,7 +297,7 @@
   border-radius: 999px;
 }
 
-/* ===== HISTÃ“RICO CAIXAS ===== */
+/* ===== HISTÓRICO CAIXAS ===== */
 .relatorio-caixas { margin-bottom: 20px; }
 
 .caixa-historico-item {
@@ -472,7 +472,7 @@
 }
 
 /* ======================================================
-   RESPONSIVE â€” RELATÃ“RIOS
+   RESPONSIVE — RELATÓRIOS
 ====================================================== */
 
 @media (max-width: 768px) {
@@ -653,7 +653,7 @@
 }
 
   /* =========================================
-     PERÃODO
+     PERÍODO
   ========================================= */
 
   .relatorio-periodo {
@@ -763,7 +763,7 @@
   }
 
   /* =========================================
-     GRÃFICOS
+     GRÁFICOS
   ========================================= */
 
   .relatorio-graficos,
@@ -878,7 +878,7 @@
   }
 
   /* =========================================
-     HISTÃ“RICO CAIXAS
+     HISTÓRICO CAIXAS
   ========================================= */
 
   .caixa-historico-item {
