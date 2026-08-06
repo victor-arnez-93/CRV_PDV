@@ -1,623 +1,1785 @@
-import { bootPage } from "./shell.js";
-import { state, effectiveStatus, demandCode, converterCode, activeCatalog } from "./store.js";
-import { escapeHtml, formatDate, formatHours, showToast } from "./ui.js";
-import { intervalFor, dateInInterval, managerSeries } from "./charts.js";
+// ======================================================
+// CRV PDV - RELATÃ“RIOS GERENCIAIS
+// Supabase real + lucro + PDF + Excel/CSV formatado
+// ======================================================
 
-let activePeriod = "30";
-let reportDemands = [];
-let reportConverters = [];
+const fmt = valor => Number(valor || 0).toLocaleString("pt-BR", {
+  style: "currency",
+  currency: "BRL"
+});
 
-function currentInterval() {
-  const period = activePeriod === "today" ? "1" : activePeriod;
-  return intervalFor(period, document.getElementById("reportStartDate").value, document.getElementById("reportEndDate").value);
+let periodoAtivo = "hoje";
+let chartHoras = null;
+let chartPagtos = null;
+
+let vendasData = [];
+let itensData = [];
+let produtosData = [];
+let caixasHistorico = [];
+let agendaFechadaData = [];
+let nomeFantasiaRelatorio = "empresa";
+
+const TIPOS_COM_AGENDA_ESPORTIVA = [
+  "arena_quadras",
+  "arena",
+  "society",
+  "arena_society",
+  "arena_beach",
+  "beach_sports",
+  "beach_tennis",
+  "futvolei",
+  "volei_areia",
+  "quadras"
+];
+
+function normalizarFormaPagamentoRelatorio(forma) {
+  const valor = String(forma || "").toLowerCase().trim();
+
+  if (valor === "cartao") return "debito";
+  if (valor === "dÃ©bito") return "debito";
+  if (valor === "crÃ©dito") return "credito";
+
+  return valor || "â€”";
 }
 
-function periodLabel() {
+function labelFormaPagamentoRelatorio(forma) {
+  const valor = normalizarFormaPagamentoRelatorio(forma);
+
   const labels = {
-    today: "Hoje",
-    "7": "Últimos 7 dias",
-    "30": "Últimos 30 dias",
-    month: "Mês atual",
-    year: `Ano de ${new Date().getFullYear()}`,
-    custom: "Período personalizado",
+    dinheiro: "Dinheiro",
+    debito: "DÃ©bito",
+    credito: "CrÃ©dito",
+    pix: "PIX",
+    misto: "Misto",
+    comanda: "Comanda",
+    "â€”": "â€”"
   };
-  return labels[activePeriod] || "Período selecionado";
+
+  return labels[valor] || valor.toUpperCase();
 }
 
-function populateFilters() {
-  document.getElementById("reportManager").innerHTML = `<option value="">Todos</option>${activeCatalog("managers").map(item => `<option>${escapeHtml(item.name)}</option>`).join("")}<option>Gestor não informado</option>`;
-  document.getElementById("reportCategory").innerHTML = `<option value="">Todas</option>${activeCatalog("categories").map(item => `<option>${escapeHtml(item.name)}</option>`).join("")}`;
+function empresaUsaAgendaEsportiva() {
+  const tipo = String(window.CRV_CONFIG?.empresa?.tipo_negocio || "")
+    .toLowerCase()
+    .trim();
+
+  return TIPOS_COM_AGENDA_ESPORTIVA.includes(tipo);
 }
 
-function getDemands() {
-  const interval = currentInterval();
-  const status = document.getElementById("reportStatus").value;
-  const priority = document.getElementById("reportPriority").value;
-  const manager = document.getElementById("reportManager").value;
-  const category = document.getElementById("reportCategory").value;
-  const responsible = document.getElementById("reportResponsible").value.trim().toLocaleLowerCase("pt-BR");
-  return state.demands.filter(item => {
-    const managerName = item.manager?.trim() || "Gestor não informado";
-    return dateInInterval(item.start_date, interval) &&
-      (!status || effectiveStatus(item) === status) &&
-      (!priority || item.priority === priority) &&
-      (!manager || managerName === manager) &&
-      (!category || item.category === category) &&
-      (!responsible || item.responsible.toLocaleLowerCase("pt-BR").includes(responsible));
-  });
+// ======================================================
+// OFFLINE RELATÃ“RIOS
+// ======================================================
+
+async function obterDadosOfflineRelatorios() {
+
+  const vendasCache =
+    await crvOfflineDB.obterCache("relatorios_vendas") || [];
+
+  const itensCache =
+    await crvOfflineDB.obterCache("relatorios_itens") || [];
+
+  const caixasCache =
+    await crvOfflineDB.obterCache("relatorios_caixas") || [];
+
+  const fila =
+    await crvOfflineDB.obterFilaOffline();
+
+  const vendasPendentes =
+    fila
+      .filter(item => item.tabela === "vendas")
+      .map(item => item.payload);
+
+  const itensPendentes =
+    fila
+      .filter(item => item.tabela === "vendas_itens")
+      .flatMap(item => {
+        return Array.isArray(item.payload)
+          ? item.payload
+          : [item.payload];
+      });
+
+  return {
+    vendas: [
+      ...vendasPendentes,
+      ...vendasCache
+    ],
+
+    itens: [
+      ...itensPendentes,
+      ...itensCache
+    ],
+
+    caixas: caixasCache
+  };
 }
 
-function getConverters() {
-  const interval = currentInterval();
-  return state.converters.filter(item => dateInInterval(item.service_date, interval));
-}
+// ======================================================
+// INIT
+// ======================================================
 
-function converterSummary(records) {
-  const quantity = records.reduce((total, item) => total + Number(item.quantity_replaced || 0), 0);
-  const locations = Object.entries(records.reduce((map, item) => {
-    map[item.location_name] = (map[item.location_name] || 0) + 1;
-    return map;
-  }, {})).sort((a, b) => b[1] - a[1]);
-  return { quantity, topLocation: locations[0]?.[0] || "—", topCount: locations[0]?.[1] || 0 };
-}
+document.addEventListener("DOMContentLoaded", async () => {
+  const hoje = obterHojeLocalRelatorio();
 
-function render() {
-  reportDemands = getDemands();
-  reportConverters = getConverters();
-  const done = reportDemands.filter(item => effectiveStatus(item) === "Concluída").length;
-  const progress = reportDemands.filter(item => effectiveStatus(item) === "Em andamento").length;
-  const overdue = reportDemands.filter(item => effectiveStatus(item) === "Atrasada").length;
-  const estimated = reportDemands.reduce((total, item) => total + Number(item.estimated_hours || 0), 0);
-  const actual = reportDemands.reduce((total, item) => total + Number(item.actual_hours || 0), 0);
-  document.getElementById("reportTotal").textContent = reportDemands.length;
-  document.getElementById("reportDone").textContent = done;
-  document.getElementById("reportProgress").textContent = progress;
-  document.getElementById("reportOverdue").textContent = overdue;
-  document.getElementById("reportDoneRate").textContent = `${Math.round(done / Math.max(reportDemands.length, 1) * 100)}% de conclusão`;
-  document.getElementById("reportEstimatedHours").textContent = formatHours(estimated);
-  document.getElementById("reportActualHours").textContent = formatHours(actual);
-  document.getElementById("reportHoursRate").textContent = estimated ? `${Math.round(actual / estimated * 100)}% do estimado` : actual ? "sem estimativa" : "0% do estimado";
-  document.getElementById("reportPeriodLabel").textContent = periodLabel();
-  document.getElementById("reportDemandCount").textContent = `${reportDemands.length} ${reportDemands.length === 1 ? "registro" : "registros"}`;
+  document.getElementById("dataInicio").value = hoje;
+  document.getElementById("dataFim").value = hoje;
 
-  document.getElementById("reportBody").innerHTML = reportDemands.length ? reportDemands.map(item => `<tr>
-    <td>${demandCode(item)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.manager?.trim() || "Gestor não informado")}</td><td>${escapeHtml(item.responsible)}</td><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.priority)}</td><td>${escapeHtml(effectiveStatus(item))}</td><td>${formatDate(item.start_date, { year: true })}</td><td>${formatDate(item.due_date, { year: true })}</td><td>${formatHours(item.estimated_hours)}</td><td>${formatHours(item.actual_hours)}</td>
-  </tr>`).join("") : `<tr><td colspan="11" class="empty-table">Nenhuma demanda encontrada para os filtros.</td></tr>`;
+  await aguardarContextoRelatorios();
+  await carregarDados();
 
-  const converters = converterSummary(reportConverters);
-  document.getElementById("reportConverterRecords").textContent = reportConverters.length;
-  document.getElementById("reportConverterQuantity").textContent = converters.quantity;
-  document.getElementById("reportConverterTopLocation").textContent = converters.topLocation;
-  document.getElementById("reportConverterSummary").textContent = `${converters.quantity} ${converters.quantity === 1 ? "troca" : "trocas"}`;
-  document.getElementById("reportConvertersBody").innerHTML = reportConverters.length ? reportConverters.map(item => `<tr>
-    <td>${converterCode(item)}</td><td>${formatDate(item.service_date, { year: true })}</td><td>${escapeHtml(item.location_name)}</td><td>${escapeHtml(item.point_reference || "—")}</td><td>${escapeHtml(item.service_type)}</td><td>${escapeHtml(item.conversion_direction || "—")}</td><td>${Number(item.quantity_replaced || 0)}</td><td>${escapeHtml(item.issue_reason || "—")}</td><td>${escapeHtml(item.status)}</td>
-  </tr>`).join("") : `<tr><td colspan="9" class="empty-table">Nenhum atendimento de conversor no período.</td></tr>`;
-}
-
-function setPeriod(value) {
-  activePeriod = value;
-  document.querySelectorAll("[data-report-period]").forEach(button => button.classList.toggle("active", button.dataset.reportPeriod === value));
-  document.getElementById("reportFilterGrid").classList.toggle("custom", value === "custom");
-  if (value !== "custom") {
-    const interval = currentInterval();
-    const toInput = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    document.getElementById("reportStartDate").value = toInput(interval.start);
-    document.getElementById("reportEndDate").value = toInput(interval.end);
+  if (typeof crvAtualizarStatusCaixaGlobal === "function") {
+    crvAtualizarStatusCaixaGlobal();
   }
-  render();
+
+  renderRelatorio();
+
+  document.getElementById("btnExportPDF")?.addEventListener("click", exportarPDF);
+  document.getElementById("btnExportExcel")?.addEventListener("click", exportarExcel);
+});
+
+async function aguardarContextoRelatorios() {
+  let tentativas = 0;
+
+  while (tentativas < 40) {
+    if (window.auth?.verificarSessao) {
+      await window.auth.verificarSessao();
+    }
+
+    if (
+  window.APP_EMPRESA_ID &&
+  window.crvOfflineDB
+) {
+  return true;
 }
 
-function fileDate() {
-  return new Date().toISOString().slice(0, 10);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    tentativas++;
+  }
+
+  return false;
 }
 
-function exportExcel() {
-  reportDemands = getDemands();
-  reportConverters = getConverters();
-  if (!reportDemands.length && !reportConverters.length) return showToast("Não há dados nos filtros atuais para exportar.", "error");
-  if (!window.XLSX) return showToast("A biblioteca de Excel não foi carregada.", "error");
+function obterHojeLocalRelatorio() {
+  const agora = new Date();
 
-  const done = reportDemands.filter(item => effectiveStatus(item) === "Concluída").length;
-  const estimated = reportDemands.reduce((total, item) => total + Number(item.estimated_hours || 0), 0);
-  const actual = reportDemands.reduce((total, item) => total + Number(item.actual_hours || 0), 0);
-  const conv = converterSummary(reportConverters);
-  const workbook = XLSX.utils.book_new();
-  workbook.Props = { Title: "FLUUX — Relatório de Demandas", Subject: periodLabel(), Author: state.profile.full_name, CreatedDate: new Date() };
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
 
-  const summaryRows = [
-    ["FLUUX — RELATÓRIO DE DEMANDAS"],
-    [`Período: ${periodLabel()}`],
-    [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
-    [],
-    ["Indicador", "Valor"],
-    ["Total de demandas", reportDemands.length],
-    ["Concluídas", done],
-    ["Em andamento", reportDemands.filter(item => effectiveStatus(item) === "Em andamento").length],
-    ["Atrasadas", reportDemands.filter(item => effectiveStatus(item) === "Atrasada").length],
-    ["Taxa de conclusão", reportDemands.length ? done / reportDemands.length : 0],
-    ["Horas estimadas", estimated],
-    ["Horas realizadas", actual],
-    ["Utilização das horas", estimated ? actual / estimated : 0],
-    [],
-    ["Atendimentos de conversores", reportConverters.length],
-    ["Conversores trocados", conv.quantity],
-    ["Local mais recorrente", conv.topLocation],
-  ];
-  const summary = XLSX.utils.aoa_to_sheet(summaryRows);
-  summary["!cols"] = [{ wch: 34 }, { wch: 24 }];
-  summary["!merges"] = [XLSX.utils.decode_range("A1:B1"), XLSX.utils.decode_range("A2:B2"), XLSX.utils.decode_range("A3:B3")];
-  ["B10", "B13"].forEach(cell => { if (summary[cell]) summary[cell].z = "0.0%"; });
-  summary["!freeze"] = { xSplit: 0, ySplit: 4 };
-  XLSX.utils.book_append_sheet(workbook, summary, "Resumo");
-
-  const demandRows = reportDemands.map(item => ({
-    Código: demandCode(item),
-    Demanda: item.title,
-    Descrição: item.description,
-    Solicitante: item.requester || "",
-    Gestor: item.manager?.trim() || "Gestor não informado",
-    Responsável: item.responsible,
-    Departamento: item.department || "",
-    Categoria: item.category,
-    Prioridade: item.priority,
-    Status: effectiveStatus(item),
-    Entrada: new Date(`${item.start_date}T12:00:00`),
-    Prazo: new Date(`${item.due_date}T12:00:00`),
-    "Horas estimadas": Number(item.estimated_hours || 0),
-    "Horas realizadas": Number(item.actual_hours || 0),
-    Tags: (item.tags || []).join(", "),
-    Observações: item.notes || "",
-  }));
-  const demandSheet = XLSX.utils.json_to_sheet(demandRows, { cellDates: true });
-  demandSheet["!cols"] = [12,34,48,22,22,22,20,20,12,20,14,14,16,16,24,42].map(wch => ({ wch }));
-  demandSheet["!autofilter"] = { ref: demandSheet["!ref"] || "A1:P1" };
-  demandSheet["!freeze"] = { xSplit: 0, ySplit: 1 };
-  for (let row = 2; row <= demandRows.length + 1; row++) { if (demandSheet[`K${row}`]) demandSheet[`K${row}`].z = "dd/mm/yyyy"; if (demandSheet[`L${row}`]) demandSheet[`L${row}`].z = "dd/mm/yyyy"; }
-  XLSX.utils.book_append_sheet(workbook, demandSheet, "Demandas");
-
-  const managers = managerSeries(reportDemands);
-  const managerRows = managers.labels.map(label => ({ Gestor: label, Demandas: managers.map[label].count, Concluídas: managers.map[label].done, "Horas estimadas": managers.map[label].estimated, "Horas realizadas": managers.map[label].actual, Utilização: managers.map[label].estimated ? managers.map[label].actual / managers.map[label].estimated : 0 }));
-  const managerSheet = XLSX.utils.json_to_sheet(managerRows);
-  managerSheet["!cols"] = [26,12,12,18,18,14].map(wch => ({ wch }));
-  managerSheet["!autofilter"] = { ref: managerSheet["!ref"] || "A1:F1" };
-  for (let row = 2; row <= managerRows.length + 1; row++) if (managerSheet[`F${row}`]) managerSheet[`F${row}`].z = "0.0%";
-  XLSX.utils.book_append_sheet(workbook, managerSheet, "Por gestor");
-
-  const converterRows = reportConverters.map(item => ({ Código: converterCode(item), Data: new Date(`${item.service_date}T12:00:00`), Local: item.location_name, Ponto: item.point_reference || "", Atendimento: item.service_type, Conversão: item.conversion_direction || "", Quantidade: Number(item.quantity_replaced || 0), Motivo: item.issue_reason || "", Status: item.status, Responsável: item.responsible_name || "", Observações: item.notes || "" }));
-  const converterSheet = XLSX.utils.json_to_sheet(converterRows, { cellDates: true });
-  converterSheet["!cols"] = [12,14,28,22,18,18,12,40,20,22,42].map(wch => ({ wch }));
-  converterSheet["!autofilter"] = { ref: converterSheet["!ref"] || "A1:K1" };
-  converterSheet["!freeze"] = { xSplit: 0, ySplit: 1 };
-  for (let row = 2; row <= converterRows.length + 1; row++) if (converterSheet[`B${row}`]) converterSheet[`B${row}`].z = "dd/mm/yyyy";
-  XLSX.utils.book_append_sheet(workbook, converterSheet, "Conversores");
-
-  XLSX.writeFile(workbook, `fluux_relatorio_demandas_${fileDate()}.xlsx`);
-  showToast("Planilha gerada com sucesso.", "success");
+  return `${ano}-${mes}-${dia}`;
 }
 
-async function imageData(url) {
+function obterEmpresaId() {
+  return window.APP_EMPRESA_ID || APP_EMPRESA_ID || null;
+}
+
+// ======================================================
+// CARREGAR DADOS
+// ======================================================
+async function carregarDados() {
   try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(blob); });
-  } catch { return null; }
+    const empresaId = obterEmpresaId();
+
+    if (!empresaId) {
+      console.warn("[RELATÃ“RIOS] empresa_id nÃ£o encontrado.");
+      return;
+    }
+
+    let vendas = [];
+    let itens = [];
+    let caixas = [];
+    let produtos = [];
+    let empresa = null;
+
+    if (
+      window.APP_STATUS?.online &&
+      window.APP_STATUS?.supabase_ok &&
+      window.sb
+    ) {
+
+      const { data: vendasSupabase, error: erroVendas } = await sb
+        .from("vendas")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .order("data", { ascending: false });
+
+      if (erroVendas) throw erroVendas;
+
+      const { data: itensSupabase, error: erroItens } = await sb
+        .from("vendas_itens")
+        .select("*")
+        .eq("empresa_id", empresaId);
+
+      if (erroItens) throw erroItens;
+
+      const { data: caixasSupabase, error: erroCaixas } = await sb
+        .from("caixa")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .order("data_abertura", { ascending: false });
+
+      if (erroCaixas) throw erroCaixas;
+
+      const { data: produtosSupabase, error: erroProdutos } = await sb
+  .from("produtos")
+  .select("*")
+  .eq("empresa_id", empresaId)
+  .eq("ativo", true)
+  .lte("estoque", 5)
+  .order("estoque", { ascending: true });
+
+if (erroProdutos) throw erroProdutos;
+
+produtos = Array.isArray(produtosSupabase)
+  ? produtosSupabase
+  : [];
+
+            const { data: empresaSupabase, error: erroEmpresa } = await sb
+        .from("empresas")
+        .select("nome_fantasia,nome")
+        .eq("id", empresaId)
+        .maybeSingle();
+
+      if (erroEmpresa) throw erroEmpresa;
+
+      empresa = empresaSupabase || null;
+
+      vendas = Array.isArray(vendasSupabase)
+        ? vendasSupabase
+        : [];
+
+      itens = Array.isArray(itensSupabase)
+        ? itensSupabase
+        : [];
+
+      caixas = Array.isArray(caixasSupabase)
+        ? caixasSupabase
+        : [];
+
+      await crvOfflineDB.salvarCache("relatorios_vendas", vendas);
+      await crvOfflineDB.salvarCache("relatorios_itens", itens);
+      await crvOfflineDB.salvarCache("relatorios_caixas", caixas);
+
+    } else {
+
+      crvLog(
+        "RELATÃ“RIOS",
+        "Modo offline - usando IndexedDB",
+        "warn"
+      );
+
+      const dadosOffline =
+        await obterDadosOfflineRelatorios();
+
+      vendas = dadosOffline.vendas;
+      itens = dadosOffline.itens;
+      caixas = dadosOffline.caixas;
+    }
+
+    itensData = Array.isArray(itens)
+      ? itens
+      : [];
+
+      produtosData = Array.isArray(produtos)
+  ? produtos
+  : [];
+
+    vendasData = (vendas || []).map(venda => {
+      const itensVenda = itensData.filter(item => {
+        return String(item.venda_id) === String(venda.id);
+      });
+
+      const lucroTotal = itensVenda.reduce((acc, item) => {
+        return acc + Number(item.lucro_total || 0);
+      }, 0);
+
+      return {
+        ...venda,
+        itens: itensVenda,
+        lucro_total:
+          Number(venda.lucro_total || 0) ||
+          lucroTotal
+      };
+    });
+
+    caixasHistorico =
+      Array.isArray(caixas)
+        ? caixas
+        : [];
+
+    if (empresaUsaAgendaEsportiva()) {
+      const { data: jogosAgenda } = await sb
+        .from("agenda")
+        .select("id, tipo_jogo, local_recurso, hora_inicio, hora_fim, data_agendamento, cliente_nome, total_pago_jogadores, total_pendente_jogadores, total_jogadores, status_jogo")
+        .eq("empresa_id", empresaId)
+        .in("status_jogo", ["fechado", "pago", "cobranca"])
+        .order("data_agendamento", { ascending: false })
+        .limit(200);
+      agendaFechadaData = Array.isArray(jogosAgenda) ? jogosAgenda : [];
+    } else {
+      agendaFechadaData = [];
+    }
+
+    nomeFantasiaRelatorio =
+      limparNomeArquivo(
+        empresa?.nome_fantasia ||
+        empresa?.nome ||
+        window.CRV_CONFIG?.empresa?.nome_fantasia ||
+        "empresa"
+      );
+
+  } catch (err) {
+    console.error(err);
+
+    crvLog(
+      "RELATÃ“RIOS",
+      err.message,
+      "error"
+    );
+
+    mostrarModalAviso(
+      "NÃ£o foi possÃ­vel carregar os relatÃ³rios agora."
+    );
+
+    vendasData = [];
+    itensData = [];
+    produtosData = [];
+    caixasHistorico = [];
+    agendaFechadaData = [];
+  }
 }
 
-function pdfDate(value) {
-  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return "—";
+// ======================================================
+// PERÃODO
+// ======================================================
 
-  return value.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+function setPeriodo(btn, periodo) {
+  document.querySelectorAll(".periodo-btn").forEach(b => b.classList.remove("active"));
+
+  btn.classList.add("active");
+  periodoAtivo = periodo;
+
+  renderRelatorio();
+}
+
+function aplicarPeriodo() {
+  periodoAtivo = "custom";
+  document.querySelectorAll(".periodo-btn").forEach(b => b.classList.remove("active"));
+  renderRelatorio();
+}
+
+function getPeriodoDetalhado() {
+  const { inicio, fim } = getIntervaloPeriodo();
+
+  return `${inicio.toLocaleDateString("pt-BR")} a ${fim.toLocaleDateString("pt-BR")}`;
+}
+
+function getPeriodoLabel() {
+  return {
+    hoje: "Hoje",
+    semana: "Ãšltimos 7 dias",
+    mes: "Ãšltimos 30 dias",
+    custom: "Personalizado"
+  }[periodoAtivo] || "Hoje";
+}
+
+function getIntervaloPeriodo() {
+  const agora = new Date();
+  let inicio = new Date();
+  let fim = new Date();
+
+  if (periodoAtivo === "hoje") {
+    inicio.setHours(0, 0, 0, 0);
+    fim.setHours(23, 59, 59, 999);
+  }
+
+  if (periodoAtivo === "semana") {
+    inicio.setDate(agora.getDate() - 6);
+    inicio.setHours(0, 0, 0, 0);
+    fim.setHours(23, 59, 59, 999);
+  }
+
+  if (periodoAtivo === "mes") {
+    inicio.setDate(agora.getDate() - 29);
+    inicio.setHours(0, 0, 0, 0);
+    fim.setHours(23, 59, 59, 999);
+  }
+
+  if (periodoAtivo === "custom") {
+    const dataInicio = document.getElementById("dataInicio")?.value;
+    const dataFim = document.getElementById("dataFim")?.value;
+
+    inicio = new Date(`${dataInicio}T00:00:00`);
+    fim = new Date(`${dataFim}T23:59:59`);
+  }
+
+  return { inicio, fim };
+}
+
+function dataVendaRelatorio(data) {
+  if (!data) return null;
+
+  const valor = String(data).trim();
+
+  // Se jÃ¡ vier ISO completo com timezone, respeita
+  if (/z$/i.test(valor) || /[+-]\d{2}:\d{2}$/.test(valor)) {
+    return new Date(valor);
+  }
+
+  // Se vier sem timezone, trata como horÃ¡rio local do sistema
+  return new Date(valor.replace(" ", "T"));
+}
+
+function formatarDataVendaRelatorio(data) {
+  const d = dataVendaRelatorio(data);
+  if (!d) return "â€”";
+
+  return d.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo"
   });
 }
 
-function pdfDateTime(value = new Date()) {
-  return value.toLocaleString("pt-BR", {
+function formatarHoraVendaRelatorio(data) {
+  const d = dataVendaRelatorio(data);
+  if (!d) return "â€”";
+
+  return d.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo"
+  });
+}
+
+function getVendasFiltradas() {
+  const { inicio, fim } = getIntervaloPeriodo();
+
+  return vendasData
+    .filter(venda => {
+      const dataVenda = dataVendaRelatorio(venda.data);
+      if (!dataVenda || Number.isNaN(dataVenda.getTime())) return false;
+
+      return dataVenda >= inicio && dataVenda <= fim;
+    })
+    .sort((a, b) => {
+      const dataA = dataVendaRelatorio(a.data);
+      const dataB = dataVendaRelatorio(b.data);
+
+      return (dataB?.getTime() || 0) - (dataA?.getTime() || 0);
+    });
+}
+
+// ======================================================
+// RENDER GERAL
+// ======================================================
+function renderRelatorio() {
+  const vendas = getVendasFiltradas();
+
+  const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+  const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
+  const qtd = vendas.length;
+  const ticket = qtd > 0 ? faturamento / qtd : 0;
+  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+
+  document.getElementById("relFaturamento").textContent = fmt(faturamento);
+  document.getElementById("relLucro").textContent = fmt(lucro);
+  document.getElementById("relMargem").textContent = `Margem: ${margem.toFixed(1)}%`;
+  document.getElementById("relVendas").textContent = qtd;
+  document.getElementById("relTicket").textContent = fmt(ticket);
+
+renderComparativoPeriodo(faturamento);
+
+  document.getElementById("badgePeriodo").textContent = getPeriodoLabel();
+  document.getElementById("subtitleRelatorio").textContent =
+    `Exibindo dados de: ${getPeriodoLabel()}`;
+
+  renderGraficoHoras(vendas);
+  renderGraficoPagamentos(vendas);
+  renderTopProdutos(vendas);
+  renderTopProdutosLucro(vendas);
+  renderRecebimentosJogos(vendas);
+  renderProdutosEstoqueBaixo();
+  renderHistoricoCaixas();
+}
+
+function renderComparativoPeriodo(faturamentoAtual) {
+  const delta = document.getElementById("relFaturamentoDelta");
+  if (!delta) return;
+
+  const { inicio, fim } = getIntervaloPeriodo();
+  const duracao = fim.getTime() - inicio.getTime();
+
+  const inicioAnterior = new Date(inicio.getTime() - duracao - 1);
+  const fimAnterior = new Date(inicio.getTime() - 1);
+
+const vendasAnterior = vendasData.filter(venda => {
+  const dataVenda = dataVendaRelatorio(venda.data);
+  if (!dataVenda || Number.isNaN(dataVenda.getTime())) return false;
+
+  return dataVenda >= inicioAnterior && dataVenda <= fimAnterior;
+});
+
+  const faturamentoAnterior = vendasAnterior.reduce((acc, venda) => {
+    return acc + Number(venda.total || 0);
+  }, 0);
+
+  if (faturamentoAnterior <= 0) {
+    delta.textContent = "sem perÃ­odo anterior";
+    delta.className = "card-sub";
+    return;
+  }
+
+  const variacao = ((faturamentoAtual - faturamentoAnterior) / faturamentoAnterior) * 100;
+  const sinal = variacao >= 0 ? "â†‘" : "â†“";
+
+  delta.textContent = `${sinal} ${Math.abs(variacao).toFixed(1)}% vs perÃ­odo anterior`;
+  delta.className = variacao >= 0 ? "card-sub relatorio-delta positivo" : "card-sub relatorio-delta negativo";
+}
+
+function renderProdutosEstoqueBaixo() {
+  let card = document.getElementById("cardEstoqueBaixo");
+
+  if (!card) {
+    const referencia = document.getElementById("cardRelatorioJogos");
+
+    if (!referencia) return;
+
+    card = document.createElement("div");
+    card.id = "cardEstoqueBaixo";
+    card.className = "card relatorio-estoque-baixo";
+
+    card.innerHTML = `
+      <div class="grafico-header">
+        <h3>Produtos com estoque baixo</h3>
+        <span class="badge-soft" id="badgeEstoqueBaixo">0 item(ns)</span>
+      </div>
+
+      <div id="listaEstoqueBaixo"></div>
+    `;
+
+    referencia.insertAdjacentElement("afterend", card);
+  }
+
+  const lista = document.getElementById("listaEstoqueBaixo");
+  const badge = document.getElementById("badgeEstoqueBaixo");
+
+  const produtos = produtosData.filter(produto => {
+    return Number(produto.estoque || 0) <= 5;
+  });
+
+  if (badge) {
+    badge.textContent = `${produtos.length} item(ns)`;
+  }
+
+  if (!lista) return;
+
+  if (!produtos.length) {
+    lista.innerHTML = `<div class="empty-relatorio"><p>Nenhum produto com estoque baixo.</p></div>`;
+    return;
+  }
+
+  lista.innerHTML = produtos.map(produto => `
+    <div class="estoque-baixo-item">
+      <div>
+        <strong>${produto.nome || "Produto"}</strong>
+        <small>${produto.categoria || "Sem categoria"}</small>
+      </div>
+
+      <span>${Number(produto.estoque || 0)} un.</span>
+    </div>
+  `).join("");
+}
+
+// ======================================================
+// GRÃFICO HORAS
+// ======================================================
+
+function renderGraficoHoras(vendas) {
+  const horas = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}h`);
+  const dados = Array(14).fill(0);
+
+vendas.forEach(venda => {
+  const dataVenda = dataVendaRelatorio(venda.data);
+  if (!dataVenda || Number.isNaN(dataVenda.getTime())) return;
+
+  const hora = dataVenda.getHours();
+  const index = hora - 7;
+
+  if (index >= 0 && index < 14) {
+    dados[index] += Number(venda.total || 0);
+  }
+});
+
+  const ctx = document.getElementById("chartHoras")?.getContext("2d");
+  if (!ctx) return;
+
+  if (chartHoras) chartHoras.destroy();
+
+  chartHoras = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: horas,
+      datasets: [{
+        data: dados,
+        backgroundColor: "rgba(249,137,72,0.7)",
+        borderColor: "#F98948",
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ======================================================
+// GRÃFICO PAGAMENTOS
+// ======================================================
+function renderGraficoPagamentos(vendas) {
+  const totais = {
+    dinheiro: 0,
+    debito: 0,
+    credito: 0,
+    pix: 0,
+    misto: 0
+  };
+
+  vendas.forEach(venda => {
+    const forma = normalizarFormaPagamentoRelatorio(venda.forma_pagamento);
+
+    if (totais[forma] !== undefined) {
+      totais[forma] += Number(venda.total || 0);
+    }
+  });
+
+  const ctx = document.getElementById("chartPagamentos")?.getContext("2d");
+  if (!ctx) return;
+
+  if (chartPagtos) chartPagtos.destroy();
+
+  chartPagtos = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Dinheiro", "DÃ©bito", "CrÃ©dito", "PIX", "Misto"],
+      datasets: [{
+        data: [
+          totais.dinheiro,
+          totais.debito,
+          totais.credito,
+          totais.pix,
+          totais.misto
+        ],
+        backgroundColor: ["#54CD16", "#F98948", "#D4A843", "#00D4FF", "#7C6354"]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+
+  const legenda = document.getElementById("pagamentoLegenda");
+
+  if (legenda) {
+    legenda.innerHTML = `
+      <div class="legenda-item"><span>Dinheiro</span><strong>${fmt(totais.dinheiro)}</strong></div>
+      <div class="legenda-item"><span>DÃ©bito</span><strong>${fmt(totais.debito)}</strong></div>
+      <div class="legenda-item"><span>CrÃ©dito</span><strong>${fmt(totais.credito)}</strong></div>
+      <div class="legenda-item"><span>PIX</span><strong>${fmt(totais.pix)}</strong></div>
+      <div class="legenda-item"><span>Misto</span><strong>${fmt(totais.misto)}</strong></div>
+    `;
+  }
+}
+
+// ======================================================
+// TOP PRODUTOS
+// ======================================================
+function itemEhPagamentoJogo(item) {
+  const origem = String(item.origem || "").toLowerCase().trim();
+  const nome = String(item.nome || "").toLowerCase().trim();
+
+  return (
+    origem === "agenda" ||
+    origem === "agenda_avulso" ||
+    origem === "agenda_mensalidade" ||
+    Boolean(item.agenda_id) ||
+    Boolean(item.agenda_jogador_id) ||
+    nome.startsWith("pagamento de jogo") ||
+    nome.startsWith("pagamento direto jogo") ||
+    nome.includes("jogo -") ||
+    nome.includes("jogo avulso") ||
+    nome.includes("jogo mensal")
+  );
+}
+
+function montarRankingProdutos(vendas) {
+  const mapa = {};
+
+  vendas.forEach(venda => {
+    (venda.itens || []).forEach(item => {
+      if (itemEhPagamentoJogo(item)) {
+        return;
+      }
+
+      const chave = String(item.nome || "Produto")
+        .trim()
+        .toLowerCase();
+
+      const nomeFormatado =
+        chave.charAt(0).toUpperCase() + chave.slice(1);
+
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          nome: nomeFormatado,
+          qtd: 0,
+          total: 0,
+          lucro: 0
+        };
+      }
+
+      mapa[chave].qtd += Number(item.quantidade || 0);
+      mapa[chave].total += Number(item.preco || 0) * Number(item.quantidade || 0);
+      mapa[chave].lucro += Number(item.lucro_total || 0);
+    });
+  });
+
+  return Object.values(mapa);
+}
+
+function renderTopProdutos(vendas) {
+  const lista = montarRankingProdutos(vendas)
+    .sort((a, b) => b.qtd - a.qtd)
+    .slice(0, 5);
+
+  const container = document.getElementById("topProdutos");
+  const badge = document.getElementById("badgeTopQtd");
+
+  if (badge) badge.textContent = `${lista.length} produto(s)`;
+
+  if (!container) return;
+
+  if (!lista.length) {
+    container.innerHTML = `<div class="empty-relatorio"><p>Sem dados</p></div>`;
+    return;
+  }
+
+  const max = Math.max(...lista.map(p => p.qtd), 1);
+
+  container.innerHTML = lista.map((p, index) => `
+    <div class="top-produto-item">
+      <div class="top-rank">${index + 1}</div>
+      <div class="top-produto-info">
+        <div class="top-produto-nome">${p.nome}</div>
+        <div class="top-produto-qtd">${p.qtd} unidade(s)</div>
+      </div>
+      <div class="top-bar-wrap">
+        <div class="top-bar" style="width:${((p.qtd / max) * 100).toFixed(1)}%"></div>
+      </div>
+      <span class="top-produto-val">${fmt(p.total)}</span>
+    </div>
+  `).join("");
+}
+
+function renderTopProdutosLucro(vendas) {
+  const lista = montarRankingProdutos(vendas)
+    .sort((a, b) => b.lucro - a.lucro)
+    .slice(0, 5);
+
+  const container = document.getElementById("topProdutosLucro");
+  const badge = document.getElementById("badgeTopLucro");
+
+  if (badge) badge.textContent = `${lista.length} produto(s)`;
+
+  if (!container) return;
+
+  if (!lista.length) {
+    container.innerHTML = `<div class="empty-relatorio"><p>Sem dados</p></div>`;
+    return;
+  }
+
+  const max = Math.max(...lista.map(p => p.lucro), 1);
+
+  container.innerHTML = lista.map((p, index) => `
+    <div class="top-produto-item">
+      <div class="top-rank">${index + 1}</div>
+      <div class="top-produto-info">
+        <div class="top-produto-nome">${p.nome}</div>
+        <div class="top-produto-qtd">${p.qtd} unidade(s) Â· ${fmt(p.total)} vendido</div>
+      </div>
+      <div class="top-bar-wrap">
+        <div class="top-bar" style="width:${((p.lucro / max) * 100).toFixed(1)}%"></div>
+      </div>
+      <span class="top-produto-lucro">${fmt(p.lucro)}</span>
+    </div>
+  `).join("");
+}
+
+function renderRecebimentosJogos(vendas) {
+  const card = document.getElementById("cardRelatorioJogos");
+  const lista = document.getElementById("listaJogosRelatorio");
+  const badge = document.getElementById("badgeJogosQtd");
+
+  if (!card || !lista) return;
+
+  const jogos = montarRecebimentosJogosAgrupados(vendas);
+
+  if (badge) {
+    badge.textContent = `${jogos.length} jogo(s)`;
+  }
+
+  if (!jogos.length) {
+    card.style.display = "none";
+    lista.innerHTML = "";
+    return;
+  }
+
+  card.style.display = "block";
+
+  lista.innerHTML = jogos.map(item => `
+    <div class="jogo-relatorio-item">
+      <div>
+        <strong>${item.descricao}</strong>
+        <small>
+          ${formatarDataVendaRelatorio(item.data)}
+          Â·
+          ${item.forma}
+          Â·
+          ${
+            item.ehMensalidade
+              ? "Mensalidade do horÃ¡rio"
+              : `Direto: ${item.qtdDireto} jogador${item.qtdDireto !== 1 ? "es" : ""}`
+          }
+          Â·
+          Comanda: ${item.qtdComanda} jogador${item.qtdComanda !== 1 ? "es" : ""}
+        </small>
+      </div>
+
+      <span>${fmt(item.total)}</span>
+    </div>
+  `).join("");
+}
+
+// ======================================================
+// HISTÃ“RICO DE CAIXAS
+// ======================================================
+function renderHistoricoCaixas() {
+  const container = document.getElementById("historicoCaixas");
+
+  if (!container) return;
+
+  const fechados = caixasHistorico
+    .filter(c => c.status === "fechado")
+    .slice(0, 10);
+
+  if (!fechados.length) {
+    container.innerHTML = `<div class="empty-relatorio"><p>Nenhum caixa fechado ainda</p></div>`;
+    return;
+  }
+
+  container.innerHTML = fechados.map(caixa => `
+    <div class="caixa-historico-item">
+      <div class="caixa-hist-info">
+        <div class="caixa-hist-col">
+          <span class="caixa-hist-label">Abertura</span>
+          <strong class="caixa-hist-val">${formatarDataHoraCaixa(caixa.data_abertura)}</strong>
+        </div>
+
+        <div class="caixa-hist-col">
+          <span class="caixa-hist-label">Fechamento</span>
+          <strong class="caixa-hist-val">${formatarDataHoraCaixa(caixa.data_fechamento)}</strong>
+        </div>
+
+        <div class="caixa-hist-col">
+          <span class="caixa-hist-label">Valor inicial</span>
+          <strong class="caixa-hist-val">${fmt(caixa.valor_inicial)}</strong>
+        </div>
+
+        <div class="caixa-hist-col">
+          <span class="caixa-hist-label">Valor final</span>
+          <strong class="caixa-hist-val green">${fmt(caixa.valor_final)}</strong>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function formatarDataHoraCaixa(data) {
+  if (!data) return "â€”";
+
+  return new Date(data).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit",
+    minute: "2-digit"
   });
 }
 
-function pdfIntervalLabel() {
-  const interval = currentInterval();
-  return `${pdfDate(interval.start)} a ${pdfDate(interval.end)}`;
-}
+function formatarHora(data) {
+  if (!data) return "â€”";
 
-function pdfFilterSummary() {
-  const labels = [];
-  const status = document.getElementById("reportStatus").value;
-  const priority = document.getElementById("reportPriority").value;
-  const manager = document.getElementById("reportManager").value;
-  const category = document.getElementById("reportCategory").value;
-  const responsible = document.getElementById("reportResponsible").value.trim();
-
-  if (status) labels.push(`Status: ${status}`);
-  if (priority) labels.push(`Prioridade: ${priority}`);
-  if (manager) labels.push(`Gestor: ${manager}`);
-  if (category) labels.push(`Categoria: ${category}`);
-  if (responsible) labels.push(`Responsável: ${responsible}`);
-
-  return labels.length ? labels.join(" · ") : "Todos os registros do período";
-}
-
-function pdfUtilizationLabel(estimated, actual) {
-  if (!estimated && !actual) return "0%";
-  if (!estimated) return "Sem estimativa";
-  return `${Math.round((actual / estimated) * 100)}%`;
-}
-
-function pdfDrawSectionTitle(doc, title, y, color = [40, 75, 99]) {
-  doc.setTextColor(...color);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
-  doc.text(String(title).toUpperCase(), 15, y);
-  doc.setDrawColor(150, 157, 160);
-  doc.setLineWidth(0.25);
-  doc.line(15, y + 2.5, 195, y + 2.5);
-  return y + 7;
-}
-
-function pdfDrawCompactHeader(doc, logo) {
-  const page = doc.internal.getCurrentPageInfo().pageNumber;
-  if (page === 1) return;
-
-  if (logo) {
-    doc.addImage(logo, "PNG", 15, 7, 22, 9, undefined, "FAST");
-  } else {
-    doc.setTextColor(0, 111, 151);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("FLUUX", 15, 14);
-  }
-
-  doc.setTextColor(40, 75, 99);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("RELATÓRIO DE DEMANDAS", 195, 13, { align: "right" });
-  doc.setDrawColor(249, 105, 0);
-  doc.setLineWidth(0.45);
-  doc.line(15, 19, 195, 19);
-}
-
-function pdfEnsureSpace(doc, y, required, logo) {
-  if (y + required <= 274) return y;
-  doc.addPage();
-  pdfDrawCompactHeader(doc, logo);
-  return 28;
-}
-
-function pdfDrawFooter(doc) {
-  const pages = doc.getNumberOfPages();
-
-  for (let page = 1; page <= pages; page += 1) {
-    doc.setPage(page);
-    doc.setDrawColor(190, 194, 196);
-    doc.setLineWidth(0.2);
-    doc.line(15, 281, 195, 281);
-    doc.setTextColor(115, 122, 126);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.text("FLUUX · Relatório gerado automaticamente pelo sistema", 15, 286.5);
-    doc.text(`Página ${page} de ${pages}`, 195, 286.5, { align: "right" });
-  }
-}
-
-async function exportPdf() {
-  reportDemands = getDemands();
-  reportConverters = getConverters();
-
-  if (!reportDemands.length && !reportConverters.length) {
-    showToast("Não há dados nos filtros atuais para exportar.", "error");
-    return;
-  }
-
-  if (!window.jspdf?.jsPDF) {
-    showToast("A biblioteca de PDF não foi carregada.", "error");
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-    compress: true,
+  return new Date(data).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit"
   });
+}
 
-  doc.setProperties({
-    title: `FLUUX — Relatório de Demandas — ${periodLabel()}`,
-    subject: `Demandas e conversores — ${pdfIntervalLabel()}`,
-    author: state.profile?.full_name || "FLUUX",
-    creator: "FLUUX — Organização de Demandas",
-  });
+function limparNomeArquivo(texto) {
+  return String(texto || "empresa")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
 
-  const logo = await imageData("assets/img/logo.png");
-  const generatedAt = new Date();
-  const done = reportDemands.filter(item => effectiveStatus(item) === "Concluída").length;
-  const progress = reportDemands.filter(item => effectiveStatus(item) === "Em andamento").length;
-  const overdue = reportDemands.filter(item => effectiveStatus(item) === "Atrasada").length;
-  const estimated = reportDemands.reduce(
-    (total, item) => total + Number(item.estimated_hours || 0),
-    0,
-  );
-  const actual = reportDemands.reduce(
-    (total, item) => total + Number(item.actual_hours || 0),
-    0,
-  );
-  const completionRate = reportDemands.length
-    ? Math.round((done / reportDemands.length) * 100)
-    : 0;
-  const conv = converterSummary(reportConverters);
+function limparResponsavelJogoRelatorio(texto) {
+  let valor = String(texto || "ResponsÃ¡vel").trim();
 
-  if (logo) {
-    doc.addImage(logo, "PNG", 87, 7, 36, 17, undefined, "FAST");
-  } else {
-    doc.setTextColor(0, 111, 151);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("FLUUX", 105, 18, { align: "center" });
+  if (valor.includes("|")) {
+    valor = valor.split("|")[0].trim();
   }
 
-  doc.setTextColor(17, 21, 24);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(17);
-  doc.text("RELATÓRIO DE DEMANDAS", 105, 31, { align: "center" });
+  if (valor.includes(" - ")) {
+    const partes = valor.split(" - ");
+    valor = partes[partes.length - 1].trim();
+  }
 
-  doc.setTextColor(82, 91, 96);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.text(
-    `Período: ${periodLabel()} (${pdfIntervalLabel()}) · Gerado em ${pdfDateTime(generatedAt)}`,
-    105,
-    37,
-    { align: "center" },
-  );
+  return valor || "ResponsÃ¡vel";
+}
 
-  doc.setDrawColor(249, 105, 0);
-  doc.setLineWidth(0.8);
-  doc.line(15, 43, 195, 43);
+function obterResponsavelJogoRelatorio(venda) {
+  return limparResponsavelJogoRelatorio(venda.descricao || "ResponsÃ¡vel");
+}
 
-  let y = pdfDrawSectionTitle(doc, "Resumo do período", 51);
+function limparDescricaoJogoRelatorio(descricao) {
+  let texto = String(descricao || "Jogo").trim();
 
-  const metrics = [
-    ["Total de demandas", String(reportDemands.length)],
-    ["Concluídas", String(done)],
-    ["Em andamento", String(progress)],
-    ["Atrasadas", String(overdue)],
-    ["Horas estimadas", formatHours(estimated)],
-    ["Horas realizadas", formatHours(actual)],
-  ];
+  texto = texto.replace(/\s*\|\s*Total\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*\|\s*Direto\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*\|\s*Comanda\s*R\$\s*[\d.,]+/gi, "");
+  texto = texto.replace(/\s*Â·\s*Comanda:\s*.*/gi, "");
 
-  const cardGap = 4;
-  const cardWidth = (180 - cardGap) / 2;
-  const cardHeight = 18;
+  return texto.trim() || "Jogo";
+}
 
-  metrics.forEach(([label, value], index) => {
-    const col = index % 2;
-    const row = Math.floor(index / 2);
-    const x = 15 + col * (cardWidth + cardGap);
-    const cardY = y + row * (cardHeight + 4);
+function quebrarDescricaoJogoRelatorio(descricao) {
+  let texto = String(descricao || "Jogo").trim();
 
-    doc.setFillColor(250, 250, 249);
-    doc.setDrawColor(205, 208, 210);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(x, cardY, cardWidth, cardHeight, 1.5, 1.5, "FD");
+  texto = limparDescricaoJogoRelatorio(texto);
 
-    doc.setTextColor(90, 99, 104);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.text(String(label).toUpperCase(), x + 4, cardY + 6);
+  const lower = texto.toLowerCase();
 
-    doc.setTextColor(22, 28, 31);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11.5);
-    doc.text(String(value), x + 4, cardY + 13.2);
-  });
+  let tipo = "Jogo";
+  let nome = texto;
 
-  y += 3 * (cardHeight + 4) + 2;
+  if (lower.includes("mensalidade")) {
+    tipo = "Mensalidade";
+  } else if (lower.includes("mensal")) {
+    tipo = "Mensal";
+  } else if (lower.includes("avulso")) {
+    tipo = "Avulso";
+  }
 
-  const executiveText = reportDemands.length
-    ? `No período selecionado foram registradas ${reportDemands.length} demanda${reportDemands.length === 1 ? "" : "s"}. ` +
-      `${done} foram concluída${done === 1 ? "" : "s"}, resultando em taxa de conclusão de ${completionRate}%. ` +
-      `A utilização das horas ficou em ${pdfUtilizationLabel(estimated, actual)} do esforço estimado.`
-    : "Não houve demandas no período selecionado. O relatório contém somente os registros de sustentação de conversores encontrados nos filtros atuais.";
+  nome = texto
+    .replace(/^mensalidade\s*[-â€“â€”]?\s*/i, "")
+    .replace(/^jogo\s*mensal\s*-\s*/i, "")
+    .replace(/^jogo\s*avulso\s*-\s*/i, "")
+    .replace(/^jogo\s*-\s*/i, "")
+    .replace(/campo\s*maior\s*-\s*/i, "")
+    .replace(/campo\s*menor\s*-\s*/i, "")
+    .trim();
 
-  doc.setTextColor(55, 63, 67);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  const executiveLines = doc.splitTextToSize(executiveText, 180);
-  doc.text(executiveLines, 15, y);
-  y += executiveLines.length * 4 + 3;
+  return {
+    tipo,
+    nome: nome || texto
+  };
+}
 
-  doc.setTextColor(90, 99, 104);
-  doc.setFontSize(7.2);
-  const filterLines = doc.splitTextToSize(`Filtros aplicados: ${pdfFilterSummary()}`, 180);
-  doc.text(filterLines, 15, y);
-  y += filterLines.length * 3.5 + 5;
+function extrairResumoJogoDescricaoRelatorio(descricao) {
+  const texto = String(descricao || "");
 
-  if (reportDemands.length) {
-    y = pdfEnsureSpace(doc, y, 38, logo);
-    y = pdfDrawSectionTitle(doc, "Demandas do período", y);
+  const diretoMatch = texto.match(/Direto:\s*(\d+)\s*jogador/i);
+  const comandaMatch = texto.match(/Comanda:\s*(\d+)\s*jogador/i);
 
-    doc.autoTable({
-      startY: y,
-      head: [["Código", "Demanda / responsável", "Gestor", "Status", "Prazo", "Est.", "Real."]],
-      body: reportDemands.map(item => [
-        demandCode(item),
-        `${item.title}\nResponsável: ${item.responsible || "—"}`,
-        item.manager?.trim() || "Gestor não informado",
-        effectiveStatus(item),
-        formatDate(item.due_date, { year: true }),
-        formatHours(item.estimated_hours),
-        formatHours(item.actual_hours),
-      ]),
-      theme: "grid",
-      styles: {
-        font: "helvetica",
-        fontSize: 6.8,
-        cellPadding: 2.1,
-        textColor: [45, 54, 59],
-        lineColor: [204, 209, 211],
-        lineWidth: 0.18,
-        overflow: "linebreak",
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: [40, 75, 99],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 6.7,
-        halign: "left",
-      },
-      alternateRowStyles: {
-        fillColor: [248, 248, 246],
-      },
-      columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 55 },
-        2: { cellWidth: 29 },
-        3: { cellWidth: 23 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 15, halign: "center" },
-        6: { cellWidth: 15, halign: "center" },
-      },
-      margin: { left: 15, right: 15, top: 24, bottom: 19 },
-      showHead: "everyPage",
-      didDrawPage: () => pdfDrawCompactHeader(doc, logo),
-    });
+  return {
+    qtdDireto: diretoMatch ? Number(diretoMatch[1]) : null,
+    qtdComanda: comandaMatch ? Number(comandaMatch[1]) : null
+  };
+}
 
-    y = doc.lastAutoTable.finalY + 8;
+function montarRecebimentosJogosAgrupados(vendas) {
+  const mapa = {};
 
-    const managers = managerSeries(reportDemands);
-    if (managers.labels.length) {
-      y = pdfEnsureSpace(doc, y, 44, logo);
-      y = pdfDrawSectionTitle(doc, "Resumo por gestor", y);
-
-      doc.autoTable({
-        startY: y,
-        head: [["Gestor", "Demandas", "Concluídas", "Est.", "Real.", "Utilização"]],
-        body: managers.labels.map(label => {
-          const item = managers.map[label];
-          return [
-            label,
-            String(item.count),
-            String(item.done),
-            formatHours(item.estimated),
-            formatHours(item.actual),
-            pdfUtilizationLabel(item.estimated, item.actual),
-          ];
-        }),
-        theme: "grid",
-        styles: {
-          font: "helvetica",
-          fontSize: 7,
-          cellPadding: 2.2,
-          textColor: [45, 54, 59],
-          lineColor: [204, 209, 211],
-          lineWidth: 0.18,
-          valign: "middle",
-        },
-        headStyles: {
-          fillColor: [237, 240, 241],
-          textColor: [27, 45, 55],
-          fontStyle: "bold",
-          fontSize: 6.7,
-        },
-        alternateRowStyles: {
-          fillColor: [250, 250, 249],
-        },
-        columnStyles: {
-          0: { cellWidth: 58 },
-          1: { cellWidth: 24, halign: "center" },
-          2: { cellWidth: 25, halign: "center" },
-          3: { cellWidth: 23, halign: "center" },
-          4: { cellWidth: 23, halign: "center" },
-          5: { cellWidth: 27, halign: "center" },
-        },
-        margin: { left: 15, right: 15, top: 24, bottom: 19 },
-        showHead: "everyPage",
-        didDrawPage: () => pdfDrawCompactHeader(doc, logo),
+  vendas.forEach(venda => {
+    const origemVenda = String(venda.origem || "").toLowerCase();
+    const vendaMensalidade =
+      origemVenda === "agenda_mensalidade" ||
+      (venda.itens || []).some(item => {
+        return String(item.origem || "").toLowerCase() ===
+          "agenda_mensalidade";
       });
 
-      y = doc.lastAutoTable.finalY + 8;
+    const itensJogo =
+      (venda.itens || []).filter(item => itemEhPagamentoJogo(item));
+
+const vendaDiretaJogo =
+  origemVenda === "agenda" ||
+  origemVenda === "agenda_avulso" ||
+  origemVenda === "agenda_mensalidade";
+
+    const vendaComandaComJogo =
+      origemVenda === "comanda" &&
+      itensJogo.length > 0;
+
+    if (!vendaDiretaJogo && !vendaComandaComJogo) {
+      return;
     }
-  }
 
-  if (reportConverters.length) {
-    y = pdfEnsureSpace(doc, y, 48, logo);
-    y = pdfDrawSectionTitle(doc, "Sustentação de conversores", y, [249, 105, 0]);
+const chave =
+  vendaDiretaJogo
+    ? venda.agenda_id || venda.origem_id || venda.id
+    : itensJogo[0]?.agenda_id || itensJogo[0]?.origem_id || venda.id;
 
-    doc.setTextColor(65, 73, 78);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    const converterIntro = `${reportConverters.length} atendimento${reportConverters.length === 1 ? "" : "s"} · ` +
-      `${conv.quantity} conversor${conv.quantity === 1 ? "" : "es"} trocado${conv.quantity === 1 ? "" : "s"} · ` +
-      `Local mais recorrente: ${conv.topLocation}`;
-    doc.text(doc.splitTextToSize(converterIntro, 180), 15, y);
-    y += 7;
+    const descricaoLimpa =
+      vendaDiretaJogo
+        ? limparDescricaoJogoRelatorio(venda.descricao)
+        : limparDescricaoJogoRelatorio(
+            itensJogo[0]?.nome || venda.descricao || "Jogo via comanda"
+          );
 
-    doc.autoTable({
-      startY: y,
-      head: [["Código", "Data", "Local", "Ponto", "Atendimento", "Qtd.", "Status"]],
-      body: reportConverters.map(item => [
-        converterCode(item),
-        formatDate(item.service_date, { year: true }),
-        item.location_name,
-        item.point_reference || "—",
-        item.service_type,
-        String(item.quantity_replaced || 0),
-        item.status,
-      ]),
-      theme: "grid",
-      styles: {
-        font: "helvetica",
-        fontSize: 6.8,
-        cellPadding: 2.1,
-        textColor: [45, 54, 59],
-        lineColor: [204, 209, 211],
-        lineWidth: 0.18,
-        overflow: "linebreak",
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: [249, 105, 0],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 6.7,
-      },
-      alternateRowStyles: {
-        fillColor: [250, 248, 244],
-      },
-      columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 23 },
-        2: { cellWidth: 37 },
-        3: { cellWidth: 31 },
-        4: { cellWidth: 31 },
-        5: { cellWidth: 15, halign: "center" },
-        6: { cellWidth: 25 },
-      },
-      margin: { left: 15, right: 15, top: 24, bottom: 19 },
-      showHead: "everyPage",
-      didDrawPage: () => pdfDrawCompactHeader(doc, logo),
-    });
-  }
+    if (!mapa[chave]) {
+      const jogoInfo = quebrarDescricaoJogoRelatorio(descricaoLimpa);
 
-  pdfDrawFooter(doc);
-  doc.save(`fluux_relatorio_demandas_${fileDate()}.pdf`);
-  showToast("PDF profissional gerado com sucesso.", "success");
+      mapa[chave] = {
+        chave: chave,               // â† ADICIONAR: necessÃ¡rio para cruzar com agendaFechadaData
+        responsavel: obterResponsavelJogoRelatorio(venda),
+        descricao: descricaoLimpa,
+        nome: jogoInfo.nome,
+        tipo: jogoInfo.tipo,
+        data: venda.data,
+        formas: new Set(),
+        total: 0,
+        totalDireto: 0,
+        totalComanda: 0,
+        qtdDireto: 0,
+        qtdComanda: 0,
+        qtdMensalistas: 0,
+        ehMensalidade: false
+      };
+    }
+
+    mapa[chave].ehMensalidade =
+      mapa[chave].ehMensalidade || vendaMensalidade;
+
+    if (new Date(venda.data) > new Date(mapa[chave].data)) {
+      mapa[chave].data = venda.data;
+    }
+
+    if (venda.forma_pagamento) {
+      mapa[chave].formas.add(
+        labelFormaPagamentoRelatorio(venda.forma_pagamento)
+      );
+    }
+
+if (vendaDiretaJogo) {
+  const resumoDescricao =
+    extrairResumoJogoDescricaoRelatorio(venda.descricao);
+
+  const qtdDireto =
+    vendaMensalidade
+      ? 0
+      : resumoDescricao.qtdDireto !== null
+      ? resumoDescricao.qtdDireto
+      : itensJogo.filter(item => {
+          return String(item.origem || "").toLowerCase() === "agenda";
+        }).length || (Number(venda.total || 0) > 0 ? 1 : 0);
+
+  const qtdComandaDescricao =
+    resumoDescricao.qtdComanda !== null
+      ? resumoDescricao.qtdComanda
+      : 0;
+
+  mapa[chave].totalDireto += Number(venda.total || 0);
+  mapa[chave].qtdDireto += qtdDireto;
+  mapa[chave].qtdComanda += qtdComandaDescricao;
 }
 
-bootPage(() => {
-  populateFilters();
-  document.querySelectorAll("[data-report-period]").forEach(button => button.addEventListener("click", () => setPeriod(button.dataset.reportPeriod)));
-  ["reportStartDate", "reportEndDate", "reportStatus", "reportPriority", "reportManager", "reportCategory", "reportResponsible"].forEach(id => document.getElementById(id).addEventListener("input", render));
-  document.getElementById("exportExcelButton").addEventListener("click", exportExcel);
-  document.getElementById("exportPdfButton").addEventListener("click", exportPdf);
-  setPeriod("30");
-});
+    if (vendaComandaComJogo && origemVenda !== "agenda") {
+      const totalItensComanda =
+        itensJogo.reduce((acc, item) => {
+          return acc + (
+            Number(item.preco || 0) *
+            Number(item.quantidade || 1)
+          );
+        }, 0);
+
+      mapa[chave].totalComanda += totalItensComanda;
+      mapa[chave].qtdComanda += itensJogo.length;
+    }
+  });
+
+  return Object.values(mapa)
+    .map(item => {
+      item.total =
+        Number(item.totalDireto || 0) +
+        Number(item.totalComanda || 0);
+
+      item.forma =
+        item.formas.size > 1
+          ? "MISTO"
+          : [...item.formas][0] || "â€”";
+
+      // Cruzar com agendaFechadaData para contar mensalistas isentos
+      const jogoAgenda = agendaFechadaData.find(j =>
+        String(j.id) === String(item.chave)
+      );
+      if (jogoAgenda) {
+        const totalJogadores = Number(jogoAgenda.total_jogadores || 0);
+        const cobrados = item.qtdDireto + item.qtdComanda;
+        item.qtdMensalistas = Math.max(0, totalJogadores - cobrados);
+      }
+
+      return item;
+    })
+    .filter(item => Number(item.total || 0) > 0);
+}
+
+// ======================================================
+// EXPORTAR EXCEL COMPATÃVEL
+// ======================================================
+function exportarExcel() {
+  const vendas = getVendasFiltradas();
+
+  if (!vendas.length) {
+    mostrarModalAviso("Sem dados para exportar.");
+    return;
+  }
+
+  if (typeof XLSX === "undefined") {
+    mostrarModalAviso("Biblioteca de Excel nÃ£o carregada.");
+    return;
+  }
+
+  const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+  const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
+  const qtd = vendas.length;
+  const ticket = qtd > 0 ? faturamento / qtd : 0;
+  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+
+  const rankingVendidos = montarRankingProdutos(vendas)
+    .sort((a, b) => b.qtd - a.qtd);
+
+  const rankingLucro = montarRankingProdutos(vendas)
+    .sort((a, b) => b.lucro - a.lucro);
+
+  const jogosAgrupados = montarRecebimentosJogosAgrupados(vendas);
+
+  const wb = XLSX.utils.book_new();
+
+  // =========================
+  // ABA RESUMO
+  // =========================
+  const resumo = [
+    ["RELATÃ“RIO FINANCEIRO - CRV PDV"],
+    [`Empresa: ${nomeFantasiaRelatorio}`],
+    [`PerÃ­odo: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
+    [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
+    [],
+    ["Indicador", "Valor"],
+    ["Faturamento", Number(faturamento || 0)],
+    ["Lucro bruto", Number(lucro || 0)],
+    ["Total de vendas", Number(qtd || 0)],
+    ["Ticket mÃ©dio", Number(ticket || 0)],
+    ["Margem", Number(margem || 0) / 100]
+  ];
+
+  const wsResumo = XLSX.utils.aoa_to_sheet(resumo);
+  wsResumo["!cols"] = [{ wch: 24 }, { wch: 18 }];
+  aplicarEstilosBasicosExcel(wsResumo, {
+    titulo: "A1",
+    moedaCols: ["B7", "B8", "B10"],
+    percentCols: ["B11"]
+  });
+  XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo");
+
+  // =========================
+  // ABA VENDAS
+  // =========================
+  const vendasLinhas = [
+    ["Data", "Hora", "Pagamento", "Subtotal", "Desconto", "Total", "Lucro bruto", "Margem", "Origem", "DescriÃ§Ã£o"]
+  ];
+
+  vendas.forEach(v => {
+    const total = Number(v.total || 0);
+    const lucroVenda = Number(v.lucro_total || 0);
+    const margemVenda = total > 0 ? (lucroVenda / total) : 0;
+
+    vendasLinhas.push([
+      formatarDataVendaRelatorio(v.data),
+      formatarHoraVendaRelatorio(v.data),
+      labelFormaPagamentoRelatorio(v.forma_pagamento),
+      Number(v.subtotal || 0),
+      Number(v.desconto || 0),
+      Number(v.total || 0),
+      lucroVenda,
+      margemVenda,
+      v.origem || "venda",
+      v.descricao || "â€”"
+    ]);
+  });
+
+  const wsVendas = XLSX.utils.aoa_to_sheet(vendasLinhas);
+  wsVendas["!cols"] = [
+    { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 50 }
+  ];
+  wsVendas["!autofilter"] = { ref: `A1:J${vendasLinhas.length}` };
+  aplicarEstilosBasicosExcel(wsVendas, {
+    headerRow: 1,
+    moedaColunasPorIndice: [3, 4, 5, 6],
+    percentualColunasPorIndice: [7],
+    totalLinhas: vendasLinhas.length
+  });
+  XLSX.utils.book_append_sheet(wb, wsVendas, "Vendas");
+
+  // =========================
+  // ABA PRODUTOS
+  // =========================
+  const produtosLinhas = [
+    ["Produto", "Quantidade", "Total vendido", "Lucro"]
+  ];
+
+  rankingVendidos.forEach(produto => {
+    produtosLinhas.push([
+      produto.nome,
+      Number(produto.qtd || 0),
+      Number(produto.total || 0),
+      Number(produto.lucro || 0)
+    ]);
+  });
+
+  const wsProdutos = XLSX.utils.aoa_to_sheet(produtosLinhas);
+  wsProdutos["!cols"] = [{ wch: 36 }, { wch: 14 }, { wch: 18 }, { wch: 18 }];
+  wsProdutos["!autofilter"] = { ref: `A1:D${produtosLinhas.length}` };
+  aplicarEstilosBasicosExcel(wsProdutos, {
+    headerRow: 1,
+    moedaColunasPorIndice: [2, 3],
+    totalLinhas: produtosLinhas.length
+  });
+  XLSX.utils.book_append_sheet(wb, wsProdutos, "Produtos");
+
+  // =========================
+  // ABA PRODUTOS LUCRO
+  // =========================
+  const produtosLucroLinhas = [
+    ["Produto", "Quantidade", "Faturamento", "Lucro"]
+  ];
+
+  rankingLucro.forEach(produto => {
+    produtosLucroLinhas.push([
+      produto.nome,
+      Number(produto.qtd || 0),
+      Number(produto.total || 0),
+      Number(produto.lucro || 0)
+    ]);
+  });
+
+  const wsProdutosLucro = XLSX.utils.aoa_to_sheet(produtosLucroLinhas);
+  wsProdutosLucro["!cols"] = [{ wch: 36 }, { wch: 14 }, { wch: 18 }, { wch: 18 }];
+  wsProdutosLucro["!autofilter"] = { ref: `A1:D${produtosLucroLinhas.length}` };
+  aplicarEstilosBasicosExcel(wsProdutosLucro, {
+    headerRow: 1,
+    moedaColunasPorIndice: [2, 3],
+    totalLinhas: produtosLucroLinhas.length
+  });
+  XLSX.utils.book_append_sheet(wb, wsProdutosLucro, "Lucro Produtos");
+
+  // =========================
+  // ABA JOGOS
+  // =========================
+  if (jogosAgrupados.length) {
+    const jogosLinhas = [
+      ["Data", "Tipo", "Jogo", "Pagamento", "Direto", "Comanda", "Mensalistas", "Total"]
+    ];
+
+    jogosAgrupados.forEach(jogo => {
+      jogosLinhas.push([
+        formatarDataVendaRelatorio(jogo.data),
+        jogo.tipo,
+        jogo.nome,
+        jogo.forma,
+        jogo.ehMensalidade
+          ? `Mensalidade do horÃ¡rio - ${fmt(jogo.totalDireto)}`
+          : `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${fmt(jogo.totalDireto)}`,
+        `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${fmt(jogo.totalComanda)}`,
+        jogo.qtdMensalistas > 0 ? jogo.qtdMensalistas : 0,
+        Number(jogo.total || 0)
+      ]);
+    });
+
+    const wsJogos = XLSX.utils.aoa_to_sheet(jogosLinhas);
+    wsJogos["!cols"] = [
+      { wch: 12 }, { wch: 12 }, { wch: 34 }, { wch: 14 },
+      { wch: 28 }, { wch: 28 }, { wch: 14 }, { wch: 16 }
+    ];
+    wsJogos["!autofilter"] = { ref: `A1:H${jogosLinhas.length}` };
+    aplicarEstilosBasicosExcel(wsJogos, {
+      headerRow: 1,
+      moedaColunasPorIndice: [7],
+      totalLinhas: jogosLinhas.length
+    });
+    XLSX.utils.book_append_sheet(wb, wsJogos, "Jogos");
+  }
+
+  // =========================
+  // ABA ESTOQUE BAIXO
+  // =========================
+  if (produtosData.length) {
+    const estoqueLinhas = [
+      ["Produto", "Categoria", "Estoque"]
+    ];
+
+    produtosData.forEach(produto => {
+      estoqueLinhas.push([
+        produto.nome || "Produto",
+        produto.categoria || "Sem categoria",
+        Number(produto.estoque || 0)
+      ]);
+    });
+
+    const wsEstoque = XLSX.utils.aoa_to_sheet(estoqueLinhas);
+    wsEstoque["!cols"] = [{ wch: 34 }, { wch: 24 }, { wch: 12 }];
+    wsEstoque["!autofilter"] = { ref: `A1:C${estoqueLinhas.length}` };
+    aplicarEstilosBasicosExcel(wsEstoque, {
+      headerRow: 1,
+      totalLinhas: estoqueLinhas.length
+    });
+    XLSX.utils.book_append_sheet(wb, wsEstoque, "Estoque Baixo");
+  }
+
+  XLSX.writeFile(
+    wb,
+    `relatorio_financeiro_${nomeFantasiaRelatorio}_crv_pdv_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+}
+
+function aplicarEstilosBasicosExcel(ws, config = {}) {
+  const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+  const moedaColunasPorIndice = config.moedaColunasPorIndice || [];
+  const percentualColunasPorIndice = config.percentualColunasPorIndice || [];
+
+  for (let row = range.s.r; row <= range.e.r; row++) {
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const endereco = XLSX.utils.encode_cell({ r: row, c: col });
+      const cell = ws[endereco];
+      if (!cell) continue;
+
+      if (row === 0) {
+        cell.s = {
+          font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "1F4E78" } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      }
+
+      if (config.headerRow && row === config.headerRow - 1) {
+        cell.s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "4472C4" } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true }
+        };
+      }
+
+      if (row > 0 && row % 2 === 1 && !cell.s) {
+        cell.s = {
+          fill: { fgColor: { rgb: "F8F9FA" } }
+        };
+      }
+
+      if (moedaColunasPorIndice.includes(col) && typeof cell.v === "number") {
+        cell.z = '"R$" #,##0.00';
+      }
+
+      if (percentualColunasPorIndice.includes(col) && typeof cell.v === "number") {
+        cell.z = '0.0%';
+      }
+    }
+  }
+}
+
+// ======================================================
+// EXPORTAR PDF / IMPRESSÃƒO PROFISSIONAL
+// ======================================================
+function exportarPDF() {
+  const vendas = getVendasFiltradas();
+
+  if (!vendas.length) {
+    mostrarModalAviso("Sem dados para exportar.");
+    return;
+  }
+
+  const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+  const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
+  const qtd = vendas.length;
+  const ticket = qtd > 0 ? faturamento / qtd : 0;
+  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+
+  const rankingVendidos = montarRankingProdutos(vendas)
+    .sort((a, b) => b.qtd - a.qtd)
+    .slice(0, 10);
+
+  const rankingLucro = montarRankingProdutos(vendas)
+    .sort((a, b) => b.lucro - a.lucro)
+    .slice(0, 10);
+
+  const recebimentosJogos =
+    montarRecebimentosJogosAgrupados(vendas);
+
+  const html = `
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>relatorio_financeiro_${nomeFantasiaRelatorio}_crv_pdv</title>
+
+      <style>
+        @page {
+          size: A4;
+          margin: 14mm;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          color: #111;
+          margin: 0;
+          padding: 0;
+          background: #fff;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .logo {
+          text-align: center;
+          margin-bottom: 14px;
+        }
+
+        .logo img {
+          height: 64px;
+          max-width: 180px;
+          object-fit: contain;
+        }
+
+        h1 {
+          text-align: center;
+          font-size: 20px;
+          margin: 0;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .subtitulo {
+          text-align: center;
+          font-size: 12px;
+          color: #555;
+          margin-top: 4px;
+          margin-bottom: 22px;
+        }
+
+        h2 {
+          font-size: 14px;
+          margin: 22px 0 8px;
+          padding-bottom: 5px;
+          border-bottom: 1px solid #999;
+          text-transform: uppercase;
+        }
+
+        .resumo {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+
+        .box {
+          border: 1px solid #cfcfcf;
+          padding: 10px;
+          border-radius: 6px;
+        }
+
+        .label {
+          color: #555;
+          font-size: 11px;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+        }
+
+        .valor {
+          font-size: 17px;
+          font-weight: bold;
+        }
+
+        p {
+          text-align: justify;
+          margin: 8px 0;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          page-break-inside: auto;
+        }
+
+        th {
+          background: #f1f1f1;
+          border: 1px solid #cfcfcf;
+          padding: 7px;
+          text-align: left;
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+
+        td {
+          border: 1px solid #d8d8d8;
+          padding: 7px;
+          font-size: 11px;
+          vertical-align: top;
+        }
+
+        tr {
+          page-break-inside: avoid;
+        }
+
+        .right {
+          text-align: right;
+        }
+
+        .footer {
+          margin-top: 28px;
+          padding-top: 10px;
+          border-top: 1px solid #ccc;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="logo">
+        <img src="assets/logo1.png">
+      </div>
+
+      <h1>RelatÃ³rio Financeiro</h1>
+
+      <div class="subtitulo">
+        PerÃ­odo: ${getPeriodoLabel()} (${getPeriodoDetalhado()}) â€¢ Gerado em ${new Date().toLocaleString("pt-BR")}
+      </div>
+
+      <h2>Resumo do perÃ­odo</h2>
+
+      <div class="resumo">
+        <div class="box">
+          <div class="label">Faturamento</div>
+          <div class="valor">${fmt(faturamento)}</div>
+        </div>
+
+        <div class="box">
+          <div class="label">Lucro bruto</div>
+          <div class="valor">${fmt(lucro)}</div>
+        </div>
+
+        <div class="box">
+          <div class="label">Total de vendas</div>
+          <div class="valor">${qtd}</div>
+        </div>
+
+        <div class="box">
+          <div class="label">Ticket mÃ©dio</div>
+          <div class="valor">${fmt(ticket)}</div>
+        </div>
+      </div>
+
+      <p>
+        O faturamento representa o valor total vendido no perÃ­odo selecionado. O lucro bruto considera os custos cadastrados nos produtos no momento da venda. A margem bruta estimada do perÃ­odo foi de ${margem.toFixed(1)}%.
+      </p>
+
+<h2>Formas de pagamento</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Forma</th>
+      <th class="right">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${Object.entries(
+      vendas.reduce((acc, venda) => {
+        const forma = labelFormaPagamentoRelatorio(
+          venda.forma_pagamento
+        );
+
+        acc[forma] =
+          (acc[forma] || 0) +
+          Number(venda.total || 0);
+
+        return acc;
+      }, {})
+    )
+      .sort((a, b) => b[1] - a[1])
+      .map(([forma, total]) => `
+        <tr>
+          <td>${forma}</td>
+          <td class="right">${fmt(total)}</td>
+        </tr>
+      `)
+      .join("")}
+  </tbody>
+</table>
+
+      <h2>Produtos mais vendidos</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th class="right">Qtd.</th>
+            <th class="right">Total vendido</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rankingVendidos.map(p => `
+            <tr>
+              <td>${p.nome}</td>
+              <td class="right">${p.qtd}</td>
+              <td class="right">${fmt(p.total)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+
+      <h2>Produtos mais lucrativos</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th class="right">Qtd.</th>
+            <th class="right">Faturamento</th>
+            <th class="right">Lucro</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rankingLucro.map(p => `
+            <tr>
+              <td>${p.nome}</td>
+              <td class="right">${p.qtd}</td>
+              <td class="right">${fmt(p.total)}</td>
+              <td class="right">${fmt(p.lucro)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+
+      ${
+  produtosData.length
+    ? `
+      <h2>Produtos com estoque baixo</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th class="right">Estoque</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${produtosData.map(produto => `
+            <tr>
+              <td>${produto.nome}</td>
+              <td>${produto.categoria || "-"}</td>
+              <td class="right">${produto.estoque}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `
+    : ""
+}
+
+      ${
+        recebimentosJogos.length
+          ? `
+            <h2>Recebimentos de jogos</h2>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Jogo</th>
+                  <th>Tipo</th>
+                  <th>Data</th>
+                  <th class="right">Valor total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recebimentosJogos.map(item => `
+                  <tr>
+                    <td>${item.nome}</td>
+                    <td>${item.tipo}</td>
+                    <td>${formatarDataVendaRelatorio(item.data)}</td>
+                    <td class="right">${fmt(item.total)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          `
+          : ""
+      }
+
+      <div class="footer">
+        CRV PDV â€¢ RelatÃ³rio gerado automaticamente pelo sistema
+      </div>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open("", "_blank");
+  janela.document.write(html);
+  janela.document.close();
+
+  janela.onload = () => {
+    janela.focus();
+    janela.print();
+  };
+}
+
+function mostrarModalAviso(mensagem) {
+    const modalExistente = document.getElementById("modalAvisoSistema");
+    if (modalExistente) modalExistente.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "modalAvisoSistema";
+    modal.className = "modal-aviso-overlay";
+
+    modal.innerHTML = `
+        <div class="modal-aviso-card">
+            <h3>Aviso</h3>
+            <p>${mensagem}</p>
+            <button id="btnFecharModalAviso">OK</button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById("btnFecharModalAviso").onclick = () => {
+        modal.remove();
+    };
+}
