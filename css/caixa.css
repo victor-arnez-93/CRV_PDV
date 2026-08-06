@@ -3414,6 +3414,218 @@ body.light .jogo-caixa-status.cobranca {
   font-size: .76rem;
 }
 
+}
+
+/* ======================================================
+   CATÁLOGO UNIFICADO NO CAIXA
+====================================================== */
+
+.pdv-quick-title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pdv-quick-title-wrap small {
+  overflow: hidden;
+  color: var(--crv-orange);
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .pdv-quick-title-wrap small {
+  color: var(--crv-blue);
+}
+
+.pdv-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tipo-itens-caixa-wrap {
+  position: relative;
+}
+
+.tipo-itens-caixa-menu {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.tipo-itens-caixa-menu button {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .76rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.tipo-itens-caixa-menu button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tipo-itens-caixa-menu button.active {
+  background: rgba(249, 137, 72, .11);
+  color: var(--crv-orange);
+}
+
+[data-theme="light"] .tipo-itens-caixa-menu button.active {
+  background: rgba(0, 56, 135, .08);
+  color: var(--crv-blue);
+}
+
+.quick-item-type {
+  color: var(--text-muted);
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.quick-item.tipo-servico {
+  border-color: rgba(84, 205, 22, .30);
+}
+
+.quick-item.tipo-taxa,
+.quick-item.tipo-outro {
+  border-color: rgba(212, 168, 67, .34);
+}
+
+.modal-itens-tipos {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 1px 1px 5px;
+}
+
+.modal-itens-tipos button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.modal-itens-tipos button:hover {
+  border-color: var(--crv-orange);
+  color: var(--text-primary);
+}
+
+.modal-itens-tipos button.active {
+  border-color: var(--crv-orange);
+  background: rgba(249, 137, 72, .10);
+  color: var(--crv-orange);
+}
+
+[data-theme="light"] .modal-itens-tipos button.active {
+  border-color: var(--crv-blue);
+  background: rgba(0, 56, 135, .08);
+  color: var(--crv-blue);
+}
+
+.produto-caixa-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.produto-caixa-tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.produto-caixa-sem-estoque {
+  color: var(--text-muted);
+  font-size: .66rem;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .pdv-quick-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .pdv-quick-title-wrap {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .pdv-quick-actions {
+    gap: 6px;
+  }
+
+  .tipo-itens-caixa-menu {
+    position: fixed;
+    top: auto;
+    right: 14px;
+    bottom: 18px;
+    left: 14px;
+    width: auto;
+    max-height: min(320px, 70dvh);
+  }
+}
+
+@media (max-width: 520px) {
+  .pdv-quick-header {
+    flex-direction: column;
+  }
+
+  .pdv-quick-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pdv-quick-actions > a {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 380px) {
+
   .pdv-mode-switch {
     gap: 4px;
   }

@@ -1300,3 +1300,155 @@
     font-size: .79rem;
   }
 }
+
+/* ======================================================
+   CATÁLOGO UNIFICADO — PRODUTOS, SERVIÇOS E TAXAS
+====================================================== */
+
+.catalogo-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 10px;
+}
+
+.catalogo-tab {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.catalogo-tab:hover {
+  border-color: var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.catalogo-tab.active {
+  border-color: rgba(249, 137, 72, .38);
+  background: rgba(249, 137, 72, .11);
+  color: var(--crv-orange);
+  box-shadow: inset 0 -2px 0 var(--crv-orange);
+}
+
+.catalogo-tab strong {
+  min-width: 25px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  color: currentColor;
+  font-family: var(--font-body);
+  font-size: .66rem;
+  text-align: center;
+}
+
+[data-theme="light"] .catalogo-tab.active {
+  border-color: rgba(0, 56, 135, .34);
+  background: rgba(0, 56, 135, .08);
+  color: var(--crv-blue);
+  box-shadow: inset 0 -2px 0 var(--crv-blue);
+}
+
+.modal-item-catalogo {
+  max-width: 520px;
+}
+
+.produto-tipo-badge,
+.badge-caixa-oculto,
+.produto-sem-estoque {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: var(--radius-pill);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.produto-tipo-badge {
+  padding: 3px 8px;
+  border: 1px solid rgba(0, 212, 255, .24);
+  background: rgba(0, 212, 255, .08);
+  color: var(--crv-cyan);
+}
+
+.produto-tipo-badge.tipo-servico {
+  border-color: rgba(84, 205, 22, .25);
+  background: rgba(84, 205, 22, .08);
+  color: var(--crv-green);
+}
+
+.produto-tipo-badge.tipo-taxa,
+.produto-tipo-badge.tipo-outro {
+  border-color: rgba(212, 168, 67, .28);
+  background: rgba(212, 168, 67, .10);
+  color: var(--crv-orange);
+}
+
+.badge-caixa-oculto {
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 80, 80, .25);
+  background: rgba(255, 80, 80, .08);
+  color: #FF5050;
+}
+
+.produto-sem-estoque {
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.produto-card.tipo-servico {
+  border-top-color: rgba(84, 205, 22, .38);
+}
+
+.produto-card.tipo-taxa,
+.produto-card.tipo-outro {
+  border-top-color: rgba(212, 168, 67, .42);
+}
+
+.form-row-estoque-margem.sem-controle-estoque {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 720px) {
+  .catalogo-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .catalogo-tab {
+    justify-content: flex-start;
+  }
+
+  .catalogo-tab strong {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .catalogo-tabs {
+    padding: 8px;
+  }
+
+  .catalogo-tab {
+    min-height: 44px;
+    padding: 9px 12px;
+  }
+}

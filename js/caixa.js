@@ -11,7 +11,10 @@ let ultimoFechamentoCaixa = null;
 let carrinho = [];
 let vendas = [];
 let produtos = [];
+let catalogoItensCaixa = [];
 let produtosRapidos = [];
+let filtroTipoItensCaixa = "todos";
+let filtroTipoModalCaixa = "todos";
 let metodoPagamento = "dinheiro";
 let modoPDV = "venda";
 let modoBalcaoCaixa = false;
@@ -58,6 +61,29 @@ const CRV_CAIXA_MODO_BALCAO_KEY = "crv-caixa-modo-balcao";
 const CRV_CAIXA_BALCAO_SIDEBAR_KEY = "crv-caixa-balcao-sidebar-anterior";
 const CRV_CAIXA_MODO_RAPIDO_LEGADO_KEY = "crv-caixa-modo-rapido";
 const CRV_CAIXA_SIDEBAR_LEGADO_KEY = "crv-caixa-sidebar-anterior";
+
+const TIPOS_ITEM_CAIXA = {
+  produto: {
+    singular: "produto",
+    plural: "Produtos",
+    icone: "package"
+  },
+  servico: {
+    singular: "serviço",
+    plural: "Serviços",
+    icone: "wrench"
+  },
+  taxa: {
+    singular: "taxa",
+    plural: "Taxas",
+    icone: "badge-dollar-sign"
+  },
+  outro: {
+    singular: "item",
+    plural: "Outros itens",
+    icone: "shapes"
+  }
+};
 
 // ======================================================
 // MODO BALCÃO — OPERAÇÃO DIRETA NO MESMO CAIXA
@@ -700,6 +726,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupModalSelecionarComanda();
   setupModalSelecionarJogo();
   setupModalTodosProdutosCaixa();
+  setupFiltrosTiposItensCaixa();
 
 caixaInicializado = true;
 
@@ -869,6 +896,62 @@ await crvOfflineDB.salvarCache(
   }
   }
 
+function normalizarTipoItemCaixa(valor) {
+  const tipo = String(valor || "produto")
+    .toLowerCase()
+    .trim();
+
+  return TIPOS_ITEM_CAIXA[tipo]
+    ? tipo
+    : "produto";
+}
+
+function tipoItemProdutoCaixa(produto) {
+  return normalizarTipoItemCaixa(produto?.tipo_item);
+}
+
+function itemControlaEstoqueCaixa(produto) {
+  if (typeof produto?.controla_estoque === "boolean") {
+    return produto.controla_estoque;
+  }
+
+  return tipoItemProdutoCaixa(produto) === "produto";
+}
+
+function itemVisivelNoCaixa(produto) {
+  return produto?.exibir_caixa !== false;
+}
+
+function obterItemCatalogoCaixa(id) {
+  return catalogoItensCaixa.find(item => {
+    return String(item.id) === String(id);
+  }) || produtos.find(item => {
+    return String(item.id) === String(id);
+  }) || null;
+}
+
+function itemCombinaFiltroTipoCaixa(produto, filtro = filtroTipoItensCaixa) {
+  const tipo = tipoItemProdutoCaixa(produto);
+
+  if (filtro === "todos") return true;
+  if (filtro === "taxa_outro") return ["taxa", "outro"].includes(tipo);
+
+  return tipo === normalizarTipoItemCaixa(filtro);
+}
+
+function rotuloFiltroTipoCaixa(filtro) {
+  if (filtro === "todos") return "Todos os tipos";
+  if (filtro === "taxa_outro") return "Taxas e outros";
+
+  return TIPOS_ITEM_CAIXA[normalizarTipoItemCaixa(filtro)].plural;
+}
+
+function atualizarProdutosRapidosCaixa() {
+  produtosRapidos = produtos.filter(produto => {
+    return produto.produto_rapido === true && itemVisivelNoCaixa(produto);
+  });
+}
+
 async function carregarProdutos() {
   try {
     const empresaId = obterEmpresaId();
@@ -881,39 +964,44 @@ async function carregarProdutos() {
       .from("produtos")
       .select("*")
       .eq("empresa_id", empresaId)
-      .eq("ativo", true)
       .order("nome", { ascending: true });
 
     if (error) throw error;
 
-    produtos = Array.isArray(data) ? data : [];
-
-    await crvOfflineDB.salvarCache(
-  "caixa_produtos",
-  produtos
-);
-
-    produtosRapidos = produtos.filter(produto => {
-      return produto.produto_rapido === true;
+    catalogoItensCaixa = Array.isArray(data) ? data : [];
+    produtos = catalogoItensCaixa.filter(produto => {
+      return produto.ativo === true && itemVisivelNoCaixa(produto);
     });
 
-    logCaixa(`${produtos.length} produtos carregados do Supabase.`, "success");
+    await crvOfflineDB.salvarCache(
+      "caixa_catalogo_itens",
+      catalogoItensCaixa
+    );
+
+    await crvOfflineDB.salvarCache(
+      "caixa_produtos",
+      produtos
+    );
+
+    atualizarProdutosRapidosCaixa();
+
+    logCaixa(`${produtos.length} itens carregados do Supabase.`, "success");
 
   } catch (err) {
-    const cacheProdutos =
-      await crvOfflineDB.obterCache(
-        "caixa_produtos"
-      ) || [];
+    const cacheCatalogo =
+      await crvOfflineDB.obterCache("caixa_catalogo_itens");
 
-    produtos =
-      cacheProdutos;
+    const cacheProdutos = cacheCatalogo ||
+      await crvOfflineDB.obterCache("caixa_produtos") || [];
 
-    produtosRapidos =
-      produtos.filter(produto => {
-        return produto.produto_rapido === true;
-      });
+    catalogoItensCaixa = Array.isArray(cacheProdutos) ? cacheProdutos : [];
+    produtos = catalogoItensCaixa.filter(produto => {
+      return produto.ativo === true && itemVisivelNoCaixa(produto);
+    });
 
-    logCaixa("Erro ao carregar produtos: " + err.message, "error");
+    atualizarProdutosRapidosCaixa();
+
+    logCaixa("Erro ao carregar itens: " + err.message, "error");
   }
 }
 
@@ -1358,18 +1446,26 @@ function fecharModal() {
 // ======================================================
 function renderProdutosRapidos() {
   const grid = document.getElementById("produtosRapidos");
+  const tipoAtual = document.getElementById("tipoItensRapidosAtual");
+  const itensRapidosFiltrados = produtosRapidos.filter(produto => {
+    return itemCombinaFiltroTipoCaixa(produto, filtroTipoItensCaixa);
+  });
 
   if (!grid) return;
 
   grid.innerHTML = "";
 
-  if (!produtosRapidos.length) {
+  if (tipoAtual) {
+    tipoAtual.textContent = rotuloFiltroTipoCaixa(filtroTipoItensCaixa);
+  }
+
+  if (!itensRapidosFiltrados.length) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;padding:22px;">
         <i data-lucide="package-search" width="28" height="28"></i>
-        <p>Nenhum produto rápido cadastrado.</p>
+        <p>Nenhum item rápido neste tipo.</p>
         <small style="color:var(--text-muted);">
-          Cadastre produtos e marque como produto rápido.
+          Cadastre o item, exiba no Caixa e marque como item rápido.
         </small>
       </div>
     `;
@@ -1381,12 +1477,18 @@ function renderProdutosRapidos() {
     return;
   }
 
-  produtosRapidos.forEach(produto => {
+  itensRapidosFiltrados.forEach(produto => {
     const item = document.createElement("div");
+    const tipoItem = tipoItemProdutoCaixa(produto);
+    const tipoConfig = TIPOS_ITEM_CAIXA[tipoItem];
 
-    item.className = "quick-item";
+    item.className = `quick-item tipo-${tipoItem}`;
 
     item.innerHTML = `
+      <div class="quick-item-type">
+        ${tipoConfig.singular}
+      </div>
+
       <div class="quick-item-name">
         ${produto.nome}
       </div>
@@ -1433,6 +1535,74 @@ function setupModalTodosProdutosCaixa() {
   }
 }
 
+function atualizarBotoesFiltroTipoCaixa() {
+  document.querySelectorAll("[data-tipo-item-caixa]").forEach(botao => {
+    botao.classList.toggle(
+      "active",
+      botao.dataset.tipoItemCaixa === filtroTipoItensCaixa
+    );
+  });
+
+  document.querySelectorAll("[data-tipo-modal-caixa]").forEach(botao => {
+    botao.classList.toggle(
+      "active",
+      botao.dataset.tipoModalCaixa === filtroTipoModalCaixa
+    );
+  });
+}
+
+function setupFiltrosTiposItensCaixa() {
+  const botaoTipos = document.getElementById("btnTiposItensCaixa");
+  const menuTipos = document.getElementById("menuTiposItensCaixa");
+
+  if (botaoTipos && menuTipos) {
+    botaoTipos.addEventListener("click", event => {
+      event.stopPropagation();
+
+      const abrir = menuTipos.style.display !== "block";
+      menuTipos.style.display = abrir ? "block" : "none";
+      botaoTipos.setAttribute("aria-expanded", abrir ? "true" : "false");
+
+      if (abrir && window.lucide) {
+        lucide.createIcons();
+      }
+    });
+
+    menuTipos.addEventListener("click", event => {
+      const botao = event.target.closest("[data-tipo-item-caixa]");
+      if (!botao) return;
+
+      filtroTipoItensCaixa = botao.dataset.tipoItemCaixa || "todos";
+      filtroTipoModalCaixa = filtroTipoItensCaixa;
+
+      atualizarBotoesFiltroTipoCaixa();
+      renderProdutosRapidos();
+
+      menuTipos.style.display = "none";
+      botaoTipos.setAttribute("aria-expanded", "false");
+    });
+
+    document.addEventListener("click", event => {
+      if (event.target.closest(".tipo-itens-caixa-wrap")) return;
+
+      menuTipos.style.display = "none";
+      botaoTipos.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  document.querySelectorAll("[data-tipo-modal-caixa]").forEach(botao => {
+    botao.addEventListener("click", () => {
+      filtroTipoModalCaixa = botao.dataset.tipoModalCaixa || "todos";
+      atualizarBotoesFiltroTipoCaixa();
+
+      const busca = document.getElementById("inputBuscaProdutosCaixa");
+      renderTodosProdutosCaixa(busca?.value || "");
+    });
+  });
+
+  atualizarBotoesFiltroTipoCaixa();
+}
+
 function abrirModalTodosProdutosCaixa() {
   const modal = document.getElementById("modalProdutosCaixa");
   const inputBusca = document.getElementById("inputBuscaProdutosCaixa");
@@ -1444,6 +1614,9 @@ function abrirModalTodosProdutosCaixa() {
   if (inputBusca) {
     inputBusca.value = "";
   }
+
+  filtroTipoModalCaixa = filtroTipoItensCaixa;
+  atualizarBotoesFiltroTipoCaixa();
 
   renderTodosProdutosCaixa("");
 
@@ -1472,23 +1645,34 @@ function fecharModalTodosProdutosCaixa() {
 
 function renderTodosProdutosCaixa(termoBusca = "") {
   const lista = document.getElementById("listaProdutosCaixa");
+  const titulo = document.getElementById("tituloModalItensCaixa");
 
   if (!lista) return;
 
   const termo = String(termoBusca || "").toLowerCase().trim();
+
+  if (titulo) {
+    titulo.textContent = filtroTipoModalCaixa === "todos"
+      ? "Todos os Itens"
+      : rotuloFiltroTipoCaixa(filtroTipoModalCaixa);
+  }
 
   const filtrados = produtos.filter(produto => {
     const nome = String(produto.nome || "").toLowerCase();
     const codigo = String(produto.codigo || "").toLowerCase();
     const codigoBarras = String(produto.codigo_barras || "").toLowerCase();
     const categoria = String(produto.categoria || "").toLowerCase();
+    const passaTipo = itemCombinaFiltroTipoCaixa(produto, filtroTipoModalCaixa);
 
     return (
-      !termo ||
-      nome.includes(termo) ||
-      codigo.includes(termo) ||
-      codigoBarras.includes(termo) ||
-      categoria.includes(termo)
+      passaTipo &&
+      (
+        !termo ||
+        nome.includes(termo) ||
+        codigo.includes(termo) ||
+        codigoBarras.includes(termo) ||
+        categoria.includes(termo)
+      )
     );
   });
 
@@ -1496,7 +1680,7 @@ function renderTodosProdutosCaixa(termoBusca = "") {
     lista.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
         <i data-lucide="package-x" width="28" height="28"></i>
-        <p>Nenhum produto encontrado.</p>
+        <p>Nenhum item encontrado.</p>
       </div>
     `;
 
@@ -1509,6 +1693,9 @@ function renderTodosProdutosCaixa(termoBusca = "") {
 
   lista.innerHTML = filtrados.map(produto => {
     const estoque = Number(produto.estoque || 0);
+    const tipoItem = tipoItemProdutoCaixa(produto);
+    const tipoConfig = TIPOS_ITEM_CAIXA[tipoItem];
+    const controlaEstoque = itemControlaEstoqueCaixa(produto);
 
     const classeEstoque =
       estoque <= 0
@@ -1525,11 +1712,18 @@ function renderTodosProdutosCaixa(termoBusca = "") {
       >
         <div>
           <div class="produto-caixa-nome">
-            ${produto.nome || "Produto"}
+            ${produto.nome || "Item"}
           </div>
 
-          <div class="produto-caixa-categoria">
-            ${produto.categoria || "Sem categoria"}
+          <div class="produto-caixa-meta">
+            <span class="produto-caixa-tipo">
+              <i data-lucide="${tipoConfig.icone}" width="10" height="10"></i>
+              ${tipoConfig.singular}
+            </span>
+
+            <span class="produto-caixa-categoria">
+              ${produto.categoria || "Sem categoria"}
+            </span>
           </div>
         </div>
 
@@ -1538,9 +1732,15 @@ function renderTodosProdutosCaixa(termoBusca = "") {
             ${fmt(produto.preco || 0)}
           </span>
 
-          <span class="produto-caixa-estoque ${classeEstoque}">
-            Est: ${estoque}
-          </span>
+          ${
+            controlaEstoque
+              ? `<span class="produto-caixa-estoque ${classeEstoque}">
+                   Est: ${estoque}
+                 </span>`
+              : `<span class="produto-caixa-sem-estoque">
+                   Sem estoque
+                 </span>`
+          }
         </div>
       </button>
     `;
@@ -1556,8 +1756,8 @@ function renderTodosProdutosCaixa(termoBusca = "") {
 
       if (!produto) {
         await alertaCaixa(
-          "Produto não encontrado",
-          "Não foi possível localizar este produto."
+          "Item não encontrado",
+          "Não foi possível localizar este item."
         );
         return;
       }
@@ -1565,7 +1765,7 @@ function renderTodosProdutosCaixa(termoBusca = "") {
       if (modoPDV === "comanda" && !comandaAtiva) {
         await alertaCaixa(
           "Comanda não selecionada",
-          "Abra ou selecione uma comanda antes de adicionar produtos."
+          "Abra ou selecione uma comanda antes de adicionar itens."
         );
         return;
       }
@@ -1579,6 +1779,10 @@ function renderTodosProdutosCaixa(termoBusca = "") {
       fecharModalTodosProdutosCaixa();
     };
   });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 // ======================================================
@@ -1793,8 +1997,8 @@ async function adicionarCarrinho(produto) {
 
   if (!produto || !produto.id) {
     await alertaCaixa(
-      "Produto inválido",
-      "Produto inválido."
+      "Item inválido",
+      "Item inválido."
     );
     return;
   }
@@ -1804,17 +2008,18 @@ async function adicionarCarrinho(produto) {
   if (preco <= 0) {
     await alertaCaixa(
       "Preço inválido",
-      "Produto sem preço válido."
+      "Item sem preço válido."
     );
     return;
   }
 
   const estoqueDisponivel = Number(produto.estoque || 0);
+  const controlaEstoque = itemControlaEstoqueCaixa(produto);
 
-  if (estoqueDisponivel <= 0) {
+  if (controlaEstoque && estoqueDisponivel <= 0) {
     await alertaCaixa(
       "Sem estoque",
-      `Produto sem estoque: <strong>${produto.nome}</strong>`
+      `Item sem estoque: <strong>${produto.nome}</strong>`
     );
     return;
   }
@@ -1824,7 +2029,7 @@ async function adicionarCarrinho(produto) {
   if (existente) {
     const novaQuantidade = Number(existente.quantidade || 0) + 1;
 
-    if (novaQuantidade > estoqueDisponivel) {
+    if (controlaEstoque && novaQuantidade > estoqueDisponivel) {
       await alertaCaixa(
       "Estoque insuficiente",
       `
@@ -1846,7 +2051,9 @@ async function adicionarCarrinho(produto) {
       codigo: produto.codigo || null,
       codigo_barras: produto.codigo_barras || null,
       quantidade: 1,
-      produto_manual: false
+      produto_manual: false,
+      tipo_item: tipoItemProdutoCaixa(produto),
+      controla_estoque: controlaEstoque
     });
   }
 
@@ -1877,8 +2084,11 @@ function obterTokensProdutoCaixa(texto) {
 
 function montarMapaProdutosBloqueadosCaixa() {
   const mapa = [];
+  const itensCadastrados = catalogoItensCaixa.length
+    ? catalogoItensCaixa
+    : produtos;
 
-  produtos.forEach(produto => {
+  itensCadastrados.forEach(produto => {
     const nome = String(produto.nome || "");
     const categoria = String(produto.categoria || "");
 
@@ -1923,7 +2133,7 @@ function validarDescricaoCobrancaAvulsa(descricao) {
     ) {
       return {
         permitido: false,
-        produto: item.produto.nome || "Produto cadastrado"
+        produto: item.produto.nome || "Item cadastrado"
       };
     }
 
@@ -1934,7 +2144,7 @@ function validarDescricaoCobrancaAvulsa(descricao) {
     if (tokensEncontrados.length >= 1) {
       return {
         permitido: false,
-        produto: item.produto.nome || "Produto cadastrado"
+        produto: item.produto.nome || "Item cadastrado"
       };
     }
   }
@@ -1976,11 +2186,11 @@ async function adicionarManual() {
 
   if (!validacao.permitido) {
     await alertaCaixa(
-      "Produto já cadastrado",
+      "Item já cadastrado",
       `
-        Esta cobrança parece estar relacionada a um produto cadastrado:<br><br>
+        Esta cobrança parece estar relacionada a um item do catálogo:<br><br>
         <strong>${validacao.produto}</strong><br><br>
-        Use a busca, os produtos rápidos ou o botão <strong>Ver todos</strong> para vender pela forma correta.
+        Use a busca, os itens rápidos ou o botão <strong>Ver todos</strong> para vender pela forma correta.
       `
     );
     return;
@@ -2325,7 +2535,7 @@ async function validarCarrinhoComEstoque() {
 
   const { data, error } = await sb
     .from("produtos")
-    .select("id, nome, preco, estoque, ativo")
+    .select("id, nome, preco, estoque, ativo, tipo_item, controla_estoque, exibir_caixa")
     .eq("empresa_id", obterEmpresaId())
     .in("id", idsUnicos);
 
@@ -2341,29 +2551,38 @@ async function validarCarrinhoComEstoque() {
     const produtoBanco = mapaProdutos.get(id);
 
     if (!produtoBanco) {
-      throw new Error("Um produto do carrinho não foi encontrado no Supabase.");
+      throw new Error("Um item do carrinho não foi encontrado no Supabase.");
     }
 
     if (produtoBanco.ativo !== true) {
-      throw new Error(`Produto inativo no caixa: ${produtoBanco.nome}`);
+      throw new Error(`Item inativo no caixa: ${produtoBanco.nome}`);
+    }
+
+    if (!itemVisivelNoCaixa(produtoBanco)) {
+      throw new Error(`Item indisponível no caixa: ${produtoBanco.nome}`);
     }
 
     const quantidadeCarrinho = carrinho
       .filter(item => item.id === id)
       .reduce((acc, item) => acc + Number(item.quantidade || 0), 0);
 
-    const estoqueAtual = Number(produtoBanco.estoque || 0);
+    if (itemControlaEstoqueCaixa(produtoBanco)) {
+      const estoqueAtual = Number(produtoBanco.estoque || 0);
 
-    if (estoqueAtual < quantidadeCarrinho) {
-      throw new Error(`Estoque insuficiente para ${produtoBanco.nome}. Disponível: ${estoqueAtual}`);
+      if (estoqueAtual < quantidadeCarrinho) {
+        throw new Error(`Estoque insuficiente para ${produtoBanco.nome}. Disponível: ${estoqueAtual}`);
+      }
     }
 
-    const produtoLocal = produtos.find(produto => produto.id === id);
+    const produtoLocal = obterItemCatalogoCaixa(id);
 
     if (produtoLocal) {
       produtoLocal.preco = produtoBanco.preco;
       produtoLocal.estoque = produtoBanco.estoque;
       produtoLocal.ativo = produtoBanco.ativo;
+      produtoLocal.tipo_item = tipoItemProdutoCaixa(produtoBanco);
+      produtoLocal.controla_estoque = itemControlaEstoqueCaixa(produtoBanco);
+      produtoLocal.exibir_caixa = itemVisivelNoCaixa(produtoBanco);
     }
   }
 
@@ -2869,11 +3088,13 @@ if (!sistemaOnline()) {
   });
 
   carrinho.forEach(item => {
-    if (item.produto_manual || !item.id) return;
+    if (
+      item.produto_manual ||
+      !item.id ||
+      !itemControlaEstoqueCaixa(item)
+    ) return;
 
-    const produtoLocal = produtos.find(produto => {
-      return String(produto.id) === String(item.id);
-    });
+    const produtoLocal = obterItemCatalogoCaixa(item.id);
 
     if (produtoLocal) {
       produtoLocal.estoque =
@@ -2890,9 +3111,12 @@ if (!sistemaOnline()) {
     produtos
   );
 
-  produtosRapidos = produtos.filter(produto => {
-    return produto.produto_rapido === true;
-  });
+  await crvOfflineDB.salvarCache(
+    "caixa_catalogo_itens",
+    catalogoItensCaixa
+  );
+
+  atualizarProdutosRapidosCaixa();
 
   vendas.unshift(vendaPayload);
 
@@ -3148,7 +3372,11 @@ if (itemAgendaAvulso) {
 
 async function baixarEstoqueProdutos() {
   const itensComProduto = carrinho.filter(item => {
-    return !item.produto_manual && item.id;
+    return (
+      !item.produto_manual &&
+      item.id &&
+      itemControlaEstoqueCaixa(item)
+    );
   });
 
   const quantidadesPorProduto = {};
@@ -3166,10 +3394,10 @@ async function baixarEstoqueProdutos() {
   });
 
   for (const item of Object.values(quantidadesPorProduto)) {
-    const produtoOriginal = produtos.find(produto => produto.id === item.id);
+    const produtoOriginal = obterItemCatalogoCaixa(item.id);
 
     if (!produtoOriginal) {
-      throw new Error(`Produto não encontrado para baixar estoque: ${item.nome}`);
+      throw new Error(`Item não encontrado para baixar estoque: ${item.nome}`);
     }
 
     const estoqueAtual = Number(produtoOriginal.estoque || 0);
@@ -6760,8 +6988,8 @@ async function processarLeituraProduto(codigoLido) {
 
     if (!produto) {
       await alertaCaixa(
-        "Produto não encontrado",
-        "Produto não encontrado."
+        "Item não encontrado",
+        "Item não encontrado."
       );
 
       if (input) {
@@ -6774,20 +7002,19 @@ async function processarLeituraProduto(codigoLido) {
 
     if (produto.ativo !== true) {
       await alertaCaixa(
-        "Produto inativo",
-        `Produto inativo: <strong>${produto.nome}</strong>`
+        "Item inativo",
+        `Item inativo: <strong>${produto.nome}</strong>`
       );
 
       return;
     }
 
-    const estoque =
-      Number(produto.estoque || 0);
+    const estoque = Number(produto.estoque || 0);
 
-    if (estoque <= 0) {
+    if (itemControlaEstoqueCaixa(produto) && estoque <= 0) {
       await alertaCaixa(
         "Sem estoque",
-        `Produto sem estoque: <strong>${produto.nome}</strong>`
+        `Item sem estoque: <strong>${produto.nome}</strong>`
       );
 
       return;
@@ -6799,17 +7026,17 @@ async function processarLeituraProduto(codigoLido) {
     if (preco <= 0) {
       await alertaCaixa(
         "Preço inválido",
-        `Produto sem preço válido: <strong>${produto.nome}</strong>`
+        `Item sem preço válido: <strong>${produto.nome}</strong>`
       );
 
       return;
     }
 
     if (modoPDV === "comanda" && comandaAtiva) {
-  await adicionarProdutoNaComanda(produto);
-} else {
-  adicionarCarrinho(produto);
-}
+      await adicionarProdutoNaComanda(produto);
+    } else {
+      await adicionarCarrinho(produto);
+    }
 
     if (input) {
       input.value = "";
@@ -7040,19 +7267,20 @@ async function adicionarProdutoNaComanda(produto) {
 
   const preco = normalizarNumero(produto.preco);
   const estoque = Number(produto.estoque || 0);
+  const controlaEstoque = itemControlaEstoqueCaixa(produto);
 
   if (preco <= 0) {
     await alertaCaixa(
       "Preço inválido",
-      `Produto sem preço válido: <strong>${produto.nome}</strong>`
+      `Item sem preço válido: <strong>${produto.nome}</strong>`
     );
     return;
   }
 
-  if (estoque <= 0) {
+  if (controlaEstoque && estoque <= 0) {
     await alertaCaixa(
       "Sem estoque",
-      `Produto sem estoque: <strong>${produto.nome}</strong>`
+      `Item sem estoque: <strong>${produto.nome}</strong>`
     );
     return;
   }
@@ -7065,7 +7293,7 @@ async function adicionarProdutoNaComanda(produto) {
     if (existente) {
       const novaQtd = Number(existente.quantidade || 0) + 1;
 
-      if (novaQtd > estoque) {
+      if (controlaEstoque && novaQtd > estoque) {
         await alertaCaixa(
           "Estoque insuficiente",
           `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>Disponível: ${estoque}`
@@ -7083,6 +7311,8 @@ async function adicionarProdutoNaComanda(produto) {
         preco_custo: Number(produto.preco_custo || 0),
         quantidade: 1,
         produto_manual: false,
+        tipo_item: tipoItemProdutoCaixa(produto),
+        controla_estoque: controlaEstoque,
         origem: "pdv",
         origem_id: null,
         agenda_jogador_id: null,
@@ -7165,7 +7395,7 @@ async function adicionarProdutoNaComanda(produto) {
   if (existente) {
     const novaQtd = Number(existente.quantidade || 0) + 1;
 
-    if (novaQtd > estoque) {
+    if (controlaEstoque && novaQtd > estoque) {
       await alertaCaixa(
         "Estoque insuficiente",
         `Estoque insuficiente para <strong>${produto.nome}</strong>.<br><br>Disponível: ${estoque}`
@@ -7369,6 +7599,10 @@ async function carregarItensComanda(opcoes = {}) {
   }
 
   carrinho = (data || []).map(item => {
+    const produtoCatalogo = item.produto_id
+      ? obterItemCatalogoCaixa(item.produto_id)
+      : null;
+
     return {
       id: item.produto_id || item.id,
       comanda_item_id: item.id,
@@ -7377,6 +7611,12 @@ async function carregarItensComanda(opcoes = {}) {
       preco_custo: Number(item.preco_custo || 0),
       quantidade: Number(item.quantidade || 0),
       produto_manual: item.produto_id ? false : true,
+      tipo_item: produtoCatalogo
+        ? tipoItemProdutoCaixa(produtoCatalogo)
+        : "produto",
+      controla_estoque: produtoCatalogo
+        ? itemControlaEstoqueCaixa(produtoCatalogo)
+        : false,
       origem: item.origem || "pdv",
       origem_id: item.origem_id || null,
       agenda_jogador_id: item.agenda_jogador_id || null
@@ -8019,11 +8259,9 @@ async function alterarQuantidadeCarrinho(index, delta) {
     return;
   }
 
-  if (!item.produto_manual) {
+  if (!item.produto_manual && itemControlaEstoqueCaixa(item)) {
 
-    const produto = produtos.find(produto => {
-      return produto.id === item.id;
-    });
+    const produto = obterItemCatalogoCaixa(item.id);
 
     const estoqueDisponivel = Number(produto?.estoque || 0);
 

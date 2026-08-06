@@ -338,7 +338,7 @@
                 class="input pdv-search"
                 type="text"
                 id="inputBusca"
-                placeholder="Buscar produto ou código de barras..."
+                placeholder="Buscar produto, serviço ou código..."
                 autocomplete="off"
                 autofocus
               />
@@ -348,12 +348,15 @@
             <!-- Sugestões de busca -->
             <div class="pdv-suggestions" id="pdvSuggestions"></div>
 
-            <!-- Produtos rápidos reais vindos do Supabase -->
+            <!-- Itens rápidos reais vindos do Supabase -->
 <div class="pdv-quick-header">
 
-  <span>Produtos rápidos</span>
+  <div class="pdv-quick-title-wrap">
+    <span id="tituloItensRapidos">Itens rápidos</span>
+    <small id="tipoItensRapidosAtual">Todos os tipos</small>
+  </div>
 
-  <div style="display:flex;align-items:center;gap:10px;">
+  <div class="pdv-quick-actions">
 
     <button
       type="button"
@@ -362,6 +365,37 @@
     >
       Ver todos
     </button>
+
+    <div class="tipo-itens-caixa-wrap">
+      <button
+        type="button"
+        class="btn-abrir-modal-comandas"
+        id="btnTiposItensCaixa"
+        aria-expanded="false"
+      >
+        <i data-lucide="sliders-horizontal" width="13" height="13"></i>
+        Tipos
+      </button>
+
+      <div class="tipo-itens-caixa-menu" id="menuTiposItensCaixa" style="display:none;">
+        <button type="button" class="active" data-tipo-item-caixa="todos">
+          <i data-lucide="layout-grid" width="14" height="14"></i>
+          Todos os itens
+        </button>
+        <button type="button" data-tipo-item-caixa="produto">
+          <i data-lucide="package" width="14" height="14"></i>
+          Produtos
+        </button>
+        <button type="button" data-tipo-item-caixa="servico">
+          <i data-lucide="wrench" width="14" height="14"></i>
+          Serviços
+        </button>
+        <button type="button" data-tipo-item-caixa="taxa_outro">
+          <i data-lucide="badge-dollar-sign" width="14" height="14"></i>
+          Taxas e outros
+        </button>
+      </div>
+    </div>
 
     <a
       href="produtos.html"
@@ -383,7 +417,7 @@
   </h3>
 
   <p class="pdv-manual-aviso">
-    Use apenas para cobranças que não sejam produtos cadastrados.
+    Use apenas para cobranças que não existam no catálogo de produtos e serviços.
   </p>
 
               <div class="pdv-manual-row">
@@ -604,7 +638,7 @@
   </div>
 </div>
 
-<!-- MODAL TODOS PRODUTOS -->
+<!-- MODAL TODOS OS ITENS -->
 <div
   class="modal-overlay"
   id="modalProdutosCaixa"
@@ -614,9 +648,9 @@
 
     <div class="modal-header">
       <div>
-        <h3>Todos os Produtos</h3>
+        <h3 id="tituloModalItensCaixa">Todos os Itens</h3>
         <p class="modal-subtitle">
-          Selecione um produto para adicionar à venda.
+          Selecione um item para adicionar à venda.
         </p>
       </div>
 
@@ -643,8 +677,15 @@
           class="input pdv-search"
           type="text"
           id="inputBuscaProdutosCaixa"
-          placeholder="Pesquisar produto..."
+          placeholder="Pesquisar produto, serviço ou taxa..."
         />
+      </div>
+
+      <div class="modal-itens-tipos" id="filtrosTiposModalCaixa">
+        <button type="button" class="active" data-tipo-modal-caixa="todos">Todos</button>
+        <button type="button" data-tipo-modal-caixa="produto">Produtos</button>
+        <button type="button" data-tipo-modal-caixa="servico">Serviços</button>
+        <button type="button" data-tipo-modal-caixa="taxa_outro">Taxas e outros</button>
       </div>
 
       <div

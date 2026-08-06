@@ -15,6 +15,7 @@ const fmt = valor => {
 
 let produtos = [];
 let filtroAtivo = "todos";
+let tipoAbaAtivo = "produto";
 let idExcluir = null;
 let comboItensTemporarios = [];
 let tipoNegocioProdutos = "";
@@ -48,6 +49,11 @@ const categoriaLabel = {
   utilidades: "Utilidades",
   combos: "Combos",
   servicos: "Serviços",
+  jogos_lazer: "Jogos e lazer",
+  locacoes: "Locações",
+  taxas: "Taxas",
+  multas: "Multas",
+  alugueis: "Aluguéis",
   produtos: "Produtos",
   pacotes: "Pacotes",
   mensalidades: "Mensalidades",
@@ -125,6 +131,51 @@ const categoriasPorSegmento = {
   servicos_agendados: ["servicos", "pacotes", "mensalidades", "produtos", "outros"],
 
   assistencia_tecnica: ["servicos", "produtos", "outros"]
+};
+
+const tiposItemCatalogo = {
+  produto: {
+    singular: "produto",
+    plural: "produtos",
+    tituloNovo: "Novo Produto",
+    tituloEditar: "Editar Produto",
+    tituloDuplicar: "Duplicar Produto",
+    icone: "package",
+    placeholder: "Ex: Água Mineral 500ml"
+  },
+  servico: {
+    singular: "serviço",
+    plural: "serviços",
+    tituloNovo: "Novo Serviço",
+    tituloEditar: "Editar Serviço",
+    tituloDuplicar: "Duplicar Serviço",
+    icone: "wrench",
+    placeholder: "Ex: Bilhar por ficha"
+  },
+  taxa: {
+    singular: "taxa",
+    plural: "taxas",
+    tituloNovo: "Nova Taxa",
+    tituloEditar: "Editar Taxa",
+    tituloDuplicar: "Duplicar Taxa",
+    icone: "badge-dollar-sign",
+    placeholder: "Ex: Taxa de locação"
+  },
+  outro: {
+    singular: "item",
+    plural: "outros itens",
+    tituloNovo: "Novo Item",
+    tituloEditar: "Editar Item",
+    tituloDuplicar: "Duplicar Item",
+    icone: "shapes",
+    placeholder: "Ex: Item comercial"
+  }
+};
+
+const categoriasPorTipoItem = {
+  servico: ["jogos_lazer", "locacoes", "servicos", "pacotes", "mensalidades", "outros"],
+  taxa: ["taxas", "multas", "alugueis", "outros"],
+  outro: ["outros"]
 };
 
 // ======================================================
@@ -350,6 +401,218 @@ function normalizarEstoque(valor) {
   return numero;
 }
 
+function normalizarTipoItemCatalogo(valor) {
+  const tipo = String(valor || "produto")
+    .toLowerCase()
+    .trim();
+
+  return tiposItemCatalogo[tipo]
+    ? tipo
+    : "produto";
+}
+
+function obterTipoItemProduto(produto) {
+  return normalizarTipoItemCatalogo(produto?.tipo_item);
+}
+
+function itemControlaEstoque(produto) {
+  if (typeof produto?.controla_estoque === "boolean") {
+    return produto.controla_estoque;
+  }
+
+  return obterTipoItemProduto(produto) === "produto";
+}
+
+function itemVisivelNoCaixa(produto) {
+  return produto?.exibir_caixa !== false;
+}
+
+function tiposDaAbaCatalogo(aba = tipoAbaAtivo) {
+  if (aba === "taxa_outro") {
+    return ["taxa", "outro"];
+  }
+
+  return [normalizarTipoItemCatalogo(aba)];
+}
+
+function itemPertenceAbaCatalogo(produto, aba = tipoAbaAtivo) {
+  return tiposDaAbaCatalogo(aba).includes(obterTipoItemProduto(produto));
+}
+
+function obterCategoriasDoTipoItem(tipo) {
+  const tipoNormalizado = normalizarTipoItemCatalogo(tipo);
+
+  if (tipoNormalizado === "produto") {
+    return obterCategoriasDoSegmento();
+  }
+
+  return categoriasPorTipoItem[tipoNormalizado] || ["outros"];
+}
+
+function atualizarContadoresTiposCatalogo() {
+  const totalProdutos = produtos.filter(produto => {
+    return obterTipoItemProduto(produto) === "produto";
+  }).length;
+
+  const totalServicos = produtos.filter(produto => {
+    return obterTipoItemProduto(produto) === "servico";
+  }).length;
+
+  const totalTaxasOutros = produtos.filter(produto => {
+    return ["taxa", "outro"].includes(obterTipoItemProduto(produto));
+  }).length;
+
+  const contadorProduto = document.getElementById("contadorTipoProduto");
+  const contadorServico = document.getElementById("contadorTipoServico");
+  const contadorTaxaOutro = document.getElementById("contadorTipoTaxaOutro");
+
+  if (contadorProduto) contadorProduto.textContent = totalProdutos;
+  if (contadorServico) contadorServico.textContent = totalServicos;
+  if (contadorTaxaOutro) contadorTaxaOutro.textContent = totalTaxasOutros;
+}
+
+function atualizarCabecalhoCatalogo() {
+  const btnTexto = document.getElementById("btnNovoItemCatalogoTexto");
+  const filtroTexto = document.getElementById("filtroTexto");
+  const ordenar = document.getElementById("ordenarProdutos");
+
+  const configuracao = tipoAbaAtivo === "taxa_outro"
+    ? tiposItemCatalogo.taxa
+    : tiposItemCatalogo[normalizarTipoItemCatalogo(tipoAbaAtivo)];
+
+  if (btnTexto) {
+    btnTexto.textContent = configuracao.tituloNovo;
+  }
+
+  if (filtroTexto) {
+    filtroTexto.placeholder = tipoAbaAtivo === "taxa_outro"
+      ? "Buscar taxa ou outro item..."
+      : `Buscar ${configuracao.singular} ou código...`;
+  }
+
+  if (ordenar) {
+    const exibirEstoque = tipoAbaAtivo === "produto";
+
+    [...ordenar.options].forEach(option => {
+      if (["menor_estoque", "maior_estoque"].includes(option.value)) {
+        option.hidden = !exibirEstoque;
+      }
+    });
+
+    if (!exibirEstoque && ["menor_estoque", "maior_estoque"].includes(ordenar.value)) {
+      ordenar.value = "az";
+    }
+  }
+}
+
+function setTipoCatalogo(botao, tipo) {
+  tipoAbaAtivo = tipo === "taxa_outro"
+    ? "taxa_outro"
+    : normalizarTipoItemCatalogo(tipo);
+
+  document.querySelectorAll(".catalogo-tab").forEach(item => {
+    const ativo = item === botao;
+    item.classList.toggle("active", ativo);
+    item.setAttribute("aria-selected", ativo ? "true" : "false");
+  });
+
+  filtroAtivo = "todos";
+
+  document.querySelectorAll(".filtro-btn").forEach(item => {
+    item.classList.toggle("active", item.dataset.filter === "todos");
+  });
+
+  const filtroTexto = document.getElementById("filtroTexto");
+  if (filtroTexto) filtroTexto.value = "";
+
+  atualizarCabecalhoCatalogo();
+  preencherFiltrosCategoriaProduto();
+  renderProdutos();
+}
+
+function preencherCategoriasModalProduto(tipo, valorAtual = "") {
+  const selectCategoria = document.getElementById("produtoCategoria");
+  if (!selectCategoria) return;
+
+  const categorias = obterCategoriasDoTipoItem(tipo);
+  const valorNormalizado = String(valorAtual || "");
+  const valorEhPadrao = categorias.includes(valorNormalizado);
+
+  selectCategoria.innerHTML = `
+    <option value="">Sem categoria</option>
+    ${categorias.map(categoria => `
+      <option value="${categoria}">
+        ${categoriaLabel[categoria] || categoria}
+      </option>
+    `).join("")}
+  `;
+
+  if (valorEhPadrao || valorNormalizado === "") {
+    selectCategoria.value = valorNormalizado;
+    document.getElementById("produtoCategoriaOutros").value = "";
+  } else {
+    selectCategoria.value = "outros";
+    document.getElementById("produtoCategoriaOutros").value = valorNormalizado;
+  }
+
+  toggleCategoriaOutros();
+}
+
+function atualizarFormularioPorTipoItem({ categoriaAtual = null } = {}) {
+  const selectTipo = document.getElementById("produtoTipoItem");
+  const tipo = normalizarTipoItemCatalogo(selectTipo?.value);
+  const configuracao = tiposItemCatalogo[tipo];
+  const nomeLabel = document.getElementById("produtoNomeLabel");
+  const nomeInput = document.getElementById("produtoNome");
+  const estoqueGrupo = document.getElementById("produtoEstoqueGrupo");
+  const estoqueInput = document.getElementById("produtoEstoque");
+  const formRow = document.querySelector(".form-row-estoque-margem");
+  const controlaEstoque = tipo === "produto";
+
+  if (selectTipo) selectTipo.value = tipo;
+  if (nomeLabel) nomeLabel.textContent = `Nome do ${configuracao.singular} *`;
+  if (nomeInput) nomeInput.placeholder = configuracao.placeholder;
+
+  if (estoqueGrupo) {
+    estoqueGrupo.style.display = controlaEstoque ? "flex" : "none";
+  }
+
+  if (formRow) {
+    formRow.classList.toggle("sem-controle-estoque", !controlaEstoque);
+  }
+
+  if (!controlaEstoque && estoqueInput) {
+    estoqueInput.value = "0";
+  }
+
+  const categoriaAnterior = categoriaAtual === null
+    ? document.getElementById("produtoCategoria")?.value || ""
+    : categoriaAtual;
+
+  preencherCategoriasModalProduto(tipo, categoriaAnterior);
+  toggleComboProdutos();
+}
+
+function sincronizarTogglesCatalogo() {
+  const ativo = document.getElementById("produtoAtivo");
+  const exibirCaixa = document.getElementById("produtoExibirCaixa");
+  const rapido = document.getElementById("produtoRapido");
+
+  if (!ativo || !exibirCaixa || !rapido) return;
+
+  if (!ativo.checked) {
+    exibirCaixa.checked = false;
+    rapido.checked = false;
+  }
+
+  if (!exibirCaixa.checked) {
+    rapido.checked = false;
+  }
+
+  exibirCaixa.disabled = !ativo.checked;
+  rapido.disabled = !ativo.checked || !exibirCaixa.checked;
+}
+
 function toggleCategoriaOutros() {
   const categoria = document.getElementById("produtoCategoria");
   const wrap = document.getElementById("categoriaOutrosWrap");
@@ -400,6 +663,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   logProdutos("Inicializando...");
 
   setupMascarasProdutos();
+  atualizarCabecalhoCatalogo();
 
   const pronto = await aguardarContextoSistema();
 
@@ -411,6 +675,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "produtos_lista"
     ) || [];
 
+  preencherFiltrosCategoriaProduto();
   renderProdutos();
   atualizarStatusCaixa();
 
@@ -418,9 +683,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 }
 
   await carregarTipoNegocioProdutos();
-  preencherFiltrosCategoriaProduto();
   await carregarProdutos();
 
+  preencherFiltrosCategoriaProduto();
   renderProdutos();
   verificarEstoqueBaixo();
   const params = new URLSearchParams(window.location.search);
@@ -475,9 +740,20 @@ function categoriaDisponivelNoSegmento(categoria) {
 
 function preencherFiltrosCategoriaProduto() {
   const filtroCategoria = document.getElementById("filtroCategoriaProduto");
-  const selectCategoria = document.getElementById("produtoCategoria");
 
-  const categorias = obterCategoriasDoSegmento();
+  const categoriasPadrao = tiposDaAbaCatalogo().flatMap(tipo => {
+    return obterCategoriasDoTipoItem(tipo);
+  });
+
+  const categoriasCadastradas = produtos
+    .filter(produto => itemPertenceAbaCatalogo(produto))
+    .map(produto => String(produto.categoria || "").trim())
+    .filter(Boolean);
+
+  const categorias = [...new Set([
+    ...categoriasPadrao,
+    ...categoriasCadastradas
+  ])];
 
   if (filtroCategoria) {
     filtroCategoria.innerHTML = `
@@ -488,23 +764,6 @@ function preencherFiltrosCategoriaProduto() {
         </option>
       `).join("")}
     `;
-  }
-
-  if (selectCategoria) {
-    const valorAtual = selectCategoria.value;
-
-    selectCategoria.innerHTML = `
-      <option value="">Sem categoria</option>
-      ${categorias.map(categoria => `
-        <option value="${categoria}">
-          ${categoriaLabel[categoria] || categoria}
-        </option>
-      `).join("")}
-    `;
-
-    if ([...selectCategoria.options].some(option => option.value === valorAtual)) {
-      selectCategoria.value = valorAtual;
-    }
   }
 }
 
@@ -542,22 +801,34 @@ async function carregarProdutos() {
           categoria: produto.categoria || "",
           ativo: produto.ativo !== false,
           produto_rapido: produto.produto_rapido === true,
+          tipo_item: normalizarTipoItemCatalogo(produto.tipo_item),
+          controla_estoque: typeof produto.controla_estoque === "boolean"
+            ? produto.controla_estoque
+            : normalizarTipoItemCatalogo(produto.tipo_item) === "produto",
+          exibir_caixa: produto.exibir_caixa !== false,
           created_at: produto.created_at || null,
           updated_at: produto.updated_at || null
         }))
       : [];
 
+    const itensAtivos = produtos.filter(produto => produto.ativo === true);
+
     await crvOfflineDB.salvarCache(
-  "caixa_produtos",
-  produtos
-);
+      "caixa_catalogo_itens",
+      produtos
+    );
+
+    await crvOfflineDB.salvarCache(
+      "caixa_produtos",
+      itensAtivos.filter(itemVisivelNoCaixa)
+    );
 
 await crvOfflineDB.salvarCache(
   "produtos_lista",
   produtos
 );
 
-    logProdutos(`${produtos.length} produto(s) carregado(s).`, "success");
+    logProdutos(`${produtos.length} item(ns) carregado(s).`, "success");
 
   } catch (err) {
     produtos =
@@ -567,8 +838,8 @@ await crvOfflineDB.salvarCache(
 
 logProdutos(
   produtos.length
-    ? "Produtos carregados do cache offline."
-    : "Erro ao carregar produtos: " + err.message,
+    ? "Itens carregados do cache offline."
+    : "Erro ao carregar itens: " + err.message,
   produtos.length ? "warn" : "error"
 );
   }
@@ -630,6 +901,8 @@ function getProdutosFiltrados() {
   );
 
   let lista = produtos.filter(produto => {
+    const passaTipo = itemPertenceAbaCatalogo(produto);
+
     const passaFiltro =
       filtroAtivo === "todos" ||
       (filtroAtivo === "ativos" && produto.ativo) ||
@@ -651,7 +924,7 @@ function getProdutosFiltrados() {
       codigoBarras.includes(texto) ||
       String(categoriaLabel[categoria] || categoria).toLowerCase().includes(texto);
 
-    return passaFiltro && passaCategoria && passaTexto;
+    return passaTipo && passaFiltro && passaCategoria && passaTexto;
   });
 
   lista.sort((a, b) => {
@@ -702,23 +975,38 @@ function renderProdutos() {
 
   const lista = getProdutosFiltrados();
 
-  const total = produtos.length;
-  const ativos = produtos.filter(produto => produto.ativo).length;
-  const rapidos = produtos.filter(produto => produto.produto_rapido).length;
+  const itensDaAba = produtos.filter(produto => {
+    return itemPertenceAbaCatalogo(produto);
+  });
+
+  const total = itensDaAba.length;
+  const ativos = itensDaAba.filter(produto => produto.ativo).length;
+  const rapidos = itensDaAba.filter(produto => produto.produto_rapido).length;
+  const rotuloAba = tipoAbaAtivo === "taxa_outro"
+    ? "taxa(s) e outro(s) item(ns)"
+    : `${tiposItemCatalogo[normalizarTipoItemCatalogo(tipoAbaAtivo)].singular}(s)`;
+
+  atualizarContadoresTiposCatalogo();
 
   if (subtitle) {
     subtitle.textContent =
-      `${total} produto(s) cadastrado(s) · ${ativos} ativo(s) · ${rapidos} rápido(s)`;
+      `${total} ${rotuloAba} cadastrado(s) · ${ativos} ativo(s) · ${rapidos} rápido(s)`;
   }
 
   if (!lista.length) {
+    const tipoNovo = tipoAbaAtivo === "taxa_outro"
+      ? "taxa"
+      : normalizarTipoItemCatalogo(tipoAbaAtivo);
+    const configuracao = tiposItemCatalogo[tipoNovo];
+
     grid.innerHTML = `
       <div class="produtos-empty">
-        <i data-lucide="package" width="40" height="40" style="opacity:0.3;"></i>
-        <p>Nenhum produto encontrado</p>
+        <i data-lucide="${configuracao.icone}" width="40" height="40" style="opacity:0.3;"></i>
+        <p>Nenhum ${configuracao.singular} encontrado</p>
+        <small>Cadastre apenas o que o estabelecimento realmente vende.</small>
         <button class="btn-ghost" onclick="abrirModalNovo()">
           <i data-lucide="plus" width="14" height="14"></i>
-          Adicionar produto
+          Adicionar ${configuracao.singular}
         </button>
       </div>
     `;
@@ -732,6 +1020,9 @@ function renderProdutos() {
 
   grid.innerHTML = lista.map(produto => {
     const estoque = Number(produto.estoque || 0);
+    const tipoItem = obterTipoItemProduto(produto);
+    const configuracaoTipo = tiposItemCatalogo[tipoItem];
+    const controlaEstoque = itemControlaEstoque(produto);
 
     const estoqueClass =
       estoque === 0
@@ -750,9 +1041,14 @@ function renderProdutos() {
     const categoria = produto.categoria || "";
 
     return `
-      <div class="produto-card ${produto.ativo ? "" : "inativo"}">
+      <div class="produto-card tipo-${tipoItem} ${produto.ativo ? "" : "inativo"}">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div class="produto-badges">
+            <span class="produto-tipo-badge tipo-${tipoItem}">
+              <i data-lucide="${configuracaoTipo.icone}" width="11" height="11"></i>
+              ${configuracaoTipo.singular}
+            </span>
+
             ${
               categoria
                 ? `<span class="produto-categoria">${categoriaLabel[categoria] || categoria}</span>`
@@ -764,6 +1060,15 @@ function renderProdutos() {
                 ? `<span class="badge-rapido">
                      <i data-lucide="zap" width="11" height="11"></i>
                      Rápido
+                   </span>`
+                : ""
+            }
+
+            ${
+              !itemVisivelNoCaixa(produto)
+                ? `<span class="badge-caixa-oculto">
+                     <i data-lucide="eye-off" width="11" height="11"></i>
+                     Fora do Caixa
                    </span>`
                 : ""
             }
@@ -788,10 +1093,17 @@ function renderProdutos() {
         </div>
 
         <div class="produto-footer">
-          <div class="produto-estoque ${estoqueClass}">
-            <i data-lucide="${estoqueIcon}" width="13" height="13"></i>
-            ${estoque} em estoque
-          </div>
+          ${
+            controlaEstoque
+              ? `<div class="produto-estoque ${estoqueClass}">
+                   <i data-lucide="${estoqueIcon}" width="13" height="13"></i>
+                   ${estoque} em estoque
+                 </div>`
+              : `<div class="produto-sem-estoque">
+                   <i data-lucide="infinity" width="13" height="13"></i>
+                   Sem controle de estoque
+                 </div>`
+          }
 
 <div class="produto-actions">
 
@@ -835,28 +1147,34 @@ function renderProdutos() {
 // ======================================================
 function abrirModalNovo() {
   const titulo = document.getElementById("modalProdutoTitulo");
+  const tipoInicial = tipoAbaAtivo === "taxa_outro"
+    ? "taxa"
+    : normalizarTipoItemCatalogo(tipoAbaAtivo);
 
   if (titulo) {
-    titulo.textContent = "Novo Produto";
+    titulo.textContent = tiposItemCatalogo[tipoInicial].tituloNovo;
   }
 
   document.getElementById("produtoId").value = "";
+  document.getElementById("produtoTipoItem").value = tipoInicial;
   document.getElementById("produtoNome").value = "";
   document.getElementById("produtoPreco").value = "";
   document.getElementById("produtoPrecoCusto").value = "";
   document.getElementById("produtoEstoque").value = "";
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = "";
-  document.getElementById("produtoCategoria").value = "";
   document.getElementById("produtoCategoriaOutros").value = "";
-  toggleCategoriaOutros();
+  atualizarFormularioPorTipoItem({ categoriaAtual: "" });
   document.getElementById("produtoAtivo").checked = true;
+  document.getElementById("produtoExibirCaixa").checked = true;
 
   const produtoRapido = document.getElementById("produtoRapido");
 
   if (produtoRapido) {
     produtoRapido.checked = false;
   }
+
+  sincronizarTogglesCatalogo();
 
   comboItensTemporarios = [];
   renderComboProdutos();
@@ -892,32 +1210,32 @@ async function abrirModalEditar(id) {
     return;
   }
 
-  document.getElementById("modalProdutoTitulo").textContent = "Editar Produto";
+  const tipoItem = obterTipoItemProduto(produto);
+
+  document.getElementById("modalProdutoTitulo").textContent =
+    tiposItemCatalogo[tipoItem].tituloEditar;
 
   document.getElementById("produtoId").value = produto.id;
+  document.getElementById("produtoTipoItem").value = tipoItem;
   document.getElementById("produtoNome").value = produto.nome;
   document.getElementById("produtoPreco").value = valorParaInputMoeda(produto.preco);
   document.getElementById("produtoPrecoCusto").value = valorParaInputMoeda(produto.preco_custo || 0);
-  document.getElementById("produtoEstoque").value = produto.estoque;
+  document.getElementById("produtoEstoque").value = itemControlaEstoque(produto)
+    ? produto.estoque
+    : 0;
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = produto.codigo || "";
-
-if (categoriaDisponivelNoSegmento(produto.categoria)) {
-  document.getElementById("produtoCategoria").value = produto.categoria || "";
-  document.getElementById("produtoCategoriaOutros").value = "";
-} else {
-  document.getElementById("produtoCategoria").value = "outros";
-  document.getElementById("produtoCategoriaOutros").value = produto.categoria || "";
-}
-
-toggleCategoriaOutros();
+  atualizarFormularioPorTipoItem({ categoriaAtual: produto.categoria || "" });
   document.getElementById("produtoAtivo").checked = produto.ativo === true;
+  document.getElementById("produtoExibirCaixa").checked = itemVisivelNoCaixa(produto);
 
   const produtoRapido = document.getElementById("produtoRapido");
 
   if (produtoRapido) {
     produtoRapido.checked = produto.produto_rapido === true;
   }
+
+  sincronizarTogglesCatalogo();
 
   await carregarItensComboProduto(produto.id);
   toggleComboProdutos();
@@ -936,10 +1254,13 @@ async function duplicarProduto(id) {
     return;
   }
 
+  const tipoItem = obterTipoItemProduto(produto);
+
   document.getElementById("modalProdutoTitulo").textContent =
-    "Duplicar Produto";
+    tiposItemCatalogo[tipoItem].tituloDuplicar;
 
   document.getElementById("produtoId").value = "";
+  document.getElementById("produtoTipoItem").value = tipoItem;
 
   document.getElementById("produtoNome").value =
     `${produto.nome} (Cópia)`;
@@ -951,31 +1272,24 @@ async function duplicarProduto(id) {
     valorParaInputMoeda(produto.preco_custo || 0);
 
   document.getElementById("produtoEstoque").value =
-    produto.estoque || 0;
+    itemControlaEstoque(produto) ? produto.estoque || 0 : 0;
 
   atualizarPreviewMargemProduto();
 
   document.getElementById("produtoCodigo").value = "";
 
-if (categoriaDisponivelNoSegmento(produto.categoria)) {
-    document.getElementById("produtoCategoria").value =
-      produto.categoria || "";
-
-    document.getElementById("produtoCategoriaOutros").value = "";
-  } else {
-    document.getElementById("produtoCategoria").value = "outros";
-
-    document.getElementById("produtoCategoriaOutros").value =
-      produto.categoria || "";
-  }
-
-  toggleCategoriaOutros();
+  atualizarFormularioPorTipoItem({ categoriaAtual: produto.categoria || "" });
 
   document.getElementById("produtoAtivo").checked =
     produto.ativo === true;
 
+  document.getElementById("produtoExibirCaixa").checked =
+    itemVisivelNoCaixa(produto);
+
   document.getElementById("produtoRapido").checked =
     produto.produto_rapido === true;
+
+  sincronizarTogglesCatalogo();
 
   await carregarItensComboProduto(produto.id);
   toggleComboProdutos();
@@ -993,11 +1307,14 @@ if (categoriaDisponivelNoSegmento(produto.categoria)) {
 
 function toggleComboProdutos() {
   const categoria = document.getElementById("produtoCategoria");
+  const tipoItem = normalizarTipoItemCatalogo(
+    document.getElementById("produtoTipoItem")?.value
+  );
   const wrap = document.getElementById("comboProdutosWrap");
 
   if (!categoria || !wrap) return;
 
-  if (categoria.value === "combos") {
+  if (tipoItem === "produto" && categoria.value === "combos") {
     wrap.style.display = "block";
 
     if (!comboItensTemporarios.length) {
@@ -1016,6 +1333,7 @@ function obterProdutosDisponiveisParaCombo() {
   return produtos.filter(produto => {
     return (
       produto.ativo === true &&
+      obterTipoItemProduto(produto) === "produto" &&
       produto.categoria !== "combos" &&
       String(produto.id) !== idAtual
     );
@@ -1128,6 +1446,9 @@ async function carregarItensComboProduto(comboId) {
 
 async function salvarItensComboProduto(comboId) {
   const categoria = obterCategoriaProduto();
+  const tipoItem = normalizarTipoItemCatalogo(
+    document.getElementById("produtoTipoItem")?.value
+  );
 
   await sb
     .from("produto_combo_itens")
@@ -1135,7 +1456,7 @@ async function salvarItensComboProduto(comboId) {
     .eq("empresa_id", obterEmpresaId())
     .eq("combo_id", comboId);
 
-  if (categoria !== "combos") return;
+  if (tipoItem !== "produto" || categoria !== "combos") return;
 
   const itensValidos = comboItensTemporarios.filter(item => {
     return item.produto_id && Number(item.quantidade || 0) > 0;
@@ -1195,8 +1516,8 @@ async function validarProdutoDuplicadoBanco({ id, nome, codigo }) {
 
   if (nomeDuplicado) {
     await abrirAlertaProduto({
-      titulo: "Produto duplicado",
-      mensagem: `Já existe um produto com este nome: <strong>${nome}</strong>.`
+      titulo: "Item duplicado",
+      mensagem: `Já existe um item com este nome: <strong>${nome}</strong>.`
     });
 
     return false;
@@ -1218,7 +1539,7 @@ async function validarProdutoDuplicadoBanco({ id, nome, codigo }) {
     if (codigoDuplicado) {
       await abrirAlertaProduto({
         titulo: "Código duplicado",
-        mensagem: `Já existe um produto com este código de barras: <strong>${codigoNormalizado}</strong>.`
+        mensagem: `Já existe um item com este código: <strong>${codigoNormalizado}</strong>.`
       });
 
       return false;
@@ -1234,8 +1555,39 @@ async function validarProdutoDuplicadoBanco({ id, nome, codigo }) {
 async function salvarProduto() {
   const id = String(document.getElementById("produtoId")?.value || "").trim();
   const nome = formatarNomeProduto(
-  document.getElementById("produtoNome")?.value
-);
+    document.getElementById("produtoNome")?.value
+  );
+  const tipoItem = normalizarTipoItemCatalogo(
+    document.getElementById("produtoTipoItem")?.value
+  );
+  const configuracaoTipo = tiposItemCatalogo[tipoItem];
+  const controlaEstoque = tipoItem === "produto";
+  const preco = normalizarPreco(document.getElementById("produtoPreco")?.value);
+  const precoCusto = normalizarPreco(document.getElementById("produtoPrecoCusto")?.value);
+  const estoque = controlaEstoque
+    ? normalizarEstoque(document.getElementById("produtoEstoque")?.value)
+    : 0;
+  const codigo = String(document.getElementById("produtoCodigo")?.value || "").trim();
+  const categoria = obterCategoriaProduto();
+  const ativo = document.getElementById("produtoAtivo")?.checked === true;
+  const exibirCaixa = ativo && document.getElementById("produtoExibirCaixa")?.checked === true;
+  const produtoRapido = exibirCaixa && document.getElementById("produtoRapido")?.checked === true;
+
+  if (!nome) {
+    await abrirAlertaProduto({
+      titulo: "Nome obrigatório",
+      mensagem: `Informe o nome do ${configuracaoTipo.singular}.`
+    });
+    return;
+  }
+
+  if (preco <= 0) {
+    await abrirAlertaProduto({
+      titulo: "Preço inválido",
+      mensagem: "Informe um preço maior que zero."
+    });
+    return;
+  }
 
   const nomeExistente = produtos.find(produto => {
     return (
@@ -1244,60 +1596,31 @@ async function salvarProduto() {
     );
   });
 
-if (nomeExistente) {
-  await abrirAlertaProduto({
-    titulo: "Produto duplicado",
-    mensagem: "Já existe um produto com este nome cadastrado."
-  });
-
-  return;
-}
-  const preco = normalizarPreco(document.getElementById("produtoPreco")?.value);
-  const precoCusto = normalizarPreco(document.getElementById("produtoPrecoCusto")?.value);
-  const estoque = normalizarEstoque(document.getElementById("produtoEstoque")?.value);
-  const codigo = String(document.getElementById("produtoCodigo")?.value || "").trim();
-  const categoria = obterCategoriaProduto();
-  const ativo = document.getElementById("produtoAtivo")?.checked === true;
-  const produtoRapido = document.getElementById("produtoRapido")?.checked === true;
-
-  const produtoValido = await validarProdutoDuplicadoBanco({
-  id,
-  nome,
-  codigo
-});
-
-if (!produtoValido) {
-  return;
-}
-
-  if (!nome) {
+  if (nomeExistente) {
     await abrirAlertaProduto({
-  titulo: "Nome obrigatório",
-  mensagem: "Informe o nome do produto."
-});
-return;
-    return;
-  }
-
-  if (preco <= 0) {
-    await abrirAlertaProduto({
-  titulo: "Preço inválido",
-  mensagem: "Informe um preço maior que zero."
-});
-return;
+      titulo: "Item duplicado",
+      mensagem: "Já existe um item com este nome cadastrado."
+    });
     return;
   }
 
   if (!sistemaOnline()) {
     await abrirAlertaProduto({
-  titulo: "Sistema offline",
-  mensagem: "Sistema sem conexão com Supabase. Aguarde e tente novamente."
-});
-return;
+      titulo: "Sistema offline",
+      mensagem: "Sistema sem conexão com Supabase. Aguarde e tente novamente."
+    });
     return;
   }
 
   try {
+    const produtoValido = await validarProdutoDuplicadoBanco({
+      id,
+      nome,
+      codigo
+    });
+
+    if (!produtoValido) return;
+
     const empresaId = obterEmpresaId();
 
     const payload = {
@@ -1311,6 +1634,9 @@ return;
       categoria: categoria || null,
       ativo: ativo,
       produto_rapido: produtoRapido,
+      tipo_item: tipoItem,
+      controla_estoque: controlaEstoque,
+      exibir_caixa: exibirCaixa,
       updated_at: new Date().toISOString()
     };
 
@@ -1325,7 +1651,7 @@ return;
 
       await salvarItensComboProduto(id);
 
-      logProdutos("Produto atualizado.", "success");
+      logProdutos(`${configuracaoTipo.singular} atualizado.`, "success");
 
     } else {
       const { data: produtoCriado, error } = await sb
@@ -1338,23 +1664,24 @@ return;
 
       await salvarItensComboProduto(produtoCriado.id);
 
-      logProdutos("Produto criado.", "success");
+      logProdutos(`${configuracaoTipo.singular} criado.`, "success");
     }
 
     fecharModal();
 
     await carregarProdutos();
+    preencherFiltrosCategoriaProduto();
     renderProdutos();
 
   } catch (err) {
     logProdutos("Erro ao salvar: " + err.message, "error");
-      await abrirAlertaProduto({
-      titulo: "Erro ao salvar produto",
+    await abrirAlertaProduto({
+      titulo: "Erro ao salvar item",
       mensagem:
-  err.message?.includes("duplicate") ||
-  err.message?.includes("unique")
-    ? "Já existe um produto com este nome ou código cadastrado."
-    : err.message || "Não foi possível salvar o produto."
+        err.message?.includes("duplicate") ||
+        err.message?.includes("unique")
+          ? "Já existe um item com este nome ou código cadastrado."
+          : err.message || "Não foi possível salvar o item."
     });
   }
 }
@@ -1367,8 +1694,8 @@ async function confirmarExcluir(id) {
 
   if (!produto) {
     await abrirAlertaProduto({
-      titulo: "Produto não encontrado",
-      mensagem: "Não foi possível localizar este produto.",
+      titulo: "Item não encontrado",
+      mensagem: "Não foi possível localizar este item.",
       textoConfirmar: "Fechar"
     });
 
@@ -1376,6 +1703,13 @@ async function confirmarExcluir(id) {
   }
 
   idExcluir = id;
+
+  const tipoItem = obterTipoItemProduto(produto);
+  const tituloExcluir = document.getElementById("tituloExcluirItem");
+
+  if (tituloExcluir) {
+    tituloExcluir.textContent = `Excluir ${tiposItemCatalogo[tipoItem].singular}?`;
+  }
 
   const msg = document.getElementById("msgExcluir");
 
@@ -1422,21 +1756,22 @@ async function excluirProduto(id) {
 
     if (error) throw error;
 
-    logProdutos("Produto excluído.", "success");
+    logProdutos("Item excluído.", "success");
 
     idExcluir = null;
 
     fecharModal();
 
     await carregarProdutos();
+    preencherFiltrosCategoriaProduto();
     renderProdutos();
 
   } catch (err) {
     logProdutos("Erro ao excluir: " + err.message, "error");
 
     await abrirAlertaProduto({
-      titulo: "Erro ao excluir produto",
-      mensagem: err.message || "Não foi possível excluir o produto.",
+      titulo: "Erro ao excluir item",
+      mensagem: err.message || "Não foi possível excluir o item.",
       textoConfirmar: "Fechar"
     });
   }
@@ -1570,6 +1905,10 @@ if (produtoNome) {
     produtoNome.value = formatarNomeProduto(produtoNome.value).trim();
   });
 }
+
+  ["produtoAtivo", "produtoExibirCaixa"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", sincronizarTogglesCatalogo);
+  });
 }
 
 setTimeout(() => {
@@ -1585,7 +1924,9 @@ function verificarEstoqueBaixo() {
   const baixos = produtos.filter(produto => {
     const estoque = Number(produto.estoque || 0);
 
-    return estoque <= 5 && produto.ativo !== false;
+    return itemControlaEstoque(produto) &&
+      estoque <= 5 &&
+      produto.ativo !== false;
   });
 
   if (!baixos.length) return;

@@ -230,7 +230,7 @@ async function carregarDados() {
 if (erroProdutos) throw erroProdutos;
 
 produtos = Array.isArray(produtosSupabase)
-  ? produtosSupabase
+  ? produtosSupabase.filter(produto => produto.controla_estoque !== false)
   : [];
 
             const { data: empresaSupabase, error: erroEmpresa } = await sb
@@ -562,7 +562,10 @@ function renderProdutosEstoqueBaixo() {
   const badge = document.getElementById("badgeEstoqueBaixo");
 
   const produtos = produtosData.filter(produto => {
-    return Number(produto.estoque || 0) <= 5;
+    return (
+      produto.controla_estoque !== false &&
+      Number(produto.estoque || 0) <= 5
+    );
   });
 
   if (badge) {
@@ -693,7 +696,7 @@ function renderGraficoPagamentos(vendas) {
 }
 
 // ======================================================
-// TOP PRODUTOS
+// TOP ITENS DO CATÁLOGO
 // ======================================================
 function itemEhPagamentoJogo(item) {
   const origem = String(item.origem || "").toLowerCase().trim();
@@ -722,7 +725,7 @@ function montarRankingProdutos(vendas) {
         return;
       }
 
-      const chave = String(item.nome || "Produto")
+      const chave = String(item.nome || "Item")
         .trim()
         .toLowerCase();
 
@@ -755,7 +758,7 @@ function renderTopProdutos(vendas) {
   const container = document.getElementById("topProdutos");
   const badge = document.getElementById("badgeTopQtd");
 
-  if (badge) badge.textContent = `${lista.length} produto(s)`;
+  if (badge) badge.textContent = `${lista.length} item(ns)`;
 
   if (!container) return;
 
@@ -789,7 +792,7 @@ function renderTopProdutosLucro(vendas) {
   const container = document.getElementById("topProdutosLucro");
   const badge = document.getElementById("badgeTopLucro");
 
-  if (badge) badge.textContent = `${lista.length} produto(s)`;
+  if (badge) badge.textContent = `${lista.length} item(ns)`;
 
   if (!container) return;
 
@@ -1245,10 +1248,10 @@ function exportarExcel() {
   XLSX.utils.book_append_sheet(wb, wsVendas, "Vendas");
 
   // =========================
-  // ABA PRODUTOS
+  // ABA ITENS
   // =========================
   const produtosLinhas = [
-    ["Produto", "Quantidade", "Total vendido", "Lucro"]
+    ["Item", "Quantidade", "Total vendido", "Lucro"]
   ];
 
   rankingVendidos.forEach(produto => {
@@ -1268,13 +1271,13 @@ function exportarExcel() {
     moedaColunasPorIndice: [2, 3],
     totalLinhas: produtosLinhas.length
   });
-  XLSX.utils.book_append_sheet(wb, wsProdutos, "Produtos");
+  XLSX.utils.book_append_sheet(wb, wsProdutos, "Itens");
 
   // =========================
-  // ABA PRODUTOS LUCRO
+  // ABA ITENS POR LUCRO
   // =========================
   const produtosLucroLinhas = [
-    ["Produto", "Quantidade", "Faturamento", "Lucro"]
+    ["Item", "Quantidade", "Faturamento", "Lucro"]
   ];
 
   rankingLucro.forEach(produto => {
@@ -1294,7 +1297,7 @@ function exportarExcel() {
     moedaColunasPorIndice: [2, 3],
     totalLinhas: produtosLucroLinhas.length
   });
-  XLSX.utils.book_append_sheet(wb, wsProdutosLucro, "Lucro Produtos");
+  XLSX.utils.book_append_sheet(wb, wsProdutosLucro, "Lucro Itens");
 
   // =========================
   // ABA JOGOS
@@ -1606,7 +1609,7 @@ function exportarPDF() {
       </div>
 
       <p>
-        O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos produtos no momento da venda. A margem bruta estimada do período foi de ${margem.toFixed(1)}%.
+        O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos itens no momento da venda. A margem bruta estimada do período foi de ${margem.toFixed(1)}%.
       </p>
 
 <h2>Formas de pagamento</h2>
@@ -1643,12 +1646,12 @@ function exportarPDF() {
   </tbody>
 </table>
 
-      <h2>Produtos mais vendidos</h2>
+      <h2>Itens mais vendidos</h2>
 
       <table>
         <thead>
           <tr>
-            <th>Produto</th>
+            <th>Item</th>
             <th class="right">Qtd.</th>
             <th class="right">Total vendido</th>
           </tr>
@@ -1664,12 +1667,12 @@ function exportarPDF() {
         </tbody>
       </table>
 
-      <h2>Produtos mais lucrativos</h2>
+      <h2>Itens mais lucrativos</h2>
 
       <table>
         <thead>
           <tr>
-            <th>Produto</th>
+            <th>Item</th>
             <th class="right">Qtd.</th>
             <th class="right">Faturamento</th>
             <th class="right">Lucro</th>

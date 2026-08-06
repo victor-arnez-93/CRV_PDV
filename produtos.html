@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="js/core/boot.js"></script>
-  <title>CRV PDV — Produtos</title>
+  <title>CRV PDV — Produtos e Serviços</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/produtos.css" />
@@ -105,7 +105,7 @@
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:12px;">
         <button class="btn-menu" id="btnMenu"><i data-lucide="menu" width="22" height="22"></i></button>
-        <span class="topbar-title">Produtos</span>
+        <span class="topbar-title">Produtos e serviços</span>
       </div>
       <div class="topbar-actions">
         <div class="caixa-status">
@@ -126,12 +126,54 @@
       <!-- PAGE HEADER -->
       <div class="page-header">
         <div>
-          <h2>Produtos</h2>
-          <p id="subtitleProdutos">0 produtos cadastrados</p>
+          <h2>Produtos e serviços</h2>
+          <p id="subtitleProdutos">Carregando catálogo...</p>
         </div>
-        <button class="btn-primary" onclick="abrirModalNovo()">
+        <button class="btn-primary" id="btnNovoItemCatalogo" onclick="abrirModalNovo()">
           <i data-lucide="plus" width="16" height="16"></i>
-          <span>Novo Produto</span>
+          <span id="btnNovoItemCatalogoTexto">Novo produto</span>
+        </button>
+      </div>
+
+      <!-- TIPOS DO CATÁLOGO -->
+      <div class="catalogo-tabs card" role="tablist" aria-label="Tipos do catálogo">
+        <button
+          class="catalogo-tab active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          data-tipo-catalogo="produto"
+          onclick="setTipoCatalogo(this, 'produto')"
+        >
+          <i data-lucide="package" width="16" height="16"></i>
+          <span>Produtos</span>
+          <strong id="contadorTipoProduto">0</strong>
+        </button>
+
+        <button
+          class="catalogo-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tipo-catalogo="servico"
+          onclick="setTipoCatalogo(this, 'servico')"
+        >
+          <i data-lucide="wrench" width="16" height="16"></i>
+          <span>Serviços</span>
+          <strong id="contadorTipoServico">0</strong>
+        </button>
+
+        <button
+          class="catalogo-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tipo-catalogo="taxa_outro"
+          onclick="setTipoCatalogo(this, 'taxa_outro')"
+        >
+          <i data-lucide="badge-dollar-sign" width="16" height="16"></i>
+          <span>Taxas e outros</span>
+          <strong id="contadorTipoTaxaOutro">0</strong>
         </button>
       </div>
 
@@ -143,7 +185,7 @@
       class="input filtro-search"
       type="text"
       id="filtroTexto"
-      placeholder="Buscar produto ou código..."
+      placeholder="Buscar no catálogo..."
       oninput="renderProdutos()"
     />
   </div>
@@ -172,16 +214,16 @@
   </div>
 </div>
 
-      <!-- GRID DE PRODUTOS -->
+      <!-- GRID DO CATÁLOGO -->
       <div class="produtos-grid" id="produtosGrid"></div>
 
     </main>
   </div>
 </div>
 
-<!-- MODAL: Novo / Editar produto -->
+<!-- MODAL: Novo / Editar item do catálogo -->
 <div class="modal-overlay" id="modalProduto" style="display:none;">
-  <div class="modal card" style="max-width:460px;">
+  <div class="modal card modal-item-catalogo">
     <div class="modal-header">
       <h3 id="modalProdutoTitulo">Novo Produto</h3>
       <button class="btn-ghost" style="padding:6px;" onclick="fecharModal()">
@@ -192,7 +234,17 @@
       <input type="hidden" id="produtoId" />
 
       <div class="input-group">
-        <label class="input-label" for="produtoNome">Nome do produto *</label>
+        <label class="input-label" for="produtoTipoItem">Tipo do item *</label>
+        <select class="input" id="produtoTipoItem" onchange="atualizarFormularioPorTipoItem()">
+          <option value="produto">Produto</option>
+          <option value="servico">Serviço</option>
+          <option value="taxa">Taxa</option>
+          <option value="outro">Outro item</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" id="produtoNomeLabel" for="produtoNome">Nome do produto *</label>
         <input class="input" type="text" id="produtoNome" placeholder="Ex: Água Mineral 500ml" />
       </div>
 
@@ -208,8 +260,8 @@
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="input-group">
+      <div class="form-row form-row-estoque-margem">
+        <div class="input-group" id="produtoEstoqueGrupo">
           <label class="input-label" for="produtoEstoque">Estoque</label>
           <input class="input" type="number" id="produtoEstoque" placeholder="0" min="0" step="1" />
         </div>
@@ -231,13 +283,12 @@
       </div>
 
 <div class="input-group">
-  <label class="input-label" for="produtoCategoria">Categoria</label>
+  <label class="input-label" for="produtoCategoria">Categoria do item</label>
   <select class="input" id="produtoCategoria" onchange="toggleCategoriaOutros(); toggleComboProdutos();">
     <option value="">Sem categoria</option>
     <option value="bebidas">Bebidas</option>
     <option value="alimentos">Alimentos</option>
     <option value="combos">Combos</option>
-    <option value="servicos">Serviços</option>
     <option value="outros">Outros</option>
   </select>
 </div>
@@ -272,8 +323,8 @@
 
 <div class="toggle-row toggle-row-info">
   <div>
-    <span class="input-label" style="margin:0;">Produto ativo</span>
-    <small>Produto disponível para venda no sistema.</small>
+    <span class="input-label" style="margin:0;">Item ativo</span>
+    <small>Permite utilizar este cadastro no sistema.</small>
   </div>
 
   <label class="toggle">
@@ -284,8 +335,20 @@
 
     <div class="toggle-row toggle-row-info">
       <div>
-        <span class="input-label" style="margin:0;">Produto rápido</span>
-        <small>Aparece como atalho no Caixa/PDV para venda rápida.</small>
+        <span class="input-label" style="margin:0;">Exibir no Caixa</span>
+        <small>Permite localizar e vender este item no Caixa/PDV.</small>
+      </div>
+
+      <label class="toggle">
+        <input type="checkbox" id="produtoExibirCaixa" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row toggle-row-info">
+      <div>
+        <span class="input-label" style="margin:0;">Item rápido</span>
+        <small>Aparece também nos atalhos do Caixa/PDV.</small>
       </div>
 
       <label class="toggle">
@@ -312,7 +375,7 @@
         <i data-lucide="trash-2" width="24" height="24"></i>
       </div>
     </div>
-    <h3 style="margin-bottom:8px;">Excluir produto?</h3>
+    <h3 id="tituloExcluirItem" style="margin-bottom:8px;">Excluir item?</h3>
     <p id="msgExcluir" style="font-size:0.88rem;color:var(--text-muted);margin-bottom:20px;"></p>
     <div class="modal-footer" style="justify-content:center;">
       <button class="btn-ghost" onclick="fecharModal()">Cancelar</button>
