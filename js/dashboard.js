@@ -233,9 +233,10 @@ async function initDashboard() {
 
 const { data: produtosBaixoData, error: produtosBaixoError } = await sb
   .from("produtos")
-  .select("id,nome,estoque")
+  .select("id,nome,estoque,controla_estoque")
   .eq("empresa_id", APP_EMPRESA_ID)
   .eq("ativo", true)
+  .eq("controla_estoque", true)
   .lte("estoque", 5);
 
 if (produtosBaixoError) throw produtosBaixoError;

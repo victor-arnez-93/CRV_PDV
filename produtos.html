@@ -235,7 +235,7 @@
 
       <div class="input-group">
         <label class="input-label" for="produtoTipoItem">Tipo do item *</label>
-        <select class="input" id="produtoTipoItem" onchange="atualizarFormularioPorTipoItem()">
+        <select class="input" id="produtoTipoItem" onchange="atualizarFormularioPorTipoItem({ aplicarPadraoEstoque: true })">
           <option value="produto">Produto</option>
           <option value="servico">Serviço</option>
           <option value="taxa">Taxa</option>
@@ -260,9 +260,21 @@
         </div>
       </div>
 
+      <div class="toggle-row toggle-row-info">
+        <div>
+          <span class="input-label" style="margin:0;">Controlar estoque</span>
+          <small>Ative para registrar a quantidade e baixar uma unidade a cada venda.</small>
+        </div>
+
+        <label class="toggle">
+          <input type="checkbox" id="produtoControlaEstoque" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
       <div class="form-row form-row-estoque-margem">
         <div class="input-group" id="produtoEstoqueGrupo">
-          <label class="input-label" for="produtoEstoque">Estoque</label>
+          <label class="input-label" for="produtoEstoque">Quantidade em estoque</label>
           <input class="input" type="number" id="produtoEstoque" placeholder="0" min="0" step="1" />
         </div>
 

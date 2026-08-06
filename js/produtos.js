@@ -491,17 +491,11 @@ function atualizarCabecalhoCatalogo() {
   }
 
   if (ordenar) {
-    const exibirEstoque = tipoAbaAtivo === "produto";
-
     [...ordenar.options].forEach(option => {
       if (["menor_estoque", "maior_estoque"].includes(option.value)) {
-        option.hidden = !exibirEstoque;
+        option.hidden = false;
       }
     });
-
-    if (!exibirEstoque && ["menor_estoque", "maior_estoque"].includes(ordenar.value)) {
-      ordenar.value = "az";
-    }
   }
 }
 
@@ -558,16 +552,26 @@ function preencherCategoriasModalProduto(tipo, valorAtual = "") {
   toggleCategoriaOutros();
 }
 
-function atualizarFormularioPorTipoItem({ categoriaAtual = null } = {}) {
+function atualizarFormularioPorTipoItem({
+  categoriaAtual = null,
+  aplicarPadraoEstoque = false
+} = {}) {
   const selectTipo = document.getElementById("produtoTipoItem");
   const tipo = normalizarTipoItemCatalogo(selectTipo?.value);
   const configuracao = tiposItemCatalogo[tipo];
   const nomeLabel = document.getElementById("produtoNomeLabel");
   const nomeInput = document.getElementById("produtoNome");
+  const controlaEstoqueInput = document.getElementById("produtoControlaEstoque");
   const estoqueGrupo = document.getElementById("produtoEstoqueGrupo");
-  const estoqueInput = document.getElementById("produtoEstoque");
   const formRow = document.querySelector(".form-row-estoque-margem");
-  const controlaEstoque = tipo === "produto";
+
+  if (aplicarPadraoEstoque && controlaEstoqueInput) {
+    controlaEstoqueInput.checked = tipo === "produto";
+  }
+
+  const controlaEstoque = controlaEstoqueInput
+    ? controlaEstoqueInput.checked
+    : tipo === "produto";
 
   if (selectTipo) selectTipo.value = tipo;
   if (nomeLabel) nomeLabel.textContent = `Nome do ${configuracao.singular} *`;
@@ -579,10 +583,6 @@ function atualizarFormularioPorTipoItem({ categoriaAtual = null } = {}) {
 
   if (formRow) {
     formRow.classList.toggle("sem-controle-estoque", !controlaEstoque);
-  }
-
-  if (!controlaEstoque && estoqueInput) {
-    estoqueInput.value = "0";
   }
 
   const categoriaAnterior = categoriaAtual === null
@@ -688,11 +688,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   preencherFiltrosCategoriaProduto();
   renderProdutos();
   verificarEstoqueBaixo();
-  const params = new URLSearchParams(window.location.search);
-
-if (params.get("alerta") === "estoque") {
-  setTimeout(verificarEstoqueBaixo, 500);
-}
   atualizarStatusCaixa();
 
   if (window.lucide) {
@@ -943,10 +938,18 @@ function getProdutosFiltrados() {
     }
 
     if (ordenacao === "menor_estoque") {
+      if (itemControlaEstoque(a) !== itemControlaEstoque(b)) {
+        return itemControlaEstoque(a) ? -1 : 1;
+      }
+
       return Number(a.estoque || 0) - Number(b.estoque || 0);
     }
 
     if (ordenacao === "maior_estoque") {
+      if (itemControlaEstoque(a) !== itemControlaEstoque(b)) {
+        return itemControlaEstoque(a) ? -1 : 1;
+      }
+
       return Number(b.estoque || 0) - Number(a.estoque || 0);
     }
 
@@ -1161,6 +1164,7 @@ function abrirModalNovo() {
   document.getElementById("produtoPreco").value = "";
   document.getElementById("produtoPrecoCusto").value = "";
   document.getElementById("produtoEstoque").value = "";
+  document.getElementById("produtoControlaEstoque").checked = tipoInicial === "produto";
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = "";
   document.getElementById("produtoCategoriaOutros").value = "";
@@ -1223,6 +1227,8 @@ async function abrirModalEditar(id) {
   document.getElementById("produtoEstoque").value = itemControlaEstoque(produto)
     ? produto.estoque
     : 0;
+  document.getElementById("produtoControlaEstoque").checked =
+    itemControlaEstoque(produto);
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = produto.codigo || "";
   atualizarFormularioPorTipoItem({ categoriaAtual: produto.categoria || "" });
@@ -1273,6 +1279,9 @@ async function duplicarProduto(id) {
 
   document.getElementById("produtoEstoque").value =
     itemControlaEstoque(produto) ? produto.estoque || 0 : 0;
+
+  document.getElementById("produtoControlaEstoque").checked =
+    itemControlaEstoque(produto);
 
   atualizarPreviewMargemProduto();
 
@@ -1561,7 +1570,8 @@ async function salvarProduto() {
     document.getElementById("produtoTipoItem")?.value
   );
   const configuracaoTipo = tiposItemCatalogo[tipoItem];
-  const controlaEstoque = tipoItem === "produto";
+  const controlaEstoque =
+    document.getElementById("produtoControlaEstoque")?.checked === true;
   const preco = normalizarPreco(document.getElementById("produtoPreco")?.value);
   const precoCusto = normalizarPreco(document.getElementById("produtoPrecoCusto")?.value);
   const estoque = controlaEstoque
@@ -1909,6 +1919,10 @@ if (produtoNome) {
   ["produtoAtivo", "produtoExibirCaixa"].forEach(id => {
     document.getElementById(id)?.addEventListener("change", sincronizarTogglesCatalogo);
   });
+
+  document.getElementById("produtoControlaEstoque")?.addEventListener("change", () => {
+    atualizarFormularioPorTipoItem();
+  });
 }
 
 setTimeout(() => {
@@ -1944,7 +1958,7 @@ function verificarEstoqueBaixo() {
 
   if (typeof crvToast === "function") {
     crvToast({
-      titulo: "Produtos com estoque baixo",
+      titulo: "Itens com estoque baixo",
       mensagem,
       tipo: "warn",
       tempo: 7000
@@ -1955,11 +1969,11 @@ function verificarEstoqueBaixo() {
   if (typeof mostrarToast === "function") {
     mostrarToast({
       tipo: "warn",
-      titulo: "Produtos com estoque baixo",
+      titulo: "Itens com estoque baixo",
       mensagem
     });
     return;
   }
 
-  console.warn("[CRV PDV] Produtos com estoque baixo:", mensagem);
+  console.warn("[CRV PDV] Itens com estoque baixo:", mensagem);
 }
