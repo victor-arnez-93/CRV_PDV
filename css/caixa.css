@@ -355,6 +355,7 @@
 .pdv-search {
   padding-left: 42px;
   padding-right: 60px;
+  font-family: 'Rajdhani', sans-serif;
   font-size: 1rem;
   height: 50px;
   border-radius: var(--radius-lg);
@@ -1984,13 +1985,12 @@ body.light .jogo-caixa-status.cobranca {
   cursor: pointer;
 
   padding: 6px 12px;
-  border-radius: 999px;
-
   border: 1px solid rgba(212, 160, 23, .35);
+  border-radius: 999px;
   background: rgba(212, 160, 23, .08);
-
   color: var(--crv-orange);
 
+  font-family: 'Rajdhani', sans-serif;
   font-size: .68rem;
   font-weight: 800;
   letter-spacing: .06em;
@@ -2232,9 +2232,10 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 .produto-caixa-nome {
+  color: var(--text-primary);
+  font-family: 'Rajdhani', sans-serif;
   font-size: .86rem;
   font-weight: 800;
-  color: var(--text-primary);
   line-height: 1.2;
 }
 
@@ -3478,6 +3479,7 @@ body.light .jogo-caixa-status.cobranca {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
+  font-family: 'Rajdhani', sans-serif;
   font-size: .76rem;
   font-weight: 700;
   text-align: left;
@@ -3532,6 +3534,7 @@ body.light .jogo-caixa-status.cobranca {
   border-radius: var(--radius-pill);
   background: var(--bg-elevated);
   color: var(--text-secondary);
+  font-family: 'Rajdhani', sans-serif;
   font-size: .72rem;
   font-weight: 800;
   cursor: pointer;
