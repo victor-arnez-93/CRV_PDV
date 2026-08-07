@@ -1,278 +1,232 @@
 (function () {
-
   let sincronizando = false;
+  let avisoFilaLegadaExibido = false;
 
-  // ======================================================
-  // PROCESSAR ITEM
-  // ======================================================
+  const RPC_POR_TIPO = {
+    caixa_abertura: "crv_sincronizar_abertura_caixa_offline",
+    venda: "crv_registrar_venda_offline",
+    caixa_fechamento: "crv_sincronizar_fechamento_caixa_offline"
+  };
 
-  async function sincronizarItem(item) {
-
-    try {
-
-      if (!window.sb) {
-        return false;
+  function emitirStatus(estado, detalhes = {}) {
+    document.dispatchEvent(new CustomEvent("crv:sync-status", {
+      detail: {
+        estado,
+        ...detalhes
       }
-
-      const tabela =
-        item.tabela;
-
-      const operacao =
-        item.operacao;
-
-      const payload =
-        item.payload;
-
-const limparIdsOffline = dados => {
-
-  if (Array.isArray(dados)) {
-    return dados.map(limparIdsOffline);
+    }));
   }
 
-  if (!dados || typeof dados !== "object") {
-    return dados;
-  }
-
-  const copia = { ...dados };
-
-  [
-    "id",
-    "venda_id",
-    "agenda_id",
-    "comanda_id"
-  ].forEach(campo => {
-
-    if (
-      copia[campo] &&
-      String(copia[campo]).startsWith("offline-")
-    ) {
-      delete copia[campo];
+  function logSync(mensagem, tipo = "info") {
+    if (typeof window.crvLog === "function") {
+      window.crvLog("SYNC", mensagem, tipo);
+      return;
     }
 
-  });
-
-  return copia;
-};
-
-      // ==========================================
-      // INSERT
-      // ==========================================
-
-      if (operacao === "insert") {
-
-const dadosInsert =
-  limparIdsOffline(
-    Array.isArray(payload)
-      ? payload
-      : [payload]
-  );
-
-  const { error } = await sb
-    .from(tabela)
-    .insert(dadosInsert);
-
-  if (error) {
-    throw error;
+    console[tipo === "error" ? "error" : "log"](`[CRV PDV][SYNC] ${mensagem}`);
   }
-}
 
-      // ==========================================
-      // UPDATE
-      // ==========================================
+  function obterEscopoAtual() {
+    return window.crvOfflineContext?.obterEscopo?.() || null;
+  }
 
-      if (operacao === "update") {
-
-        const { id, ...dados } = payload;
-
-        const { error } = await sb
-          .from(tabela)
-          .update(dados)
-          .eq("id", id);
-
-        if (error) {
-          throw error;
-        }
-      }
-
-      // ==========================================
-      // DELETE
-      // ==========================================
-
-      if (operacao === "delete") {
-
-        const { error } = await sb
-          .from(tabela)
-          .delete()
-          .eq("id", payload.id);
-
-        if (error) {
-          throw error;
-        }
-      }
-
-      crvLog(
-        "SYNC",
-        `${operacao} sincronizado em ${tabela}`,
-        "success"
-      );
-
-      return true;
-
-    } catch (err) {
-
-      crvLog(
-        "SYNC",
-        err.message,
-        "error"
-      );
-
+  async function supabaseDisponivel() {
+    if (!navigator.onLine || !window.sb) {
       return false;
     }
+
+    if (typeof window.testarSupabase === "function") {
+      return await window.testarSupabase({ silencioso: true });
+    }
+
+    return window.APP_STATUS?.supabase_ok === true;
   }
 
-  // ======================================================
-  // SINCRONIZAR FILA
-  // ======================================================
+  async function sincronizarOperacao(item) {
+    const rpc = RPC_POR_TIPO[item.tipo];
+
+    if (!rpc) {
+      throw new Error(`Tipo de operação offline não suportado: ${item.tipo}`);
+    }
+
+    await crvOfflineDB.atualizarOperacaoOffline(item.operacao_id, {
+      status: "sincronizando",
+      tentativas: Number(item.tentativas || 0) + 1,
+      ultimo_erro: null
+    });
+
+    const { data, error } = await sb.rpc(rpc, {
+      p_operacao_id: item.operacao_id,
+      p_empresa_id: item.empresa_id,
+      p_payload: item.payload
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    await crvOfflineDB.atualizarOperacaoOffline(item.operacao_id, {
+      status: "sincronizada",
+      sincronizado_em: new Date().toISOString(),
+      ultimo_erro: null,
+      resultado: data || null
+    });
+
+    return data;
+  }
+
+  async function avisarFilaLegada(escopo) {
+    if (avisoFilaLegadaExibido) {
+      return;
+    }
+
+    const filaLegada = await crvOfflineDB.obterFilaOffline();
+    const quantidade = filaLegada.filter(item => {
+      return (
+        !item.sincronizado &&
+        String(item.empresa_id || "") === String(escopo.empresa_id)
+      );
+    }).length;
+
+    if (!quantidade) {
+      return;
+    }
+
+    avisoFilaLegadaExibido = true;
+    logSync(
+      `${quantidade} pendência(s) da fila antiga foram preservadas para revisão.`,
+      "warn"
+    );
+
+    if (typeof window.crvToast === "function") {
+      window.crvToast({
+        titulo: "Pendências antigas preservadas",
+        mensagem: "Operações da versão offline anterior não foram reenviadas automaticamente para evitar duplicidade.",
+        tipo: "warn",
+        tempo: 8000
+      });
+    }
+  }
 
   async function sincronizarPendencias() {
-
     if (sincronizando) {
       return;
     }
 
-    if (!navigator.onLine) {
+    const escopo = obterEscopoAtual();
+
+    if (!escopo || !(await supabaseDisponivel())) {
       return;
     }
 
     sincronizando = true;
 
     try {
+      await avisarFilaLegada(escopo);
 
-      crvLog(
-        "SYNC",
-        "Verificando pendências offline..."
-      );
-
-      const fila =
-        await crvOfflineDB.obterFilaOffline();
+      const fila = await crvOfflineDB.obterOperacoesPendentes({
+        empresa_id: escopo.empresa_id,
+        usuario_id: escopo.usuario_id
+      });
 
       if (!fila.length) {
-
-        crvLog(
-          "SYNC",
-          "Nenhuma pendência encontrada",
-          "success"
-        );
-
-        sincronizando = false;
-
+        emitirStatus("sincronizado", { pendentes: 0 });
         return;
       }
 
-      crvToast({
-        titulo: "Sincronização iniciada",
-        mensagem:
-          `${fila.length} item(ns) pendente(s) encontrados.`,
-        tipo: "info"
+      emitirStatus("sincronizando", {
+        pendentes: fila.length,
+        total: fila.length
       });
 
-      let sincronizados = 0;
+      if (typeof window.crvToast === "function") {
+        window.crvToast({
+          titulo: "Sincronização iniciada",
+          mensagem: `${fila.length} operação(ões) pendente(s).`,
+          tipo: "info"
+        });
+      }
 
-      for (const item of fila.sort((a, b) => {
+      let sincronizadas = 0;
 
-  const ta = new Date(a.created_at || 0).getTime();
-  const tb = new Date(b.created_at || 0).getTime();
+      for (const item of fila) {
+        try {
+          await sincronizarOperacao(item);
+          sincronizadas++;
 
-  return ta - tb;
+          emitirStatus("sincronizando", {
+            pendentes: fila.length - sincronizadas,
+            total: fila.length,
+            sincronizadas
+          });
+        } catch (err) {
+          await crvOfflineDB.atualizarOperacaoOffline(item.operacao_id, {
+            status: "erro",
+            ultimo_erro: err.message || "Falha de sincronização"
+          });
 
-})) {
+          logSync(err.message || "Falha de sincronização", "error");
+          emitirStatus("erro", {
+            pendentes: fila.length - sincronizadas,
+            erro: err.message || "Falha de sincronização"
+          });
 
-        const ok =
-          await sincronizarItem(item);
+          if (typeof window.crvToast === "function") {
+            window.crvToast({
+              titulo: "Sincronização pendente",
+              mensagem: `${err.message || "Uma operação não pôde ser sincronizada."} Nada foi descartado.`,
+              tipo: "error",
+              tempo: 9000
+            });
+          }
 
-        if (ok) {
-
-          await crvOfflineDB
-            .removerFilaOffline(item.id);
-
-          sincronizados++;
+          break;
         }
       }
 
-      crvToast({
-        titulo: "Sincronização concluída",
-        mensagem:
-          `${sincronizados} item(ns) sincronizado(s).`,
-        tipo: "success"
-      });
+      if (sincronizadas === fila.length) {
+        emitirStatus("sincronizado", {
+          pendentes: 0,
+          sincronizadas
+        });
 
-      crvLog(
-        "SYNC",
-        `${sincronizados} itens sincronizados`,
-        "success"
-      );
+        document.dispatchEvent(new CustomEvent("crv:sync-concluido", {
+          detail: { sincronizadas }
+        }));
 
+        if (typeof window.crvToast === "function") {
+          window.crvToast({
+            titulo: "Sincronização concluída",
+            mensagem: `${sincronizadas} operação(ões) sincronizada(s) com segurança.`,
+            tipo: "success"
+          });
+        }
+      }
     } catch (err) {
-
-      crvLog(
-        "SYNC",
-        err.message,
-        "error"
-      );
-
-      crvToast({
-        titulo: "Erro de sincronização",
-        mensagem:
-          err.message,
-        tipo: "error"
+      logSync(err.message || "Erro ao sincronizar", "error");
+      emitirStatus("erro", {
+        erro: err.message || "Erro ao sincronizar"
       });
-
     } finally {
-
       sincronizando = false;
     }
   }
 
-  // ======================================================
-  // AUTO SYNC
-  // ======================================================
+  document.addEventListener("crv:online", () => {
+    setTimeout(sincronizarPendencias, 800);
+  });
 
-  document.addEventListener(
-    "crv:online",
-    () => {
+  document.addEventListener("crv:contexto-offline-pronto", () => {
+    setTimeout(sincronizarPendencias, 500);
+  });
 
-      setTimeout(() => {
-        sincronizarPendencias();
-      }, 1200);
+  document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(sincronizarPendencias, 2500);
+  });
 
-    }
-  );
+  window.addEventListener("crv:forcar-sync", sincronizarPendencias);
 
-  // ======================================================
-  // INIT
-  // ======================================================
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-      setTimeout(() => {
-        sincronizarPendencias();
-      }, 2500);
-
-    }
-  );
-
-  // ======================================================
-  // GLOBAL
-  // ======================================================
   window.crvSync = {
     sincronizarPendencias
   };
-
-  window.addEventListener(
-    "crv:forcar-sync",
-    () => sincronizarPendencias()
-  );
-
 })();

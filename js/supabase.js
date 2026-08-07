@@ -24,7 +24,8 @@
   // ==========================================
   window.APP_STATUS = {
     online: navigator.onLine,
-    supabase_ok: false
+    supabase_ok: false,
+    supabase_testado: false
   };
 
 
@@ -51,9 +52,13 @@
   // ==========================================
   // 🔍 TESTE SUPABASE
   // ==========================================
-  async function testarSupabase() {
+  async function testarSupabase(opcoes = {}) {
+    const silencioso = opcoes.silencioso === true;
+
     try {
-      logSistema("SUPABASE", "Testando conexão...");
+      if (!silencioso) {
+        logSistema("SUPABASE", "Testando conexão...");
+      }
 
       const { error } = await sb
         .from("produtos")
@@ -63,11 +68,36 @@
       if (error) throw error;
 
       APP_STATUS.supabase_ok = true;
-      logSistema("SUPABASE", "Conectado com sucesso", "success");
+      APP_STATUS.online = navigator.onLine;
+      APP_STATUS.supabase_testado = true;
+
+      if (!silencioso) {
+        logSistema("SUPABASE", "Conectado com sucesso", "success");
+      }
+
+      document.dispatchEvent(new CustomEvent("crv:supabase-status", {
+        detail: { disponivel: true }
+      }));
+
+      return true;
 
     } catch (err) {
       APP_STATUS.supabase_ok = false;
-      logSistema("SUPABASE", "Erro: " + err.message, "error");
+      APP_STATUS.online = navigator.onLine;
+      APP_STATUS.supabase_testado = true;
+
+      if (!silencioso) {
+        logSistema("SUPABASE", "Erro: " + err.message, "error");
+      }
+
+      document.dispatchEvent(new CustomEvent("crv:supabase-status", {
+        detail: {
+          disponivel: false,
+          erro: err.message
+        }
+      }));
+
+      return false;
     }
   }
 
@@ -77,15 +107,20 @@
   // ==========================================
   // 🌐 ONLINE / OFFLINE
   // ==========================================
-  window.addEventListener("online", () => {
+  window.addEventListener("online", async () => {
     APP_STATUS.online = true;
     logSistema("REDE", "Conexão restaurada", "success");
+    await testarSupabase({ silencioso: true });
     document.dispatchEvent(new Event("app:online"));
   });
 
   window.addEventListener("offline", () => {
     APP_STATUS.online = false;
+    APP_STATUS.supabase_ok = false;
     logSistema("REDE", "Modo OFFLINE", "warn");
+    document.dispatchEvent(new CustomEvent("crv:supabase-status", {
+      detail: { disponivel: false }
+    }));
     document.dispatchEvent(new Event("app:offline"));
   });
 
@@ -114,6 +149,12 @@
   document.addEventListener("DOMContentLoaded", async () => {
     logSistema("APP", "Inicializando Supabase...");
     await testarSupabase();
+
+    window.setInterval(() => {
+      if (navigator.onLine) {
+        testarSupabase({ silencioso: true });
+      }
+    }, 30000);
   });
 
 })();

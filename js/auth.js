@@ -48,41 +48,56 @@ async function verificarSessao() {
 
     if (data?.session) {
       USER = data.session.user;
-
       window.USER = USER;
 
-      await sb.rpc("garantir_empresa_usuario", {
-        p_nome: USER.user_metadata?.nome || USER.email,
-        p_email: USER.email
-      });
+      try {
+        await sb.rpc("garantir_empresa_usuario", {
+          p_nome: USER.user_metadata?.nome || USER.email,
+          p_email: USER.email
+        });
 
-      const { data: usuarioSistema, error: userError } = await sb
-        .from("usuarios")
-        .select(`
-          *,
-          empresas:empresa_id (
-            id,
-            nome,
-            nome_fantasia,
-            tipo_negocio,
-            configuracao_inicial_concluida,
-            configuracao_obrigatoria,
-            logo_url
-          )
-        `)
-        .eq("id", USER.id)
-        .single();
+        const { data: usuarioSistema, error: userError } = await sb
+          .from("usuarios")
+          .select(`
+            *,
+            empresas:empresa_id (
+              id,
+              nome,
+              nome_fantasia,
+              tipo_negocio,
+              configuracao_inicial_concluida,
+              configuracao_obrigatoria,
+              logo_url
+            )
+          `)
+          .eq("id", USER.id)
+          .single();
 
-      if (userError) {
-        log("Usuário sem cadastro interno", "error");
-        return;
+        if (userError) throw userError;
+
+        window.APP_USER = usuarioSistema;
+        window.APP_EMPRESA_ID = usuarioSistema.empresa_id;
+        window.APP_EMPRESA = usuarioSistema.empresas || null;
+
+        window.crvOfflineContext?.salvarContexto({
+          user: USER,
+          usuario: usuarioSistema,
+          empresa: usuarioSistema.empresas || null
+        });
+
+        log("Empresa carregada: " + APP_EMPRESA_ID, "success");
+      } catch (contextError) {
+        const contexto = window.crvOfflineContext?.restaurarContexto(USER.id);
+
+        if (!contexto) {
+          throw contextError;
+        }
+
+        log(
+          "Contexto da empresa restaurado com segurança do cache local.",
+          "warn"
+        );
       }
-
-      window.APP_USER = usuarioSistema;
-      window.APP_EMPRESA_ID = usuarioSistema.empresa_id;
-      window.APP_EMPRESA = usuarioSistema.empresas || null;
-
-      log("Empresa carregada: " + APP_EMPRESA_ID, "success");
     } else {
       USER = null;
       window.APP_USER = null;

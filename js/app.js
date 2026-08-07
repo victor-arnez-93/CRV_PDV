@@ -117,24 +117,71 @@ function crvObterEmpresaIdGlobal() {
   return null;
 }
 
+function crvChaveOfflineGlobal(sufixo) {
+  return window.crvOfflineContext?.chaveEscopo?.(sufixo) || null;
+}
+
+function crvLerJSONLocal(chave) {
+  if (!chave) return null;
+
+  try {
+    const bruto = localStorage.getItem(chave);
+    return bruto ? JSON.parse(bruto) : null;
+  } catch (err) {
+    console.warn("[CRV OFFLINE] Cache local inválido.", err);
+    return null;
+  }
+}
+
 function crvObterOperadorAtual() {
-  return {
+  const operadorSessao = {
     id: sessionStorage.getItem("CRV_OPERADOR_ID") || null,
     nome: sessionStorage.getItem("CRV_OPERADOR_NOME") || null,
     perfil: sessionStorage.getItem("CRV_OPERADOR_PERFIL") || null
   };
+
+  if (operadorSessao.id || navigator.onLine !== false) {
+    return operadorSessao;
+  }
+
+  const operadorOffline = crvLerJSONLocal(
+    crvChaveOfflineGlobal("operador-atual")
+  );
+
+  if (!operadorOffline?.id) {
+    return operadorSessao;
+  }
+
+  sessionStorage.setItem("CRV_OPERADOR_ID", operadorOffline.id);
+  sessionStorage.setItem("CRV_OPERADOR_NOME", operadorOffline.nome || "");
+  sessionStorage.setItem("CRV_OPERADOR_PERFIL", operadorOffline.perfil || "");
+
+  return operadorOffline;
 }
 
 function crvLimparOperadorAtual() {
   sessionStorage.removeItem("CRV_OPERADOR_ID");
   sessionStorage.removeItem("CRV_OPERADOR_NOME");
   sessionStorage.removeItem("CRV_OPERADOR_PERFIL");
+
+  const chave = crvChaveOfflineGlobal("operador-atual");
+  if (chave) localStorage.removeItem(chave);
 }
 
 function crvSalvarOperadorAtual(operador) {
   sessionStorage.setItem("CRV_OPERADOR_ID", operador.id);
   sessionStorage.setItem("CRV_OPERADOR_NOME", operador.nome || "");
   sessionStorage.setItem("CRV_OPERADOR_PERFIL", operador.perfil || "");
+
+  const chave = crvChaveOfflineGlobal("operador-atual");
+
+  if (chave) {
+    localStorage.setItem(chave, JSON.stringify({
+      id: operador.id,
+      nome: operador.nome || "",
+      perfil: operador.perfil || ""
+    }));
+  }
 }
 
 window.CRV_PERMISSOES_OPERADOR = {
@@ -142,6 +189,28 @@ window.CRV_PERMISSOES_OPERADOR = {
   especiais: {},
   modulosNegocio: {}
 };
+
+function crvRestaurarPermissoesOffline() {
+  const permissoes = crvLerJSONLocal(
+    crvChaveOfflineGlobal("permissoes-operador")
+  );
+
+  if (!permissoes) return null;
+
+  window.CRV_PERMISSOES_OPERADOR = permissoes;
+  return permissoes;
+}
+
+function crvSalvarPermissoesOffline() {
+  const chave = crvChaveOfflineGlobal("permissoes-operador");
+
+  if (chave) {
+    localStorage.setItem(
+      chave,
+      JSON.stringify(window.CRV_PERMISSOES_OPERADOR)
+    );
+  }
+}
 
 async function crvCarregarPermissoesOperadorAtual() {
   window.CRV_PERMISSOES_OPERADOR = {
@@ -153,7 +222,11 @@ async function crvCarregarPermissoesOperadorAtual() {
   const empresaId = crvObterEmpresaIdGlobal();
 
   if (!empresaId || !window.sb) {
-    return window.CRV_PERMISSOES_OPERADOR;
+    return crvRestaurarPermissoesOffline() || window.CRV_PERMISSOES_OPERADOR;
+  }
+
+  if (navigator.onLine === false) {
+    return crvRestaurarPermissoesOffline() || window.CRV_PERMISSOES_OPERADOR;
   }
 
   const { data: empresa, error: erroEmpresa } = await sb
@@ -187,6 +260,7 @@ async function crvCarregarPermissoesOperadorAtual() {
   const operador = crvObterOperadorAtual();
 
   if (!operador.id) {
+    crvSalvarPermissoesOffline();
     return window.CRV_PERMISSOES_OPERADOR;
   }
 
@@ -198,7 +272,7 @@ async function crvCarregarPermissoesOperadorAtual() {
 
   if (erroModulos) {
     console.warn("[CRV PERMISSÕES][MÓDULOS]", erroModulos);
-    return window.CRV_PERMISSOES_OPERADOR;
+    return crvRestaurarPermissoesOffline() || window.CRV_PERMISSOES_OPERADOR;
   }
 
   const { data: especiais, error: erroEspeciais } = await sb
@@ -225,6 +299,7 @@ async function crvCarregarPermissoesOperadorAtual() {
       item.permitido === true;
   });
 
+  crvSalvarPermissoesOffline();
   return window.CRV_PERMISSOES_OPERADOR;
 }
 

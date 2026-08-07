@@ -22,6 +22,7 @@ let comandaAtiva = null;
 let comandaOculta = false;
 let caixaInicializado = false;
 let vendaEmProcessamento = false;
+let operacaoCaixaEmProcessamento = false;
 let comandasCaixa = [];
 let comandasCaixaFiltradas = [];
 let carregandoComandasCaixa = false;
@@ -471,6 +472,74 @@ function obterOperadorAtualId() {
   return sessionStorage.getItem("CRV_OPERADOR_ID") || null;
 }
 
+function obterEscopoOfflineCaixa() {
+  const escopo = window.crvOfflineContext?.obterEscopo?.();
+
+  if (!escopo?.empresa_id || !escopo?.usuario_id) {
+    return null;
+  }
+
+  return {
+    ...escopo,
+    operador_id: obterOperadorAtualId()
+  };
+}
+
+function chaveCacheCaixa(chave) {
+  return window.crvOfflineContext?.chaveEscopo?.(`caixa:${chave}`) || null;
+}
+
+async function salvarCacheCaixa(chave, dados) {
+  const chaveEscopo = chaveCacheCaixa(chave);
+
+  if (!chaveEscopo || !window.crvOfflineDB) {
+    return false;
+  }
+
+  return window.crvOfflineDB.salvarCache(chaveEscopo, dados);
+}
+
+async function obterCacheCaixa(chave) {
+  const chaveEscopo = chaveCacheCaixa(chave);
+
+  if (!chaveEscopo || !window.crvOfflineDB) {
+    return null;
+  }
+
+  return window.crvOfflineDB.obterCache(chaveEscopo);
+}
+
+function gerarUUIDCaixa() {
+  return window.crvOfflineDB?.gerarUUID?.() || window.crypto.randomUUID();
+}
+
+async function salvarOperacaoCaixaOffline({
+  tipo,
+  payload,
+  operacaoId = null
+}) {
+  const escopo = obterEscopoOfflineCaixa();
+
+  if (!escopo) {
+    throw new Error(
+      "O contexto seguro da empresa ainda não está disponível neste dispositivo."
+    );
+  }
+
+  const id = operacaoId || gerarUUIDCaixa();
+
+  const registro = await window.crvOfflineDB.salvarOperacaoOffline({
+    operacao_id: id,
+    tipo,
+    payload,
+    empresa_id: escopo.empresa_id,
+    usuario_id: escopo.usuario_id,
+    operador_id: escopo.operador_id
+  });
+
+  return registro;
+}
+
 async function registrarAuditoriaCaixa({
   modulo = "caixa",
   acao,
@@ -599,13 +668,24 @@ async function salvarOffline({
 }) {
 
   try {
+    const escopo = obterEscopoOfflineCaixa();
 
-    await crvOfflineDB.adicionarFilaOffline({
+    if (!escopo) {
+      throw new Error("Contexto offline da empresa não encontrado.");
+    }
+
+    const filaId = await crvOfflineDB.adicionarFilaOffline({
       tabela,
       operacao,
       payload,
-      empresa_id: obterEmpresaId()
+      empresa_id: escopo.empresa_id,
+      usuario_id: escopo.usuario_id,
+      operador_id: escopo.operador_id
     });
+
+    if (!filaId) {
+      throw new Error("A operação não pôde ser gravada no dispositivo.");
+    }
 
     crvToast({
       titulo: "Dados salvos offline",
@@ -638,6 +718,10 @@ async function salvarOffline({
 // AGUARDAR SUPABASE / AUTH
 // ======================================================
 async function aguardarContextoSistema() {
+  if (navigator.onLine === false && obterEscopoOfflineCaixa()) {
+    return false;
+  }
+
   const tentativasMaximas = 40;
   let tentativa = 0;
 
@@ -667,10 +751,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     logCaixa("Supabase/Auth não ficou pronto a tempo.", "error");
 
     caixa =
-      await crvOfflineDB.obterCache("caixa_status") || null;
+      await obterCacheCaixa("caixa_status") || null;
 
     vendas =
-      await crvOfflineDB.obterCache("caixa_vendas") || [];
+      await obterCacheCaixa("caixa_vendas") || [];
 
     if (caixa && caixa.status === "aberto") {
       crvToast({
@@ -682,9 +766,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     } else {
       crvToast({
-        titulo: "Status do caixa não confirmado",
+        titulo: "Caixa pronto para operação local",
         mensagem:
-          "Aguarde a conexão finalizar antes de abrir um novo caixa.",
+          "Não há caixa aberto no cache. Você pode abrir um novo caixa offline neste dispositivo.",
         tipo: "warn",
         tempo: 8000
       });
@@ -711,6 +795,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupModalSelecionarComanda();
     setupModalSelecionarJogo();
     setupModalTodosProdutosCaixa();
+    setupFiltrosTiposItensCaixa();
 
     caixaInicializado = true;
 
@@ -735,6 +820,30 @@ iniciarAvisosFimDeJogoCaixa();
 await processarRecebimentoAgendaAoAbrirCaixa();
 
 logCaixa("Tela pronta para operação.", "success");
+});
+
+document.addEventListener("crv:sync-concluido", async event => {
+  if (!caixaInicializado || !sistemaOnline()) {
+    return;
+  }
+
+  try {
+    await carregarDadosSupabase();
+    await carregarProdutos();
+
+    renderEstado();
+    renderProdutosRapidos();
+    renderCarrinho();
+    renderHistorico();
+    atualizarInfobar();
+
+    logCaixa(
+      `${Number(event.detail?.sincronizadas || 0)} operação(ões) offline incorporada(s) ao Supabase.`,
+      "success"
+    );
+  } catch (err) {
+    logCaixa("Sincronização concluída, mas a tela não foi atualizada: " + err.message, "warn");
+  }
 });
 
 async function inicializarCaixa() {
@@ -841,12 +950,12 @@ async function carregarDadosSupabase() {
       vendas = [];
     }
 
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa(
   "caixa_status",
   caixa
 );
 
-await crvOfflineDB.salvarCache(
+await salvarCacheCaixa(
   "caixa_vendas",
   vendas
 );
@@ -856,10 +965,10 @@ await crvOfflineDB.salvarCache(
   } catch (err) {
 
     const cacheCaixa =
-      await crvOfflineDB.obterCache("caixa_status") || null;
+      await obterCacheCaixa("caixa_status") || null;
 
     const cacheVendas =
-      await crvOfflineDB.obterCache("caixa_vendas") || [];
+      await obterCacheCaixa("caixa_vendas") || [];
 
     if (cacheCaixa && cacheCaixa.status === "aberto") {
       caixa = cacheCaixa;
@@ -973,12 +1082,12 @@ async function carregarProdutos() {
       return produto.ativo === true && itemVisivelNoCaixa(produto);
     });
 
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa(
       "caixa_catalogo_itens",
       catalogoItensCaixa
     );
 
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa(
       "caixa_produtos",
       produtos
     );
@@ -989,10 +1098,10 @@ async function carregarProdutos() {
 
   } catch (err) {
     const cacheCatalogo =
-      await crvOfflineDB.obterCache("caixa_catalogo_itens");
+      await obterCacheCaixa("caixa_catalogo_itens");
 
     const cacheProdutos = cacheCatalogo ||
-      await crvOfflineDB.obterCache("caixa_produtos") || [];
+      await obterCacheCaixa("caixa_produtos") || [];
 
     catalogoItensCaixa = Array.isArray(cacheProdutos) ? cacheProdutos : [];
     produtos = catalogoItensCaixa.filter(produto => {
@@ -1023,14 +1132,14 @@ async function carregarTipoNegocioCaixa() {
 
     tipoNegocioCaixa = String(data?.tipo_negocio || "");
 
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa(
       "caixa_tipo_negocio",
       tipoNegocioCaixa
     );
 
   } catch (err) {
     tipoNegocioCaixa =
-      await crvOfflineDB.obterCache("caixa_tipo_negocio") || "";
+      await obterCacheCaixa("caixa_tipo_negocio") || "";
 
     console.warn("[CAIXA][TIPO_NEGOCIO CACHE]", err);
   }
@@ -1213,10 +1322,81 @@ async function abrirCaixa() {
   const valor = normalizarNumero(inputValor?.value || 0);
 
   if (!sistemaOnline()) {
-    await alertaCaixa(
-  "Sistema conectando",
-  "Sistema ainda não está conectado ao Supabase. Aguarde alguns segundos e tente novamente."
-);
+    if (operacaoCaixaEmProcessamento) return;
+
+    if (caixa && caixa.status === "aberto") {
+      await alertaCaixa(
+        "Caixa já aberto",
+        "Já existe um caixa aberto neste dispositivo."
+      );
+      return;
+    }
+
+    try {
+      operacaoCaixaEmProcessamento = true;
+
+      const escopo = obterEscopoOfflineCaixa();
+
+      if (!escopo) {
+        throw new Error(
+          "Faça ao menos um acesso online neste dispositivo antes de abrir o Caixa offline."
+        );
+      }
+
+      const caixaId = gerarUUIDCaixa();
+      const agora = new Date().toISOString();
+      const payload = {
+        id: caixaId,
+        valor_inicial: valor,
+        valor_final: null,
+        status: "aberto",
+        data_abertura: agora,
+        data_fechamento: null,
+        observacoes: null,
+        usuario_abertura: escopo.usuario_id,
+        usuario_fechamento: null,
+        operador_abertura_id: escopo.operador_id,
+        operador_fechamento_id: null
+      };
+
+      const operacao = await salvarOperacaoCaixaOffline({
+        tipo: "caixa_abertura",
+        payload
+      });
+
+      caixa = {
+        ...payload,
+        empresa_id: escopo.empresa_id,
+        _offline: true,
+        _operacao_id: operacao.operacao_id
+      };
+
+      vendas = [];
+      carrinho = [];
+
+      await salvarCacheCaixa("caixa_status", caixa);
+      await salvarCacheCaixa("caixa_vendas", vendas);
+
+      if (inputValor) inputValor.value = "";
+
+      renderEstado();
+      renderCarrinho();
+      renderHistorico();
+
+      crvToast({
+        titulo: "Caixa aberto offline",
+        mensagem: "A abertura foi salva neste dispositivo e será sincronizada depois.",
+        tipo: "warn",
+        tempo: 6500
+      });
+
+      logCaixa("Caixa aberto e persistido offline.", "warn");
+    } catch (err) {
+      await alertaCaixa("Não foi possível abrir o Caixa", err.message);
+    } finally {
+      operacaoCaixaEmProcessamento = false;
+    }
+
     return;
   }
 
@@ -1264,6 +1444,9 @@ async function abrirCaixa() {
 });
     vendas = [];
     carrinho = [];
+
+    await salvarCacheCaixa("caixa_status", caixa);
+    await salvarCacheCaixa("caixa_vendas", vendas);
 
     if (inputValor) inputValor.value = "";
 
@@ -1365,10 +1548,73 @@ function calcularDiferenca() {
 
 async function fecharCaixa() {
   if (!sistemaOnline()) {
-    await alertaCaixa(
-      "Sistema offline",
-      "Sistema sem conexão com Supabase."
-    );
+    if (operacaoCaixaEmProcessamento) return;
+
+    if (!caixa?.id || caixa.status !== "aberto") {
+      await alertaCaixa("Caixa fechado", "Nenhum caixa aberto.");
+      return;
+    }
+
+    try {
+      operacaoCaixaEmProcessamento = true;
+
+      const escopo = obterEscopoOfflineCaixa();
+
+      if (!escopo) {
+        throw new Error("Contexto offline da empresa não encontrado.");
+      }
+
+      const valorFinal = normalizarNumero(
+        document.getElementById("valorFechamento")?.value || 0
+      );
+      const dataFechamento = new Date().toISOString();
+      const caixaFechado = {
+        ...caixa,
+        status: "fechado",
+        valor_final: valorFinal,
+        data_fechamento: dataFechamento,
+        usuario_fechamento: escopo.usuario_id,
+        operador_fechamento_id: escopo.operador_id
+      };
+
+      await salvarOperacaoCaixaOffline({
+        tipo: "caixa_fechamento",
+        payload: {
+          caixa_id: caixa.id,
+          valor_final: valorFinal,
+          data_fechamento: dataFechamento,
+          usuario_fechamento: escopo.usuario_id,
+          operador_fechamento_id: escopo.operador_id
+        }
+      });
+
+      ultimoFechamentoCaixa = caixaFechado;
+      caixa = null;
+      vendas = [];
+      carrinho = [];
+
+      await salvarCacheCaixa("caixa_status", null);
+      await salvarCacheCaixa("caixa_vendas", []);
+
+      fecharModal();
+      renderEstado();
+      renderCarrinho();
+      renderHistorico();
+
+      crvToast({
+        titulo: "Caixa fechado offline",
+        mensagem: "O fechamento foi salvo e será sincronizado na ordem correta.",
+        tipo: "warn",
+        tempo: 6500
+      });
+
+      logCaixa("Caixa fechado e persistido offline.", "warn");
+    } catch (err) {
+      await alertaCaixa("Não foi possível fechar o Caixa", err.message);
+    } finally {
+      operacaoCaixaEmProcessamento = false;
+    }
+
     return;
   }
 
@@ -1416,6 +1662,9 @@ async function fecharCaixa() {
     caixa = null;
     vendas = [];
     carrinho = [];
+
+    await salvarCacheCaixa("caixa_status", null);
+    await salvarCacheCaixa("caixa_vendas", []);
 
     fecharModal();
     renderEstado();
@@ -3005,11 +3254,18 @@ async function finalizarVenda() {
   }
 
 if (!sistemaOnline()) {
-
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Caixa fechado",
       "Abra o caixa antes de finalizar uma venda."
+    );
+    return;
+  }
+
+  if (modoPDV !== "venda") {
+    await alertaCaixa(
+      "Recurso online",
+      "Durante a falta de conexão, utilize a Venda rápida. Comandas e jogos serão sincronizados em uma etapa própria."
     );
     return;
   }
@@ -3022,10 +3278,19 @@ if (!sistemaOnline()) {
     return;
   }
 
-  const subtotalTeste = calcularSubtotalCarrinho();
-  const descontoTeste = calcularDesconto();
+  if (carrinho.some(item => String(item.origem || "pdv") !== "pdv")) {
+    await alertaCaixa(
+      "Recebimento online",
+      "Cobranças originadas da Agenda precisam de conexão. Produtos, serviços, taxas e cobranças avulsas continuam disponíveis offline."
+    );
+    return;
+  }
 
-  if (descontoTeste > subtotalTeste) {
+  const subtotal = calcularSubtotalCarrinho();
+  const desconto = calcularDesconto();
+  const total = calcularTotalCarrinho();
+
+  if (desconto > subtotal) {
     await alertaCaixa(
       "Desconto inválido",
       "O desconto não pode ser maior que o subtotal."
@@ -3033,110 +3298,150 @@ if (!sistemaOnline()) {
     return;
   }
 
-  const vendaOfflineId =
-    "offline-" + Date.now();
+  if (total <= 0) {
+    await alertaCaixa("Total inválido", "Total da venda inválido.");
+    return;
+  }
 
-  const subtotal = calcularSubtotalCarrinho();
-  const desconto = calcularDesconto();
-  const total = calcularTotalCarrinho();
+  const valorRecebido = normalizarNumero(
+    document.getElementById("valorRecebido")?.value || 0
+  );
 
-  const troco =
-    metodoPagamento === "dinheiro"
-      ? Math.max(
-          0,
-          normalizarNumero(
-            document.getElementById("valorRecebido")?.value || 0
-          ) - total
-        )
-      : 0;
+  if (
+    metodoPagamento === "dinheiro" &&
+    valorRecebido > 0 &&
+    valorRecebido < total
+  ) {
+    await alertaCaixa(
+      "Pagamento insuficiente",
+      "O valor recebido é menor que o total da venda."
+    );
+    return;
+  }
 
-  const vendaPayload = {
-    id: vendaOfflineId,
-    empresa_id: obterEmpresaId(),
-    caixa_id: caixa?.id || null,
-    subtotal,
-    desconto,
-    total,
-    forma_pagamento: metodoPagamento,
-    troco,
-    data: new Date().toISOString(),
-    offline: true,
-    operador_id: obterOperadorAtualId(),
-    venda_manual: carrinho.some(item => item.produto_manual === true)
-  };
+  const troco = metodoPagamento === "dinheiro"
+    ? Math.max(0, valorRecebido - total)
+    : 0;
 
-  const itensPayload = carrinho.map(item => ({
-    empresa_id: obterEmpresaId(),
-    venda_id: vendaOfflineId,
-    produto_id: item.produto_manual
-      ? null
-      : item.id,
-    nome: item.nome,
-    preco: Number(item.preco || 0),
-    preco_custo: Number(item.preco_custo || 0),
-    quantidade: Number(item.quantidade || 0)
-  }));
+  try {
+    vendaEmProcessamento = true;
+    bloquearBotaoFinalizar(true);
 
-  await salvarOffline({
-    tabela: "vendas",
-    payload: vendaPayload
-  });
+    const escopo = obterEscopoOfflineCaixa();
 
-  await salvarOffline({
-    tabela: "vendas_itens",
-    payload: itensPayload
-  });
-
-  carrinho.forEach(item => {
-    if (
-      item.produto_manual ||
-      !item.id ||
-      !itemControlaEstoqueCaixa(item)
-    ) return;
-
-    const produtoLocal = obterItemCatalogoCaixa(item.id);
-
-    if (produtoLocal) {
-      produtoLocal.estoque =
-        Math.max(
-          0,
-          Number(produtoLocal.estoque || 0) -
-          Number(item.quantidade || 0)
-        );
+    if (!escopo) {
+      throw new Error(
+        "O contexto seguro da empresa não foi encontrado neste dispositivo."
+      );
     }
-  });
 
-  await crvOfflineDB.salvarCache(
-    "caixa_produtos",
-    produtos
-  );
+    const operacaoId = gerarUUIDCaixa();
+    const dataVenda = new Date().toISOString();
+    const vendaServidor = {
+      caixa_id: caixa.id,
+      cliente_id: null,
+      subtotal,
+      desconto,
+      total,
+      forma_pagamento: metodoPagamento,
+      troco,
+      origem: "pdv",
+      origem_id: null,
+      descricao: "Venda rápida",
+      data: dataVenda,
+      operador_id: escopo.operador_id,
+      venda_manual: carrinho.some(item => item.produto_manual === true)
+    };
 
-  await crvOfflineDB.salvarCache(
-    "caixa_catalogo_itens",
-    catalogoItensCaixa
-  );
+    const itensServidor = carrinho.map(item => {
+      const preco = Number(item.preco || 0);
+      const precoCusto = Number(item.preco_custo || 0);
+      const quantidade = Number(item.quantidade || 0);
 
-  atualizarProdutosRapidosCaixa();
+      return {
+        produto_id: item.produto_manual ? null : item.id,
+        nome: item.nome,
+        preco,
+        preco_custo: precoCusto,
+        lucro_unitario: preco - precoCusto,
+        lucro_total: (preco - precoCusto) * quantidade,
+        quantidade,
+        origem: "pdv",
+        origem_id: null,
+        item_manual: item.produto_manual === true
+      };
+    });
 
-  vendas.unshift(vendaPayload);
+    const operacao = await salvarOperacaoCaixaOffline({
+      tipo: "venda",
+      operacaoId,
+      payload: {
+        venda: vendaServidor,
+        itens: itensServidor
+      }
+    });
 
-  await crvOfflineDB.salvarCache(
-    "caixa_vendas",
-    vendas
-  );
+    carrinho.forEach(item => {
+      if (
+        item.produto_manual ||
+        !item.id ||
+        !itemControlaEstoqueCaixa(item)
+      ) return;
 
-  exibirModalSucesso(total, troco);
+      const produtoLocal = obterItemCatalogoCaixa(item.id);
 
-  carrinho = [];
+      if (produtoLocal) {
+        produtoLocal.estoque = Math.max(
+          0,
+          Number(produtoLocal.estoque || 0) - Number(item.quantidade || 0)
+        );
+      }
+    });
 
-  renderCarrinho();
-  atualizarInfobar();
-  renderHistorico();
+    await salvarCacheCaixa("caixa_produtos", produtos);
+    await salvarCacheCaixa("caixa_catalogo_itens", catalogoItensCaixa);
 
-  logVenda(
-    "Venda salva offline.",
-    "warn"
-  );
+    atualizarProdutosRapidosCaixa();
+
+    const vendaLocal = {
+      id: `offline-${operacaoId}`,
+      empresa_id: escopo.empresa_id,
+      ...vendaServidor,
+      _offline: true,
+      _operacao_id: operacao.operacao_id
+    };
+
+    vendas.unshift(vendaLocal);
+    await salvarCacheCaixa("caixa_vendas", vendas);
+
+    exibirModalSucesso(total, troco);
+    carrinho = [];
+
+    const descontoInput = document.getElementById("inputDesconto");
+    const valorRecebidoInput = document.getElementById("valorRecebido");
+
+    if (descontoInput) descontoInput.value = "";
+    if (valorRecebidoInput) valorRecebidoInput.value = "";
+
+    renderCarrinho();
+    atualizarInfobar();
+    renderHistorico();
+
+    crvToast({
+      titulo: "Venda registrada offline",
+      mensagem: "A venda foi salva neste dispositivo e entrará na sincronização automática.",
+      tipo: "warn",
+      tempo: 6500
+    });
+
+    logVenda(`Venda offline salva com operação ${operacaoId}.`, "warn");
+  } catch (err) {
+    logVenda("Erro ao salvar venda offline: " + err.message, "error");
+    await alertaCaixa("Venda não salva", err.message);
+  } finally {
+    vendaEmProcessamento = false;
+    bloquearBotaoFinalizar(false);
+  }
 
   return;
 }
@@ -3319,6 +3624,8 @@ if (itemAgendaAvulso) {
     await baixarEstoqueProdutos();
 
     vendas.unshift(vendaData);
+
+    await salvarCacheCaixa("caixa_vendas", vendas);
 
     exibirModalSucesso(total, troco);
 
@@ -3809,6 +4116,14 @@ function setupModoPDV() {
 }
 
 async function alterarModoPDV(modo) {
+
+  if (!sistemaOnline() && modo !== "venda") {
+    await alertaCaixa(
+      "Disponível com conexão",
+      "Comandas e jogos ficam temporariamente protegidos durante o modo offline. A Venda rápida continua funcionando normalmente."
+    );
+    return;
+  }
 
   if (modo === "comanda" && !caixaPermiteComandas()) {
     await alertaCaixa(
@@ -4571,9 +4886,9 @@ async function carregarJogosCaixa() {
 
     vinculosComandaJogadorCaixa = {};
 
-    await crvOfflineDB.salvarCache("caixa_jogos", jogosCaixa);
-    await crvOfflineDB.salvarCache("caixa_jogadores_agenda", jogadores);
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa("caixa_jogos", jogosCaixa);
+    await salvarCacheCaixa("caixa_jogadores_agenda", jogadores);
+    await salvarCacheCaixa(
       "caixa_mensalidades_agenda",
       mensalidadesCaixa
     );
@@ -4609,7 +4924,7 @@ async function carregarJogosCaixa() {
           }
         });
 
-        await crvOfflineDB.salvarCache(
+        await salvarCacheCaixa(
           "caixa_vinculos_comanda_jogador",
           vinculosComandaJogadorCaixa
         );
@@ -4622,16 +4937,16 @@ async function carregarJogosCaixa() {
 
   } catch (err) {
     const cacheJogos =
-      await crvOfflineDB.obterCache("caixa_jogos") || [];
+      await obterCacheCaixa("caixa_jogos") || [];
 
     const cacheJogadores =
-      await crvOfflineDB.obterCache("caixa_jogadores_agenda") || [];
+      await obterCacheCaixa("caixa_jogadores_agenda") || [];
 
     const cacheMensalidades =
-      await crvOfflineDB.obterCache("caixa_mensalidades_agenda") || [];
+      await obterCacheCaixa("caixa_mensalidades_agenda") || [];
 
     const cacheVinculos =
-      await crvOfflineDB.obterCache("caixa_vinculos_comanda_jogador") || {};
+      await obterCacheCaixa("caixa_vinculos_comanda_jogador") || {};
 
     jogosCaixa = cacheJogos;
     mensalidadesCaixa = cacheMensalidades;
@@ -5362,6 +5677,14 @@ function atualizarTotalSelecionadoJogoCaixa() {
 }
 
 async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Jogos disponíveis com conexão",
+      "O envio para comanda não foi realizado. Use a Venda rápida enquanto estiver offline."
+    );
+    return;
+  }
+
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Caixa fechado",
@@ -5461,6 +5784,14 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
 }
 
 async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Jogos disponíveis com conexão",
+      "O envio para comanda não foi realizado. A operação online foi preservada."
+    );
+    return;
+  }
+
   if (!jogadorComandaPendenteCaixa?.jogo?.id || !jogadorComandaPendenteCaixa?.jogador?.id) {
     jogadorComandaPendenteCaixa = null;
     return;
@@ -5663,6 +5994,14 @@ async function atualizarResumoAgendaAposComandaCaixa(agendaId) {
 }
 
 async function confirmarPagamentoJogoCaixa() {
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Jogos disponíveis com conexão",
+      "O recebimento do jogo não foi alterado. Use a Venda rápida para vendas comuns offline."
+    );
+    return;
+  }
+
   if (vendaEmProcessamento) return;
 
   if (!caixa || caixa.status !== "aberto") {
@@ -6497,6 +6836,14 @@ const jogosAtivos = jogosCaixa.filter(jogo => {
 }
 
 async function abrirModalSelecionarComanda() {
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Comandas disponíveis com conexão",
+      "As comandas não serão abertas ou alteradas no modo offline nesta etapa."
+    );
+    return;
+  }
+
   const modal = document.getElementById("modalSelecionarComanda");
   const inputBusca = document.getElementById("inputBuscaModalComanda");
 
@@ -6592,14 +6939,14 @@ async function carregarComandasCaixa(opcoes = {}) {
     comandasCaixa = Array.isArray(data) ? data : [];
     ultimaCargaComandasCaixa = Date.now();
 
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa(
       "caixa_comandas",
       comandasCaixa
     );
 
   } catch (err) {
     const cacheComandas =
-      await crvOfflineDB.obterCache("caixa_comandas") || [];
+      await obterCacheCaixa("caixa_comandas") || [];
 
     comandasCaixa = cacheComandas;
     ultimaCargaComandasCaixa = Date.now();
@@ -6833,6 +7180,14 @@ if (input) {
 async function selecionarComandaCaixa(comanda) {
   if (!comanda?.id) return;
 
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "As comandas não serão alteradas até a conexão voltar. Use a Venda rápida."
+    );
+    return;
+  }
+
   try {
     let comandaOperacional = comanda;
 
@@ -6865,7 +7220,7 @@ async function selecionarComandaCaixa(comanda) {
           comandasCaixa[index] = comandaOperacional;
         }
 
-        await crvOfflineDB.salvarCache("caixa_comandas", comandasCaixa);
+        await salvarCacheCaixa("caixa_comandas", comandasCaixa);
 
         await salvarOffline({
           tabela: "comandas",
@@ -7063,6 +7418,14 @@ async function processarLeituraProduto(codigoLido) {
 // LEITOR COMANDA
 // ======================================================
 async function processarLeituraComanda(codigoLido) {
+
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "A comanda não foi aberta. Use a Venda rápida enquanto estiver sem conexão."
+    );
+    return;
+  }
 
   const codigo =
     String(codigoLido || "")
@@ -7265,6 +7628,14 @@ async function adicionarProdutoNaComanda(produto) {
     return;
   }
 
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "Este item não foi adicionado à comanda. Use a Venda rápida enquanto estiver sem conexão."
+    );
+    return;
+  }
+
   const preco = normalizarNumero(produto.preco);
   const estoque = Number(produto.estoque || 0);
   const controlaEstoque = itemControlaEstoqueCaixa(produto);
@@ -7339,12 +7710,12 @@ async function adicionarProdutoNaComanda(produto) {
       };
     }
 
-    await crvOfflineDB.salvarCache(
+    await salvarCacheCaixa(
       `caixa_comanda_itens_${comandaAtiva.id}`,
       carrinho
     );
 
-    await crvOfflineDB.salvarCache("caixa_comandas", comandasCaixa);
+    await salvarCacheCaixa("caixa_comandas", comandasCaixa);
 
     await salvarOffline({
       tabela: "comanda_itens",
@@ -7473,6 +7844,14 @@ async function adicionarItemManualNaComanda({
     return;
   }
 
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "A cobrança não foi adicionada à comanda. Use a Venda rápida enquanto estiver sem conexão."
+    );
+    return;
+  }
+
   try {
     const total = Number(preco || 0) * Number(quantidade || 1);
 
@@ -7494,12 +7873,12 @@ async function adicionarItemManualNaComanda({
 
       comandaAtiva.total = calcularSubtotalCarrinho();
 
-      await crvOfflineDB.salvarCache(
+      await salvarCacheCaixa(
         `caixa_comanda_itens_${comandaAtiva.id}`,
         carrinho
       );
 
-      await crvOfflineDB.salvarCache("caixa_comandas", comandasCaixa);
+      await salvarCacheCaixa("caixa_comandas", comandasCaixa);
 
       renderCarrinho();
       atualizarInterfaceModoPDV();
@@ -7551,7 +7930,7 @@ async function carregarItensComanda(opcoes = {}) {
 
   if (!sistemaOnline()) {
     const cacheItens =
-      await crvOfflineDB.obterCache(`caixa_comanda_itens_${comandaAtiva.id}`) || [];
+      await obterCacheCaixa(`caixa_comanda_itens_${comandaAtiva.id}`) || [];
 
     carrinho = cacheItens;
 
@@ -7574,7 +7953,7 @@ async function carregarItensComanda(opcoes = {}) {
       };
     }
 
-    await crvOfflineDB.salvarCache("caixa_comandas", comandasCaixa);
+    await salvarCacheCaixa("caixa_comandas", comandasCaixa);
 
     renderCarrinho();
     atualizarInterfaceModoPDV();
@@ -7623,7 +8002,7 @@ async function carregarItensComanda(opcoes = {}) {
     };
   });
 
-  await crvOfflineDB.salvarCache(
+  await salvarCacheCaixa(
     `caixa_comanda_itens_${comandaAtiva.id}`,
     carrinho
   );
@@ -7647,7 +8026,7 @@ async function carregarItensComanda(opcoes = {}) {
     };
   }
 
-  await crvOfflineDB.salvarCache("caixa_comandas", comandasCaixa);
+  await salvarCacheCaixa("caixa_comandas", comandasCaixa);
 
   if (atualizarTotalBanco) {
     await sb
@@ -7768,94 +8147,13 @@ async function fecharComanda() {
 
   if (vendaEmProcessamento) return;
 
-if (!sistemaOnline()) {
-
-  const vendaOfflineId =
-    "offline-" + Date.now();
-
-  const subtotal =
-    calcularSubtotalCarrinho();
-
-  const desconto =
-    calcularDesconto();
-
-  const total =
-    calcularTotalCarrinho();
-
-  const troco =
-    metodoPagamento === "dinheiro"
-      ? Math.max(
-          0,
-          normalizarNumero(
-            document.getElementById("valorRecebido")?.value || 0
-          ) - total
-        )
-      : 0;
-
-  const vendaPayload = {
-    id: vendaOfflineId,
-    empresa_id: obterEmpresaId(),
-    caixa_id: caixa?.id || null,
-    subtotal,
-    desconto,
-    total,
-    forma_pagamento: metodoPagamento,
-    troco,
-    origem: "comanda",
-    origem_id: comandaAtiva?.id || null,
-    descricao:
-      `Comanda ${comandaAtiva?.codigo || ""}`,
-    data: new Date().toISOString(),
-    operador_id: obterOperadorAtualId(),
-    offline: true
-  };
-
-  const itensPayload =
-    carrinho.map(item => ({
-      empresa_id: obterEmpresaId(),
-      venda_id: vendaOfflineId,
-      produto_id:
-        item.produto_manual
-          ? null
-          : item.id,
-      nome: item.nome,
-      preco: Number(item.preco || 0),
-      preco_custo:
-        Number(item.preco_custo || 0),
-      quantidade:
-        Number(item.quantidade || 0)
-    }));
-
-  await salvarOffline({
-    tabela: "vendas",
-    payload: vendaPayload
-  });
-
-  await salvarOffline({
-    tabela: "vendas_itens",
-    payload: itensPayload
-  });
-
-vendas.unshift(vendaPayload);
-
-exibirModalSucesso(total, troco);
-
-  comandaAtiva = null;
-  comandaOculta = false;
-  carrinho = [];
-
-  renderCarrinho();
-  atualizarInfobar();
-  renderHistorico();
-  atualizarInterfaceModoPDV();
-
-  logVenda(
-    "Comanda salva offline.",
-    "warn"
-  );
-
-  return;
-}
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "Para evitar itens duplicados ou fechamento incompleto, comandas serão liberadas offline em uma etapa específica. Use a Venda rápida enquanto estiver sem conexão."
+    );
+    return;
+  }
 
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
@@ -8194,6 +8492,14 @@ async function removerItemCarrinho(index) {
 
   if (!item) return;
 
+  if (modoPDV === "comanda" && !sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "A comanda não foi alterada. Aguarde a conexão para remover itens."
+    );
+    return;
+  }
+
   if (modoPDV === "comanda" && comandaAtiva) {
 
     if (!item.comanda_item_id) {
@@ -8250,6 +8556,14 @@ async function alterarQuantidadeCarrinho(index, delta) {
   const item = carrinho[index];
 
   if (!item) return;
+
+  if (modoPDV === "comanda" && !sistemaOnline()) {
+    await alertaCaixa(
+      "Comanda protegida no modo offline",
+      "A comanda não foi alterada. Aguarde a conexão para mudar quantidades."
+    );
+    return;
+  }
 
   const novaQuantidade =
     Number(item.quantidade || 0) + Number(delta || 0);
