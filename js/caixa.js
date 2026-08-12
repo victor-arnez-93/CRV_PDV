@@ -13,11 +13,12 @@ let vendas = [];
 let produtos = [];
 let catalogoItensCaixa = [];
 let produtosRapidos = [];
-let filtroTipoItensCaixa = "todos";
-let filtroTipoModalCaixa = "todos";
+let filtroTipoItensCaixa = "produto";
+let filtroTipoModalCaixa = "produto";
 let metodoPagamento = "dinheiro";
 let modoPDV = "venda";
 let modoBalcaoCaixa = false;
+let rapidosBalcaoOcultos = true;
 let comandaAtiva = null;
 let comandaOculta = false;
 let caixaInicializado = false;
@@ -122,6 +123,12 @@ function aplicarModoBalcaoCaixa(ativo, { persistir = true } = {}) {
   modoBalcaoCaixa = ativo === true;
 
   body.classList.toggle("caixa-modo-balcao", modoBalcaoCaixa);
+
+  if (modoBalcaoCaixa && !estavaAtivo) {
+    rapidosBalcaoOcultos = true;
+  }
+
+  aplicarEstadoRapidosBalcaoCaixa();
   botao.classList.toggle("active", modoBalcaoCaixa);
   botao.setAttribute("aria-pressed", String(modoBalcaoCaixa));
   botao.title = modoBalcaoCaixa
@@ -207,6 +214,41 @@ function setupModoBalcaoCaixa() {
   aplicarModoBalcaoCaixa(modoSalvo, { persistir: false });
 }
 
+function aplicarEstadoRapidosBalcaoCaixa() {
+  const body = document.body;
+  const botao = document.getElementById("btnToggleRapidosBalcao");
+
+  if (!body) return;
+
+  const ocultar = modoBalcaoCaixa && rapidosBalcaoOcultos;
+  body.classList.toggle("rapidos-balcao-ocultos", ocultar);
+
+  if (!botao) return;
+
+  botao.setAttribute("aria-expanded", String(!ocultar));
+  botao.innerHTML = ocultar
+    ? `<i data-lucide="chevron-down" width="13" height="13"></i><span>Mostrar rápidos</span>`
+    : `<i data-lucide="chevron-up" width="13" height="13"></i><span>Ocultar rápidos</span>`;
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function setupRapidosBalcaoCaixa() {
+  const botao = document.getElementById("btnToggleRapidosBalcao");
+
+  if (!botao || botao.dataset.ready === "1") return;
+
+  botao.dataset.ready = "1";
+  botao.addEventListener("click", () => {
+    rapidosBalcaoOcultos = !rapidosBalcaoOcultos;
+    aplicarEstadoRapidosBalcaoCaixa();
+  });
+
+  aplicarEstadoRapidosBalcaoCaixa();
+}
+
 document.addEventListener("crv:config-pronta", () => {
   aplicarVisibilidadeAtalhosContextuaisCaixa();
 
@@ -283,7 +325,9 @@ function buscarMensalidadeCaixa(jogo) {
   if (!jogo || !jogoMensalCaixa(jogo)) return null;
 
   const origemId = jogo.recorrencia_origem_id || jogo.id;
-  const dataJogo = String(jogo.data_agendamento || "").slice(0, 10);
+  const dataJogo = String(
+    jogo.horario_original_data || jogo.data_agendamento || ""
+  ).slice(0, 10);
   const competencia = dataJogo.slice(0, 7);
 
   return mensalidadesCaixa.find(mensalidade => {
@@ -744,6 +788,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   logCaixa("Inicializando...");
 
   setupModoBalcaoCaixa();
+  setupRapidosBalcaoCaixa();
 
   const pronto = await aguardarContextoSistema();
 
@@ -1028,7 +1073,7 @@ function itemControlaEstoqueCaixa(produto) {
 }
 
 function itemVisivelNoCaixa(produto) {
-  return produto?.exibir_caixa !== false;
+  return produto?.ativo !== false;
 }
 
 function obterItemCatalogoCaixa(id) {
@@ -1057,7 +1102,7 @@ function rotuloFiltroTipoCaixa(filtro) {
 
 function atualizarProdutosRapidosCaixa() {
   produtosRapidos = produtos.filter(produto => {
-    return produto.produto_rapido === true && itemVisivelNoCaixa(produto);
+    return produto.ativo === true && produto.produto_rapido === true;
   });
 }
 
@@ -1079,7 +1124,7 @@ async function carregarProdutos() {
 
     catalogoItensCaixa = Array.isArray(data) ? data : [];
     produtos = catalogoItensCaixa.filter(produto => {
-      return produto.ativo === true && itemVisivelNoCaixa(produto);
+      return produto.ativo === true;
     });
 
     await salvarCacheCaixa(
@@ -1714,7 +1759,7 @@ function renderProdutosRapidos() {
         <i data-lucide="package-search" width="28" height="28"></i>
         <p>Nenhum item rápido neste tipo.</p>
         <small style="color:var(--text-muted);">
-          Cadastre o item, exiba no Caixa e marque como item rápido.
+          Cadastre o item e marque como item rápido.
         </small>
       </div>
     `;
@@ -1821,7 +1866,7 @@ function setupFiltrosTiposItensCaixa() {
       const botao = event.target.closest("[data-tipo-item-caixa]");
       if (!botao) return;
 
-      filtroTipoItensCaixa = botao.dataset.tipoItemCaixa || "todos";
+      filtroTipoItensCaixa = botao.dataset.tipoItemCaixa || "produto";
       filtroTipoModalCaixa = filtroTipoItensCaixa;
 
       atualizarBotoesFiltroTipoCaixa();
@@ -1841,7 +1886,7 @@ function setupFiltrosTiposItensCaixa() {
 
   document.querySelectorAll("[data-tipo-modal-caixa]").forEach(botao => {
     botao.addEventListener("click", () => {
-      filtroTipoModalCaixa = botao.dataset.tipoModalCaixa || "todos";
+      filtroTipoModalCaixa = botao.dataset.tipoModalCaixa || "produto";
       atualizarBotoesFiltroTipoCaixa();
 
       const busca = document.getElementById("inputBuscaProdutosCaixa");
@@ -2519,6 +2564,7 @@ function renderCarrinho() {
 
   carrinho.forEach((item, index) => {
     const div = document.createElement("div");
+    const itemAgendaIndividual = Boolean(item.agenda_jogador_id);
 
     div.className = "cart-item";
 
@@ -2528,9 +2574,15 @@ function renderCarrinho() {
       </div>
 
     <div class="cart-item-qty">
-      <button class="qty-btn qty-minus" type="button">−</button>
-      <span class="qty-num">${item.quantidade}</span>
-      <button class="qty-btn qty-plus" type="button">+</button>
+      ${
+        itemAgendaIndividual
+          ? `<span class="qty-num" title="Cobrança individual vinculada à Agenda">1 jogador</span>`
+          : `
+              <button class="qty-btn qty-minus" type="button">−</button>
+              <span class="qty-num">${item.quantidade}</span>
+              <button class="qty-btn qty-plus" type="button">+</button>
+            `
+      }
     </div>
 
       <div class="cart-item-price">
@@ -3177,74 +3229,6 @@ async function prepararRecebimentoAvulsoAgendaCaixa(recebimento) {
   });
 }
 
-async function atualizarMensalidadeAgendaAposVenda(vendaId) {
-  const recebimento =
-    recebimentoAgendaCaixa || obterRecebimentoAgendaStorage();
-
-  if (!recebimento?.mensalidade_id) return;
-
-  const { error } = await sb
-    .from("agenda_mensalidades")
-    .update({
-      status: "pago",
-      forma_pagamento: metodoPagamento,
-      pago_em: new Date().toISOString(),
-      venda_id: vendaId,
-      caixa_id: caixa?.id || null,
-      agenda_id: recebimento.agenda_id || null,
-      atualizado_em: new Date().toISOString()
-    })
-    .eq("id", recebimento.mensalidade_id)
-    .eq("empresa_id", obterEmpresaId());
-
-  if (error) throw error;
-
-  const mensalidadeLocal = mensalidadesCaixa.find(item => {
-    return String(item.id) === String(recebimento.mensalidade_id);
-  });
-
-  if (mensalidadeLocal) {
-    mensalidadeLocal.status = "pago";
-    mensalidadeLocal.forma_pagamento = metodoPagamento;
-    mensalidadeLocal.pago_em = new Date().toISOString();
-    mensalidadeLocal.venda_id = vendaId;
-    mensalidadeLocal.caixa_id = caixa?.id || null;
-    mensalidadeLocal.agenda_id = recebimento.agenda_id || null;
-  }
-
-  limparRecebimentoAgendaStorage();
-}
-
-async function atualizarJogadoresAvulsosAgendaAposVenda(vendaId) {
-  const itensAgenda = carrinho.filter(item => {
-    return String(item.origem || "") === "agenda_avulso" && item.agenda_jogador_id;
-  });
-
-  if (!itensAgenda.length) return;
-
-  const idsJogadores = itensAgenda.map(item => item.agenda_jogador_id);
-  const agendaId = itensAgenda[0].agenda_id;
-
-  const { error: erroJogadores } = await sb
-    .from("agenda_jogadores")
-    .update({
-      pago: true,
-      forma_pagamento: metodoPagamento,
-      status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_DIRETO,
-      venda_id: vendaId,
-      pago_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString()
-    })
-    .eq("empresa_id", obterEmpresaId())
-    .in("id", idsJogadores);
-
-  if (erroJogadores) throw erroJogadores;
-
-  await atualizarResumoAgendaAposComandaCaixa(agendaId);
-
-  limparRecebimentoAgendaStorage();
-}
-
 // ======================================================
 // FINALIZAR VENDA
 // ======================================================
@@ -3517,14 +3501,110 @@ const itensAgendaAvulso =
 const itemAgendaAvulso =
   itensAgendaAvulso[0] || null;
 
+const itemAgenda = itemMensalidadeAgenda || itemAgendaAvulso;
+
 if (
-  itemMensalidadeAgenda &&
-  carrinho.some(item => String(item.origem || "") !== "agenda_mensalidade")
+  itemAgenda &&
+  carrinho.some(item => {
+    const origem = String(item.origem || "");
+    return itemMensalidadeAgenda
+      ? origem !== "agenda_mensalidade"
+      : origem !== "agenda_avulso";
+  })
 ) {
   await alertaCaixa(
     "Finalize separadamente",
-    "A mensalidade do horário deve ser recebida sozinha. Finalize-a primeiro e depois registre produtos ou outras cobranças."
+    "Recebimentos da Agenda devem ser finalizados separadamente de produtos ou outras cobranças."
   );
+  return;
+}
+
+if (itemAgenda && desconto > 0) {
+  await alertaCaixa(
+    "Desconto indisponível",
+    "A mensalidade e os avulsos usam os valores definidos na Agenda. Ajuste o valor do avulso no jogo antes de receber."
+  );
+  return;
+}
+
+if (itemAgenda) {
+  const formaPagamentoRpc = normalizarFormaPagamentoAgendaRpcCaixa(
+    metodoPagamento
+  );
+
+  let resultadoRecebimento = null;
+
+  if (itemMensalidadeAgenda) {
+    const { data, error } = await sb.rpc("receber_mensalidade_agenda", {
+      p_mensalidade_id: itemMensalidadeAgenda.mensalidade_id,
+      p_caixa_id: caixa.id,
+      p_forma_pagamento: formaPagamentoRpc,
+      p_operador_id: obterOperadorAtualId(),
+      p_valor_recebido: metodoPagamento === "dinheiro"
+        ? (valorRecebido || total)
+        : total
+    });
+
+    if (error) throw error;
+    resultadoRecebimento = data;
+  } else {
+    const idsJogadores = itensAgendaAvulso
+      .map(item => item.agenda_jogador_id)
+      .filter(Boolean);
+
+    if (!idsJogadores.length) {
+      throw new Error("Os jogadores avulsos deste recebimento não foram identificados.");
+    }
+
+    const { data, error } = await sb.rpc("receber_avulsos_agenda", {
+      p_agenda_id: itemAgendaAvulso.agenda_id,
+      p_jogadores_ids: idsJogadores,
+      p_caixa_id: caixa.id,
+      p_forma_pagamento: formaPagamentoRpc,
+      p_operador_id: obterOperadorAtualId(),
+      p_valor_recebido: metodoPagamento === "dinheiro"
+        ? (valorRecebido || total)
+        : total
+    });
+
+    if (error) throw error;
+    resultadoRecebimento = data;
+  }
+
+  limparRecebimentoAgendaStorage();
+
+  const totalRecebidoAgenda = Number(
+    resultadoRecebimento?.valor || total
+  );
+  const trocoAgenda = Number(resultadoRecebimento?.troco || 0);
+
+  carrinho = [];
+
+  const descontoInput = document.getElementById("inputDesconto");
+  const valorRecebidoInput = document.getElementById("valorRecebido");
+
+  if (descontoInput) descontoInput.value = "";
+  if (valorRecebidoInput) valorRecebidoInput.value = "";
+
+  await carregarDadosSupabase();
+  await carregarProdutos();
+  await carregarJogosCaixa();
+
+  renderProdutosRapidos();
+  renderCarrinho();
+  renderHistorico();
+  renderJogosAtivosNoCaixa();
+  atualizarInfobar();
+
+  exibirModalSucesso(totalRecebidoAgenda, trocoAgenda);
+
+  logVenda(
+    itemMensalidadeAgenda
+      ? "Mensalidade recebida pela transação protegida da Agenda."
+      : "Avulsos recebidos em uma única transação protegida da Agenda.",
+    "success"
+  );
+
   return;
 }
 
@@ -3538,29 +3618,10 @@ const vendaPayload = {
   forma_pagamento: metodoPagamento,
   troco: troco,
 
-origem: itemMensalidadeAgenda
-    ? "agenda_mensalidade"
-    : itemAgendaAvulso
-      ? "agenda_avulso"
-      : "pdv",
-
-  origem_id: itemMensalidadeAgenda
-    ? itemMensalidadeAgenda.mensalidade_id
-    : itemAgendaAvulso
-      ? itemAgendaAvulso.agenda_id
-      : null,
-
-  agenda_id: itemMensalidadeAgenda
-    ? itemMensalidadeAgenda.agenda_id
-    : itemAgendaAvulso
-      ? itemAgendaAvulso.agenda_id
-      : null,
-
-  descricao: itemMensalidadeAgenda
-    ? itemMensalidadeAgenda.nome
-    : itemAgendaAvulso
-      ? `Jogo avulso - ${recebimentoAgendaCaixa?.local_recurso || "Quadra/Campo"} - ${recebimentoAgendaCaixa?.cliente_nome || "Responsável"}`
-      : "Venda rápida",
+  origem: "pdv",
+  origem_id: null,
+  agenda_id: null,
+  descricao: "Venda rápida",
 
   data: new Date().toISOString(),
   operador_id: obterOperadorAtualId(),
@@ -3600,10 +3661,10 @@ return {
   lucro_total: lucroTotal,
   quantidade: quantidade,
 
-  origem: item.origem || "pdv",
-  origem_id: item.origem_id || null,
-  agenda_id: item.agenda_id || null,
-  agenda_jogador_id: item.agenda_jogador_id || null
+  origem: "pdv",
+  origem_id: null,
+  agenda_id: null,
+  agenda_jogador_id: null
 };
     });
 
@@ -3612,14 +3673,6 @@ return {
       .insert(itensPayload);
 
     if (itensError) throw itensError;
-
-if (itemMensalidadeAgenda) {
-  await atualizarMensalidadeAgendaAposVenda(vendaData.id);
-}
-
-if (itemAgendaAvulso) {
-  await atualizarJogadoresAvulsosAgendaAposVenda(vendaData.id);
-}
 
     await baixarEstoqueProdutos();
 
@@ -4356,6 +4409,7 @@ const totalPago = jogadores
   .filter(jogador => {
     return (
       jogador.pago === true &&
+      !jogador.venda_id &&
       String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
     );
   })
@@ -4599,6 +4653,8 @@ function setupModalSelecionarJogo() {
   const btnFecharFinalizar = document.getElementById("btnFecharFinalizarJogo");
   const btnCancelarFinalizar = document.getElementById("btnCancelarFinalizarJogo");
   const btnConfirmarFinalizar = document.getElementById("btnConfirmarFinalizarJogo");
+  const btnAdicionarAvulso = document.getElementById("btnAdicionarAvulsoJogoCaixa");
+  const inputValorAvulso = document.getElementById("novoAvulsoJogoValor");
 
   if (btnFechar) {
     btnFechar.onclick = fecharModalSelecionarJogo;
@@ -4634,6 +4690,25 @@ function setupModalSelecionarJogo() {
 
   if (btnConfirmarFinalizar) {
     btnConfirmarFinalizar.onclick = confirmarPagamentoJogoCaixa;
+  }
+
+  if (btnAdicionarAvulso) {
+    btnAdicionarAvulso.onclick = async () => {
+      try {
+        await adicionarAvulsoJogoCaixa();
+      } catch (err) {
+        console.error("[CAIXA][ADICIONAR AVULSO]", err);
+        await alertaCaixa(
+          "Não foi possível adicionar",
+          err.message || "O jogador não foi incluído."
+        );
+      }
+    };
+  }
+
+  if (inputValorAvulso && inputValorAvulso.dataset.mascaraAplicada !== "true") {
+    aplicarMascaraMoedaCaixa(inputValorAvulso);
+    inputValorAvulso.dataset.mascaraAplicada = "true";
   }
 }
 
@@ -4693,130 +4768,33 @@ function obterHojeISOCaixa() {
   return `${ano}-${mes}-${dia}`;
 }
 
-function obterDiaSemanaCaixa(dataISO) {
-  if (!dataISO) return null;
-
-  const data = new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
-
-  return data.getDay();
-}
-
-function jogoMensalModeloCaixa(jogo) {
-  return (
-    (
-      String(jogo.recorrencia || "") === "mensal" ||
-      String(jogo.tipo_jogo || "") === "mensalista"
-    ) &&
-    !jogo.recorrencia_origem_id &&
-    jogo.status_jogo !== "cancelado" &&
-    jogo.status_jogo !== "fechado"
-  );
-}
-
 async function gerarOcorrenciasMensaisCaixa(dataAlvo) {
-  if (!dataAlvo) return;
-  if (!caixaPermiteJogos()) return;
-  if (!sistemaOnline()) return;
+  if (!dataAlvo || !caixaPermiteJogos() || !sistemaOnline()) return;
 
-  const empresaId = obterEmpresaId();
+  const dataReferencia = String(dataAlvo).slice(0, 10);
+  const { data: ciclos, error: erroCiclos } = await sb
+    .from("agenda_mensalidades")
+    .select("id, status, renovacao_status, data_inicio, data_fim")
+    .eq("empresa_id", obterEmpresaId())
+    .lte("data_inicio", dataReferencia)
+    .gte("data_fim", dataReferencia);
 
-  const { data: jogosBase, error: erroBase } = await sb
-    .from("agenda")
-    .select("*")
-    .eq("empresa_id", empresaId)
-    .neq("status_jogo", "cancelado")
-    .neq("status_jogo", "fechado");
+  if (erroCiclos) throw erroCiclos;
 
-  if (erroBase) {
-    console.warn("[CAIXA][RECORRÊNCIA]", erroBase);
-    return;
-  }
+  for (const ciclo of ciclos || []) {
+    if (
+      ciclo.status === "cancelado" ||
+      ciclo.renovacao_status === "cancelada"
+    ) {
+      continue;
+    }
 
-  const modelos = (jogosBase || []).filter(jogo => {
-    if (!jogoMensalModeloCaixa(jogo)) return false;
-
-    const dataBase = String(jogo.data_agendamento || "").slice(0, 10);
-
-    if (!dataBase) return false;
-    if (dataAlvo <= dataBase) return false;
-
-    return obterDiaSemanaCaixa(dataBase) === obterDiaSemanaCaixa(dataAlvo);
-  });
-
-  for (const modelo of modelos) {
-    const jaExiste = (jogosBase || []).some(jogo => {
-      return (
-        String(jogo.recorrencia_origem_id || "") === String(modelo.id) &&
-        String(jogo.data_agendamento || "").slice(0, 10) === dataAlvo
-      );
+    const { error } = await sb.rpc("materializar_ciclo_mensal_agenda", {
+      p_mensalidade_id: ciclo.id
     });
 
-    if (jaExiste) continue;
-
-    const { data: novaOcorrencia, error: erroInsert } = await sb
-      .from("agenda")
-      .insert([{
-        empresa_id: empresaId,
-        cliente_nome: modelo.cliente_nome,
-        cliente_telefone: modelo.cliente_telefone || null,
-        data_agendamento: dataAlvo,
-        hora_inicio: modelo.hora_inicio,
-        hora_fim: modelo.hora_fim,
-        local_recurso: modelo.local_recurso,
-        tipo_jogo: modelo.tipo_jogo || "mensalista",
-        status_jogo: "agendado",
-        recorrencia: "avulso",
-        recorrencia_origem_id: modelo.id,
-        ocorrencia_gerada: true,
-        valor_previsto: modelo.valor_previsto || 0,
-        valor_mensal: modelo.valor_mensal || 0,
-        dia_pagamento_mensal: modelo.dia_pagamento_mensal || null,
-        observacoes: modelo.observacoes || null,
-        usar_times: modelo.usar_times === true,
-        time_a: modelo.time_a || null,
-        time_b: modelo.time_b || null,
-        atualizado_em: new Date().toISOString()
-      }])
-      .select("id")
-      .single();
-
-    if (erroInsert) {
-      console.warn("[CAIXA][GERAR OCORRÊNCIA]", erroInsert);
-      continue;
-    }
-
-    const { data: jogadoresModelo, error: erroJogadores } = await sb
-      .from("agenda_jogadores")
-      .select("*")
-      .eq("empresa_id", empresaId)
-      .eq("agenda_id", modelo.id)
-      .neq("removido", true);
-
-    if (erroJogadores) {
-      console.warn("[CAIXA][COPIAR JOGADORES]", erroJogadores);
-      continue;
-    }
-
-    if (jogadoresModelo?.length) {
-      await sb
-        .from("agenda_jogadores")
-        .insert(
-          jogadoresModelo.map(jogador => ({
-            empresa_id: empresaId,
-            agenda_id: novaOcorrencia.id,
-            nome: jogador.nome,
-            time_jogador: jogador.time_jogador || null,
-            valor: 0,
-            forma_pagamento: null,
-            pago: false,
-            status_pagamento: STATUS_JOGADOR_CAIXA.PENDENTE,
-            pago_em: null,
-            removido: false,
-            origem_jogador: jogador.origem_jogador || "mensalista",
-            mensalista: jogador.mensalista !== undefined ? jogador.mensalista : true,
-            cobrar_no_jogo: jogador.cobrar_no_jogo !== undefined ? jogador.cobrar_no_jogo : false
-          }))
-        );
+    if (error) {
+      console.warn("[CAIXA][MATERIALIZAR CICLO]", error);
     }
   }
 }
@@ -4847,9 +4825,9 @@ async function carregarJogosCaixa() {
       .select("*")
       .eq("empresa_id", obterEmpresaId())
       .neq("status_jogo", "cancelado")
-      .neq("status_jogo", "fechado")
       .order("data_agendamento", { ascending: true })
-      .order("hora_inicio", { ascending: true });
+      .order("hora_inicio", { ascending: true })
+      .limit(300);
 
     if (erroJogos) throw erroJogos;
 
@@ -5264,6 +5242,163 @@ function montarDescricaoJogoComandaCaixa(jogo, jogador) {
   ].join(" · ");
 }
 
+function normalizarFormaPagamentoAgendaRpcCaixa(formaPagamento) {
+  const forma = String(formaPagamento || "dinheiro").toLowerCase();
+
+  if (["debito", "credito", "cartao"].includes(forma)) {
+    return "cartao";
+  }
+
+  if (["dinheiro", "pix", "misto"].includes(forma)) {
+    return forma;
+  }
+
+  return "dinheiro";
+}
+
+async function adicionarAvulsoJogoCaixa() {
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Adição disponível com conexão",
+      "Nenhum jogador foi adicionado. Tente novamente quando o sistema estiver online."
+    );
+    return;
+  }
+
+  if (!jogoSelecionadoCaixa?.id) {
+    await alertaCaixa("Jogo não selecionado", "Abra um jogo antes de adicionar o avulso.");
+    return;
+  }
+
+  if (["fechado", "cancelado"].includes(String(jogoSelecionadoCaixa.status_jogo || ""))) {
+    await alertaCaixa(
+      "Jogo encerrado",
+      "Jogadores não podem ser adicionados pelo Caixa depois do fechamento ou cancelamento."
+    );
+    return;
+  }
+
+  const inputNome = document.getElementById("novoAvulsoJogoNome");
+  const inputValor = document.getElementById("novoAvulsoJogoValor");
+  const selectTime = document.getElementById("novoAvulsoJogoTime");
+
+  const nome = formatarNomeComandaCaixa(inputNome?.value.trim() || "");
+  const valor = normalizarNumero(inputValor?.value || 0);
+  const timeJogador = selectTime?.value || null;
+
+  if (!nome) {
+    await alertaCaixa("Nome obrigatório", "Informe o nome do jogador avulso.");
+    inputNome?.focus();
+    return;
+  }
+
+  if (valor <= 0) {
+    await alertaCaixa("Valor obrigatório", "Informe um valor de cobrança maior que zero.");
+    inputValor?.focus();
+    return;
+  }
+
+  const jogadoresAtuais = (jogadoresCaixaPorAgenda[jogoSelecionadoCaixa.id] || [])
+    .filter(jogador => jogador.removido !== true);
+
+  if (jogadoresAtuais.some(jogador => {
+    return String(jogador.nome || "").trim().toLowerCase() === nome.toLowerCase();
+  })) {
+    await alertaCaixa(
+      "Jogador já listado",
+      "Já existe um jogador ativo com esse nome neste jogo."
+    );
+    return;
+  }
+
+  const jogoId = jogoSelecionadoCaixa.id;
+  const { error } = await sb
+    .from("agenda_jogadores")
+    .insert([{
+      empresa_id: obterEmpresaId(),
+      agenda_id: jogoId,
+      nome,
+      time_jogador: timeJogador,
+      valor,
+      pago: false,
+      forma_pagamento: null,
+      status_pagamento: STATUS_JOGADOR_CAIXA.PENDENTE,
+      pago_em: null,
+      removido: false,
+      origem_jogador: "avulso",
+      mensalista: false,
+      cobrar_no_jogo: true
+    }]);
+
+  if (error) throw error;
+
+  if (inputNome) inputNome.value = "";
+  if (inputValor) inputValor.value = "";
+  if (selectTime) selectTime.value = "";
+
+  await carregarJogosCaixa();
+  abrirFinalizacaoJogoCaixa(jogoId);
+
+  crvToast({
+    titulo: "Avulso adicionado",
+    mensagem: `${nome} entrou somente neste jogo e já está disponível para cobrança.`,
+    tipo: "success"
+  });
+}
+
+async function removerAvulsoJogoCaixa(jogadorId) {
+  const jogoId = jogoSelecionadoCaixa?.id;
+  const jogador = (jogadoresCaixaPorAgenda[jogoId] || []).find(item => {
+    return String(item.id) === String(jogadorId);
+  });
+
+  if (!jogoId || !jogador) return;
+
+  if (
+    jogadorPagoCaixa(jogador) ||
+    jogadorEmComandaCaixa(jogador) ||
+    jogador.venda_id ||
+    jogador.comanda_id
+  ) {
+    await alertaCaixa(
+      "Jogador já vinculado",
+      "Este avulso possui pagamento ou comanda e não pode ser removido."
+    );
+    return;
+  }
+
+  const confirmou = await abrirConfirmacaoCaixa({
+    titulo: "Remover avulso",
+    mensagem: `Remover <strong>${jogador.nome || "este jogador"}</strong> somente deste jogo?`,
+    textoConfirmar: "Remover jogador"
+  });
+
+  if (!confirmou) return;
+
+  const { error } = await sb
+    .from("agenda_jogadores")
+    .update({
+      removido: true,
+      removido_em: new Date().toISOString(),
+      motivo_remocao: "Removido pelo Caixa antes da cobrança",
+      atualizado_em: new Date().toISOString()
+    })
+    .eq("id", jogador.id)
+    .eq("agenda_id", jogoId)
+    .eq("empresa_id", obterEmpresaId());
+
+  if (error) throw error;
+
+  await carregarJogosCaixa();
+  abrirFinalizacaoJogoCaixa(jogoId);
+
+  crvToast({
+    titulo: "Avulso removido",
+    mensagem: "A remoção afetou somente esta ocorrência.",
+    tipo: "info"
+  });
+}
+
 function abrirFinalizacaoJogoCaixa(jogoId) {
   const jogo = jogosCaixa.find(item => String(item.id) === String(jogoId));
 
@@ -5295,8 +5430,9 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
     });
 
   const jogadores = jogadoresCobraveisCaixa(todosJogadores);
-  const qtdMensalistas =
-    todosJogadores.filter(jogadorMensalistaIsentoCaixa).length;
+  const mensalistasIncluidos =
+    todosJogadores.filter(jogadorMensalistaIsentoCaixa);
+  const qtdMensalistas = mensalistasIncluidos.length;
   const mensalidade = buscarMensalidadeCaixa(jogo);
   const ehMensal = jogoMensalCaixa(jogo);
   const mensalidadePaga = mensalidadePagaCaixa(mensalidade);
@@ -5308,6 +5444,8 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
   const titulo = document.getElementById("finalizarJogoTitulo");
   const subtitulo = document.getElementById("finalizarJogoSubtitulo");
   const painelMensalidade = document.getElementById("jogoCaixaMensalidade");
+  const painelMensalistas = document.getElementById("jogoCaixaMensalistasIncluidos");
+  const painelAdicionarAvulso = document.getElementById("jogoCaixaAdicionarAvulso");
   const resumo = document.getElementById("jogoCaixaResumo");
   const lista = document.getElementById("jogoCaixaJogadores");
   const rateio = document.querySelector(
@@ -5403,6 +5541,43 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
           receberMensalidadeJogoCaixa(jogo.id, mensalidade.id);
         });
     }
+  }
+
+  if (painelMensalistas) {
+    if (!ehMensal || !mensalistasIncluidos.length) {
+      painelMensalistas.style.display = "none";
+      painelMensalistas.innerHTML = "";
+    } else {
+      painelMensalistas.style.display = "block";
+      painelMensalistas.innerHTML = `
+        <div class="jogo-caixa-mensalistas-header">
+          <div>
+            <strong>Mensalistas incluídos neste horário</strong>
+            <small>
+              ${mensalidadePaga
+                ? "Mensalidade do ciclo paga: nenhuma nova cobrança nestes jogadores."
+                : "A lista está incluída no ciclo; receba a mensalidade uma única vez acima."}
+            </small>
+          </div>
+          <span>${qtdMensalistas} jogador${qtdMensalistas !== 1 ? "es" : ""}</span>
+        </div>
+        <div class="jogo-caixa-mensalistas-lista">
+          ${mensalistasIncluidos.map(jogador => `
+            <span class="jogo-caixa-mensalista-chip ${mensalidadePaga ? "pago" : "pendente"}">
+              <i data-lucide="${mensalidadePaga ? "badge-check" : "clock-3"}" width="13" height="13"></i>
+              ${jogador.nome || "Mensalista"}
+            </span>
+          `).join("")}
+        </div>
+      `;
+    }
+  }
+
+  if (painelAdicionarAvulso) {
+    const jogoEncerrado = ["fechado", "cancelado"].includes(
+      String(jogo.status_jogo || "").toLowerCase()
+    );
+    painelAdicionarAvulso.style.display = jogoEncerrado ? "none" : "block";
   }
 
   if (resumo) {
@@ -5538,6 +5713,17 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
               <i data-lucide="ticket" width="14" height="14"></i>
               <span>${emComanda || statusPagamento === STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA ? "Vinculado" : "Comanda"}</span>
             </button>
+
+            <button
+              class="btn-ghost jogo-caixa-btn-remover"
+              type="button"
+              data-jogador-id="${jogador.id}"
+              title="Remover avulso deste jogo"
+              aria-label="Remover ${jogador.nome || "jogador"} deste jogo"
+              ${bloqueado ? "disabled" : ""}
+            >
+              <i data-lucide="trash-2" width="14" height="14"></i>
+            </button>
           </div>
         `;
       }).join("");
@@ -5567,6 +5753,25 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
       });
     });
 
+  document
+    .querySelectorAll(".jogo-caixa-btn-remover")
+    .forEach(btn => {
+      btn.addEventListener("click", async event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+          await removerAvulsoJogoCaixa(btn.dataset.jogadorId);
+        } catch (err) {
+          console.error("[CAIXA][REMOVER AVULSO]", err);
+          await alertaCaixa(
+            "Não foi possível remover",
+            err.message || "O jogador não foi alterado."
+          );
+        }
+      });
+    });
+
   atualizarTotalSelecionadoJogoCaixa();
 
   if (modal) {
@@ -5581,6 +5786,7 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
 function fecharModalFinalizarJogoCaixa() {
   const modal = document.getElementById("modalFinalizarJogoCaixa");
   const painelMensalidade = document.getElementById("jogoCaixaMensalidade");
+  const painelMensalistas = document.getElementById("jogoCaixaMensalistasIncluidos");
 
   if (modal) {
     modal.style.display = "none";
@@ -5683,6 +5889,11 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
       "O envio para comanda não foi realizado. Use a Venda rápida enquanto estiver offline."
     );
     return;
+  }
+
+  if (painelMensalistas) {
+    painelMensalistas.style.display = "none";
+    painelMensalistas.innerHTML = "";
   }
 
   if (!caixa || caixa.status !== "aberto") {
@@ -5827,7 +6038,7 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
     return;
   }
 
-  const { error: erroItem } = await sb
+  const { data: itemComandaCriado, error: erroItem } = await sb
     .from("comanda_itens")
     .insert([
       {
@@ -5845,7 +6056,9 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
         agenda_jogador_id: jogador.id,
         operador_id: obterOperadorAtualId()
       }
-    ]);
+    ])
+    .select("id")
+    .single();
 
   if (erroItem) throw erroItem;
 
@@ -5856,13 +6069,22 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
   pago: false,
   forma_pagamento: "comanda",
   status_pagamento: STATUS_JOGADOR_CAIXA.EM_COMANDA,
+  comanda_id: comanda.id,
   pago_em: null,
   atualizado_em: new Date().toISOString()
 })
     .eq("id", jogador.id)
     .eq("empresa_id", empresaId);
 
-  if (erroJogador) throw erroJogador;
+  if (erroJogador) {
+    await sb
+      .from("comanda_itens")
+      .delete()
+      .eq("id", itemComandaCriado.id)
+      .eq("empresa_id", empresaId);
+
+    throw erroJogador;
+  }
 
   await atualizarResumoAgendaAposComandaCaixa(jogo.id);
 
@@ -6027,77 +6249,6 @@ async function confirmarPagamentoJogoCaixa() {
     [...document.querySelectorAll(".jogo-caixa-jogador-row")]
       .filter(row => row.querySelector(".jogo-caixa-check")?.checked);
 
-  const jogadoresJaPagosDireto =
-    jogadores.filter(jogador => {
-      return (
-        jogador.pago === true &&
-        Number(jogador.valor || 0) > 0 &&
-        String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
-      );
-    });
-
-  const jogadoresPagosComanda =
-    jogadores.filter(jogador => {
-      return (
-        jogador.pago === true &&
-        Number(jogador.valor || 0) > 0 &&
-        String(jogador.forma_pagamento || "").toLowerCase() === "comanda"
-      );
-    });
-
-    if (!linhasSelecionadas.length && jogadoresJaPagosDireto.length) {
-    const confirmarSync = await abrirConfirmacaoCaixa({
-      titulo: "Sincronizar venda do jogo",
-      mensagem: `
-        Este jogo já está marcado como pago na agenda, mas pode não ter sido lançado no caixa.<br><br>
-        Deseja sincronizar a venda agora?
-      `,
-      textoConfirmar: "Sincronizar venda"
-    });
-
-    if (!confirmarSync) return;
-
-    try {
-      vendaEmProcessamento = true;
-
-      await atualizarVendaAgendaPeloCaixa(jogoSelecionadoCaixa);
-
-      await carregarDadosSupabase();
-      await carregarJogosCaixa();
-      await atualizarBadgesModosCaixa();
-      renderJogosAtivosNoCaixa();
-      await verificarJogosPendentesSincronizacaoCaixa();
-
-      renderEstado();
-      renderHistorico();
-      renderJogosAtivosNoCaixa();
-      atualizarInfobar();
-
-      fecharModalFinalizarJogoCaixa();
-      fecharModalSelecionarJogo();
-
-      await alertaCaixa(
-        "Venda sincronizada",
-        "O pagamento do jogo foi lançado no caixa, vendas e relatórios."
-      );
-
-      await alterarModoPDV("jogos");
-
-    } catch (err) {
-      console.error(err);
-
-      await alertaCaixa(
-        "Erro ao sincronizar jogo",
-        err.message || "Não foi possível sincronizar a venda do jogo."
-      );
-
-    } finally {
-      vendaEmProcessamento = false;
-    }
-
-    return;
-  }
-
   if (!linhasSelecionadas.length) {
     await alertaCaixa(
       "Nenhum pagamento selecionado",
@@ -6182,24 +6333,50 @@ const confirmar = await abrirConfirmacaoCaixa({
   try {
     vendaEmProcessamento = true;
 
+    // O valor pode ser ajustado na conferência, mas a baixa financeira é
+    // única e atômica pela RPC. Assim não existe janela entre marcar o
+    // jogador como pago e gerar venda/itens/relatórios.
     for (const pagamento of pagamentos) {
       const { error } = await sb
         .from("agenda_jogadores")
-.update({
-  valor: pagamento.valorCobrado,
-  pago: true,
-  forma_pagamento: pagamento.formaPagamento,
-  status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_DIRETO,
-  pago_em: new Date().toISOString(),
-  atualizado_em: new Date().toISOString()
-})
+        .update({
+          valor: pagamento.valorCobrado,
+          atualizado_em: new Date().toISOString()
+        })
         .eq("id", pagamento.jogadorId)
+        .eq("agenda_id", jogoSelecionadoCaixa.id)
         .eq("empresa_id", obterEmpresaId());
 
       if (error) throw error;
     }
 
-    await atualizarVendaAgendaPeloCaixa(jogoSelecionadoCaixa);
+    const formasRpc = [
+      ...new Set(
+        pagamentos.map(pagamento => {
+          return normalizarFormaPagamentoAgendaRpcCaixa(
+            pagamento.formaPagamento
+          );
+        })
+      )
+    ];
+
+    const formaPagamentoRpc = formasRpc.length === 1
+      ? formasRpc[0]
+      : "misto";
+
+    const { data: recebimento, error: erroRecebimento } = await sb.rpc(
+      "receber_avulsos_agenda",
+      {
+        p_agenda_id: jogoSelecionadoCaixa.id,
+        p_jogadores_ids: pagamentos.map(pagamento => pagamento.jogadorId),
+        p_caixa_id: caixa.id,
+        p_forma_pagamento: formaPagamentoRpc,
+        p_operador_id: obterOperadorAtualId(),
+        p_valor_recebido: totalSelecionado
+      }
+    );
+
+    if (erroRecebimento) throw erroRecebimento;
 
     await carregarDadosSupabase();
     await carregarJogosCaixa();
@@ -6213,7 +6390,9 @@ const jogoIdFinalizado = jogoSelecionadoCaixa.id;
 fecharModalFinalizarJogoCaixa();
 fecharModalSelecionarJogo();
 
-const jogadoresAtualizados = jogadoresCaixaPorAgenda[jogoIdFinalizado] || [];
+const jogadoresAtualizados = jogadoresCobraveisCaixa(
+  jogadoresCaixaPorAgenda[jogoIdFinalizado] || []
+);
 
 const pendentesAgora = jogadoresAtualizados.filter(jogador =>
   jogadorPendenteCaixa(jogador)
@@ -6236,7 +6415,7 @@ if (pendentesAgora > 0 || emComandaAgora > 0) {
 } else {
   await alertaCaixa(
     "Jogo finalizado",
-    "Pagamento total lançado no caixa, vendas, relatórios e atividades recentes."
+    `Pagamento de <strong>${fmt(Number(recebimento?.valor || totalSelecionado))}</strong> lançado no caixa, vendas e relatórios.`
   );
 }
 
@@ -8231,15 +8410,6 @@ if (!confirmar) return;
   const desconto = calcularDesconto();
   const total = calcularTotalCarrinho();
 
-  const itensAgendaComanda = carrinho.filter(item => item.agenda_jogador_id);
-const itensExtrasComanda = carrinho.filter(item => !item.agenda_jogador_id);
-
-const subtotalComandaExtra = itensExtrasComanda.reduce((acc, item) => {
-  return acc + Number(item.preco || 0) * Number(item.quantidade || 0);
-}, 0);
-
-const totalComandaExtra = Math.max(0, subtotalComandaExtra - desconto);
-
 if (desconto > subtotal) {
   await alertaCaixa(
     "Desconto inválido",
@@ -8289,14 +8459,17 @@ if (desconto > subtotal) {
 
 let vendaData = null;
 
-if (itensExtrasComanda.length > 0) {
+// A comanda gera uma única venda com tudo que foi efetivamente recebido:
+// consumos comuns e jogadores avulsos. Os itens de jogo preservam seus
+// vínculos para aparecer corretamente em Vendas e Relatórios.
+if (carrinho.length > 0) {
   const vendaPayload = {
     empresa_id: empresaId,
     caixa_id: caixa.id,
     cliente_id: null,
-    subtotal: subtotalComandaExtra,
+    subtotal: subtotal,
     desconto: desconto,
-    total: totalComandaExtra,
+    total: total,
     forma_pagamento: metodoPagamento,
     troco: troco,
     origem: "comanda",
@@ -8317,7 +8490,7 @@ if (itensExtrasComanda.length > 0) {
   vendaData = vendaComandaData;
   vendaCriadaId = vendaData.id;
 
-  const itensPayload = itensExtrasComanda.map(item => {
+  const itensPayload = carrinho.map(item => {
     const precoVenda = Number(item.preco || 0);
     const precoCusto = Number(item.preco_custo || 0);
     const quantidade = Number(item.quantidade || 0);
@@ -8335,9 +8508,14 @@ if (itensExtrasComanda.length > 0) {
       lucro_unitario: lucroUnitario,
       lucro_total: lucroTotal,
       quantidade: quantidade,
-      origem: item.origem || "pdv",
+      origem: item.agenda_jogador_id
+        ? "agenda_avulso"
+        : item.origem || "pdv",
       origem_id: item.origem_id || null,
-      agenda_jogador_id: null
+      agenda_id: item.agenda_jogador_id
+        ? item.origem_id || null
+        : null,
+      agenda_jogador_id: item.agenda_jogador_id || null
     };
   });
 
@@ -8363,7 +8541,8 @@ if (itensExtrasComanda.length > 0) {
           pago: true,
           status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA,
           forma_pagamento: "comanda",
-          venda_id: null,
+          comanda_id: null,
+          venda_id: vendaData?.id || null,
           pago_em: new Date().toISOString(),
           atualizado_em: new Date().toISOString()
         })
@@ -8384,22 +8563,18 @@ if (itensExtrasComanda.length > 0) {
 
         for (const agendaId of agendaIds) {
           await atualizarResumoAgendaAposComandaCaixa(agendaId);
-
-          const jogoRelacionado =
-            jogosCaixa.find(jogo => String(jogo.id) === String(agendaId)) ||
-            { id: agendaId };
-
-          await atualizarVendaAgendaPeloCaixa(jogoRelacionado);
         }
     }
 
     await baixarEstoqueProdutos();
 
-await sb
+const { error: erroRemoverItensComanda } = await sb
   .from("comanda_itens")
   .delete()
   .eq("empresa_id", empresaId)
   .eq("comanda_id", comandaAtiva.id);
+
+if (erroRemoverItensComanda) throw erroRemoverItensComanda;
 
 const { error: erroComanda } = await sb
   .from("comandas")
@@ -8419,7 +8594,7 @@ const { error: erroComanda } = await sb
 if (vendaData) {
   vendas.unshift(vendaData);
 
-  exibirModalSucesso(totalComandaExtra, troco);
+  exibirModalSucesso(total, troco);
 } else {
   await alertaCaixa(
     "Comanda fechada",
@@ -8522,6 +8697,30 @@ async function removerItemCarrinho(index) {
 
     if (!confirmar) return;
 
+    if (item.agenda_jogador_id) {
+      const { error: erroLiberarJogador } = await sb
+        .from("agenda_jogadores")
+        .update({
+          pago: false,
+          forma_pagamento: null,
+          status_pagamento: STATUS_JOGADOR_CAIXA.PENDENTE,
+          comanda_id: null,
+          pago_em: null,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq("id", item.agenda_jogador_id)
+        .eq("empresa_id", obterEmpresaId());
+
+      if (erroLiberarJogador) {
+        await alertaCaixa(
+          "Erro na comanda",
+          "Não foi possível liberar o jogador vinculado a este item."
+        );
+        console.error(erroLiberarJogador);
+        return;
+      }
+    }
+
     const { error } = await sb
       .from("comanda_itens")
       .delete()
@@ -8529,12 +8728,29 @@ async function removerItemCarrinho(index) {
       .eq("empresa_id", obterEmpresaId());
 
     if (error) {
+      if (item.agenda_jogador_id) {
+        await sb
+          .from("agenda_jogadores")
+          .update({
+            forma_pagamento: "comanda",
+            status_pagamento: STATUS_JOGADOR_CAIXA.EM_COMANDA,
+            comanda_id: comandaAtiva.id,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq("id", item.agenda_jogador_id)
+          .eq("empresa_id", obterEmpresaId());
+      }
+
       await alertaCaixa(
         "Erro na comanda",
         "Erro ao remover item da comanda."
       );
       console.error(error);
       return;
+    }
+
+    if (item.agenda_jogador_id && item.origem_id) {
+      await atualizarResumoAgendaAposComandaCaixa(item.origem_id);
     }
 
     await carregarItensComanda({
@@ -8561,6 +8777,14 @@ async function alterarQuantidadeCarrinho(index, delta) {
     await alertaCaixa(
       "Comanda protegida no modo offline",
       "A comanda não foi alterada. Aguarde a conexão para mudar quantidades."
+    );
+    return;
+  }
+
+  if (item.agenda_jogador_id) {
+    await alertaCaixa(
+      "Cobrança individual",
+      "Uma cobrança de jogador sempre corresponde a uma pessoa. Para retirá-la, remova o item da comanda."
     );
     return;
   }

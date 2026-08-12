@@ -194,6 +194,18 @@
     <button class="filtro-btn active" data-filter="todos" onclick="setFiltro(this,'todos')">Todos</button>
     <button class="filtro-btn" data-filter="ativos" onclick="setFiltro(this,'ativos')">Ativos</button>
     <button class="filtro-btn" data-filter="inativos" onclick="setFiltro(this,'inativos')">Inativos</button>
+    <button class="filtro-btn" data-filter="baixo_estoque" onclick="setFiltro(this,'baixo_estoque')">
+      <i data-lucide="alert-triangle" width="13" height="13"></i>
+      Baixo estoque
+    </button>
+    <button class="filtro-btn" data-filter="sem_estoque" onclick="setFiltro(this,'sem_estoque')">
+      <i data-lucide="package-x" width="13" height="13"></i>
+      Sem estoque
+    </button>
+    <button class="filtro-btn" data-filter="rapidos" onclick="setFiltro(this,'rapidos')">
+      <i data-lucide="zap" width="13" height="13"></i>
+      Rápidos
+    </button>
   </div>
 
   <div class="produtos-filtros-extra">
@@ -347,20 +359,8 @@
 
     <div class="toggle-row toggle-row-info">
       <div>
-        <span class="input-label" style="margin:0;">Exibir no Caixa</span>
-        <small>Permite localizar e vender este item no Caixa/PDV.</small>
-      </div>
-
-      <label class="toggle">
-        <input type="checkbox" id="produtoExibirCaixa" checked />
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="toggle-row toggle-row-info">
-      <div>
         <span class="input-label" style="margin:0;">Item rápido</span>
-        <small>Aparece também nos atalhos do Caixa/PDV.</small>
+        <small>Define apenas se o item aparece nos atalhos. Todo item ativo continua pesquisável no Caixa.</small>
       </div>
 
       <label class="toggle">

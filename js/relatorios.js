@@ -24,10 +24,12 @@ const TIPOS_COM_AGENDA_ESPORTIVA = [
   "arena",
   "society",
   "arena_society",
+  "arena_esportiva",
   "arena_beach",
   "beach_sports",
   "beach_tennis",
   "futvolei",
+  "futevolei",
   "volei_areia",
   "quadras"
 ];
@@ -59,6 +61,10 @@ function labelFormaPagamentoRelatorio(forma) {
 }
 
 function empresaUsaAgendaEsportiva() {
+  if (typeof window.crvSegmentoArena === "function") {
+    return window.crvSegmentoArena();
+  }
+
   const tipo = String(window.CRV_CONFIG?.empresa?.tipo_negocio || "")
     .toLowerCase()
     .trim();
@@ -172,6 +178,27 @@ function obterEmpresaId() {
   return window.APP_EMPRESA_ID || APP_EMPRESA_ID || null;
 }
 
+async function carregarPaginasSupabaseRelatorio(criarConsulta) {
+  const registros = [];
+  const tamanhoPagina = 1000;
+  let inicio = 0;
+
+  while (true) {
+    const { data, error } = await criarConsulta()
+      .range(inicio, inicio + tamanhoPagina - 1);
+
+    if (error) throw error;
+
+    const pagina = Array.isArray(data) ? data : [];
+    registros.push(...pagina);
+
+    if (pagina.length < tamanhoPagina) break;
+    inicio += tamanhoPagina;
+  }
+
+  return registros;
+}
+
 // ======================================================
 // CARREGAR DADOS
 // ======================================================
@@ -196,28 +223,22 @@ async function carregarDados() {
       window.sb
     ) {
 
-      const { data: vendasSupabase, error: erroVendas } = await sb
+      const vendasSupabase = await carregarPaginasSupabaseRelatorio(() => sb
         .from("vendas")
         .select("*")
         .eq("empresa_id", empresaId)
-        .order("data", { ascending: false });
+        .order("data", { ascending: false }));
 
-      if (erroVendas) throw erroVendas;
-
-      const { data: itensSupabase, error: erroItens } = await sb
+      const itensSupabase = await carregarPaginasSupabaseRelatorio(() => sb
         .from("vendas_itens")
         .select("*")
-        .eq("empresa_id", empresaId);
+        .eq("empresa_id", empresaId));
 
-      if (erroItens) throw erroItens;
-
-      const { data: caixasSupabase, error: erroCaixas } = await sb
+      const caixasSupabase = await carregarPaginasSupabaseRelatorio(() => sb
         .from("caixa")
         .select("*")
         .eq("empresa_id", empresaId)
-        .order("data_abertura", { ascending: false });
-
-      if (erroCaixas) throw erroCaixas;
+        .order("data_abertura", { ascending: false }));
 
       const { data: produtosSupabase, error: erroProdutos } = await sb
   .from("produtos")
@@ -283,10 +304,21 @@ produtos = Array.isArray(produtosSupabase)
   ? produtos
   : [];
 
+    const itensPorVenda = new Map();
+
+    itensData.forEach(item => {
+      const vendaId = String(item.venda_id || "");
+      if (!vendaId) return;
+
+      if (!itensPorVenda.has(vendaId)) {
+        itensPorVenda.set(vendaId, []);
+      }
+
+      itensPorVenda.get(vendaId).push(item);
+    });
+
     vendasData = (vendas || []).map(venda => {
-      const itensVenda = itensData.filter(item => {
-        return String(item.venda_id) === String(venda.id);
-      });
+      const itensVenda = itensPorVenda.get(String(venda.id)) || [];
 
       const lucroTotal = itensVenda.reduce((acc, item) => {
         return acc + Number(item.lucro_total || 0);
@@ -306,7 +338,12 @@ produtos = Array.isArray(produtosSupabase)
         ? caixas
         : [];
 
-    if (empresaUsaAgendaEsportiva()) {
+    if (
+      empresaUsaAgendaEsportiva() &&
+      window.APP_STATUS?.online &&
+      window.APP_STATUS?.supabase_ok &&
+      window.sb
+    ) {
       const { data: jogosAgenda } = await sb
         .from("agenda")
         .select("id, tipo_jogo, local_recurso, hora_inicio, hora_fim, data_agendamento, cliente_nome, total_pago_jogadores, total_pendente_jogadores, total_jogadores, status_jogo")
@@ -362,6 +399,19 @@ function setPeriodo(btn, periodo) {
 }
 
 function aplicarPeriodo() {
+  const dataInicio = document.getElementById("dataInicio")?.value;
+  const dataFim = document.getElementById("dataFim")?.value;
+
+  if (!dataInicio || !dataFim) {
+    mostrarModalAviso("Informe as datas inicial e final para filtrar o relatório.");
+    return;
+  }
+
+  if (dataInicio > dataFim) {
+    mostrarModalAviso("A data inicial não pode ser posterior à data final.");
+    return;
+  }
+
   periodoAtivo = "custom";
   document.querySelectorAll(".periodo-btn").forEach(b => b.classList.remove("active"));
   renderRelatorio();
@@ -378,6 +428,9 @@ function getPeriodoLabel() {
     hoje: "Hoje",
     semana: "Últimos 7 dias",
     mes: "Últimos 30 dias",
+    trimestre: "Últimos 90 dias",
+    semestre: "Últimos 180 dias",
+    ano: "Últimos 365 dias",
     custom: "Personalizado"
   }[periodoAtivo] || "Hoje";
 }
@@ -398,8 +451,15 @@ function getIntervaloPeriodo() {
     fim.setHours(23, 59, 59, 999);
   }
 
-  if (periodoAtivo === "mes") {
-    inicio.setDate(agora.getDate() - 29);
+  const diasPorPeriodo = {
+    mes: 30,
+    trimestre: 90,
+    semestre: 180,
+    ano: 365
+  };
+
+  if (diasPorPeriodo[periodoAtivo]) {
+    inicio.setDate(agora.getDate() - (diasPorPeriodo[periodoAtivo] - 1));
     inicio.setHours(0, 0, 0, 0);
     fim.setHours(23, 59, 59, 999);
   }
@@ -409,7 +469,7 @@ function getIntervaloPeriodo() {
     const dataFim = document.getElementById("dataFim")?.value;
 
     inicio = new Date(`${dataInicio}T00:00:00`);
-    fim = new Date(`${dataFim}T23:59:59`);
+    fim = new Date(`${dataFim}T23:59:59.999`);
   }
 
   return { inicio, fim };
@@ -566,7 +626,9 @@ function renderProdutosEstoqueBaixo() {
       produto.controla_estoque !== false &&
       Number(produto.estoque || 0) <= 5
     );
-  });
+  })
+    .sort((a, b) => Number(a.estoque || 0) - Number(b.estoque || 0))
+    .slice(0, 5);
 
   if (badge) {
     badge.textContent = `${produtos.length} item(ns)`;
@@ -825,7 +887,14 @@ function renderRecebimentosJogos(vendas) {
 
   if (!card || !lista) return;
 
-  const jogos = montarRecebimentosJogosAgrupados(vendas);
+  if (!empresaUsaAgendaEsportiva()) {
+    card.style.display = "none";
+    lista.innerHTML = "";
+    if (badge) badge.textContent = "0 jogo(s)";
+    return;
+  }
+
+  const jogos = montarRecebimentosJogosAgrupados(vendas).slice(0, 5);
 
   if (badge) {
     badge.textContent = `${jogos.length} jogo(s)`;
@@ -868,12 +937,35 @@ function renderRecebimentosJogos(vendas) {
 // ======================================================
 function renderHistoricoCaixas() {
   const container = document.getElementById("historicoCaixas");
+  const badge = document.getElementById("badgeCaixasQtd");
 
   if (!container) return;
 
+  const { inicio, fim } = getIntervaloPeriodo();
+
   const fechados = caixasHistorico
     .filter(c => c.status === "fechado")
-    .slice(0, 10);
+    .filter(caixa => {
+      const dataReferencia = dataVendaRelatorio(
+        caixa.data_fechamento || caixa.data_abertura
+      );
+
+      return (
+        dataReferencia &&
+        !Number.isNaN(dataReferencia.getTime()) &&
+        dataReferencia >= inicio &&
+        dataReferencia <= fim
+      );
+    })
+    .sort((a, b) => {
+      const dataA = dataVendaRelatorio(a.data_fechamento || a.data_abertura);
+      const dataB = dataVendaRelatorio(b.data_fechamento || b.data_abertura);
+      return (dataB?.getTime() || 0) - (dataA?.getTime() || 0);
+    });
+
+  if (badge) {
+    badge.textContent = `${fechados.length} caixa(s)`;
+  }
 
   if (!fechados.length) {
     container.innerHTML = `<div class="empty-relatorio"><p>Nenhum caixa fechado ainda</p></div>`;
@@ -1040,10 +1132,13 @@ const vendaDiretaJogo =
       return;
     }
 
-const chave =
-  vendaDiretaJogo
-    ? venda.agenda_id || venda.origem_id || venda.id
-    : itensJogo[0]?.agenda_id || itensJogo[0]?.origem_id || venda.id;
+const agendaReferenciaId = vendaDiretaJogo
+  ? venda.agenda_id || venda.origem_id || venda.id
+  : itensJogo[0]?.agenda_id || itensJogo[0]?.origem_id || venda.id;
+
+const chave = vendaMensalidade && vendaDiretaJogo
+  ? `mensalidade:${venda.origem_id || venda.id}`
+  : `jogo:${agendaReferenciaId}`;
 
     const descricaoLimpa =
       vendaDiretaJogo
@@ -1056,7 +1151,8 @@ const chave =
       const jogoInfo = quebrarDescricaoJogoRelatorio(descricaoLimpa);
 
       mapa[chave] = {
-        chave: chave,               // ← ADICIONAR: necessário para cruzar com agendaFechadaData
+        chave,
+        agendaId: venda.agenda_id || agendaReferenciaId,
         responsavel: obterResponsavelJogoRelatorio(venda),
         descricao: descricaoLimpa,
         nome: jogoInfo.nome,
@@ -1096,7 +1192,11 @@ if (vendaDiretaJogo) {
       : resumoDescricao.qtdDireto !== null
       ? resumoDescricao.qtdDireto
       : itensJogo.filter(item => {
-          return String(item.origem || "").toLowerCase() === "agenda";
+          const origemItem = String(item.origem || "").toLowerCase();
+          return (
+            ["agenda", "agenda_avulso"].includes(origemItem) &&
+            Boolean(item.agenda_jogador_id)
+          );
         }).length || (Number(venda.total || 0) > 0 ? 1 : 0);
 
   const qtdComandaDescricao =
@@ -1136,7 +1236,7 @@ if (vendaDiretaJogo) {
 
       // Cruzar com agendaFechadaData para contar mensalistas isentos
       const jogoAgenda = agendaFechadaData.find(j =>
-        String(j.id) === String(item.chave)
+        String(j.id) === String(item.agendaId)
       );
       if (jogoAgenda) {
         const totalJogadores = Number(jogoAgenda.total_jogadores || 0);
@@ -1146,7 +1246,12 @@ if (vendaDiretaJogo) {
 
       return item;
     })
-    .filter(item => Number(item.total || 0) > 0);
+    .filter(item => Number(item.total || 0) > 0)
+    .sort((a, b) => {
+      const dataA = dataVendaRelatorio(a.data)?.getTime() || 0;
+      const dataB = dataVendaRelatorio(b.data)?.getTime() || 0;
+      return dataB - dataA;
+    });
 }
 
 // ======================================================
@@ -1172,12 +1277,16 @@ function exportarExcel() {
   const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
 
   const rankingVendidos = montarRankingProdutos(vendas)
-    .sort((a, b) => b.qtd - a.qtd);
+    .sort((a, b) => b.qtd - a.qtd)
+    .slice(0, 5);
 
   const rankingLucro = montarRankingProdutos(vendas)
-    .sort((a, b) => b.lucro - a.lucro);
+    .sort((a, b) => b.lucro - a.lucro)
+    .slice(0, 5);
 
-  const jogosAgrupados = montarRecebimentosJogosAgrupados(vendas);
+  const jogosAgrupados = empresaUsaAgendaEsportiva()
+    ? montarRecebimentosJogosAgrupados(vendas).slice(0, 5)
+    : [];
 
   const wb = XLSX.utils.book_new();
 
@@ -1344,7 +1453,7 @@ function exportarExcel() {
       ["Produto", "Categoria", "Estoque"]
     ];
 
-    produtosData.forEach(produto => {
+    produtosData.slice(0, 5).forEach(produto => {
       estoqueLinhas.push([
         produto.nome || "Produto",
         produto.categoria || "Sem categoria",
@@ -1431,14 +1540,15 @@ function exportarPDF() {
 
   const rankingVendidos = montarRankingProdutos(vendas)
     .sort((a, b) => b.qtd - a.qtd)
-    .slice(0, 10);
+    .slice(0, 5);
 
   const rankingLucro = montarRankingProdutos(vendas)
     .sort((a, b) => b.lucro - a.lucro)
-    .slice(0, 10);
+    .slice(0, 5);
 
-  const recebimentosJogos =
-    montarRecebimentosJogosAgrupados(vendas);
+  const recebimentosJogos = empresaUsaAgendaEsportiva()
+    ? montarRecebimentosJogosAgrupados(vendas).slice(0, 5)
+    : [];
 
   const html = `
     <html>
@@ -1705,7 +1815,7 @@ function exportarPDF() {
         </thead>
 
         <tbody>
-          ${produtosData.map(produto => `
+          ${produtosData.slice(0, 5).map(produto => `
             <tr>
               <td>${produto.nome}</td>
               <td>${produto.categoria || "-"}</td>

@@ -353,10 +353,21 @@
 
   <div class="pdv-quick-title-wrap">
     <span id="tituloItensRapidos">Itens rápidos</span>
-    <small id="tipoItensRapidosAtual">Todos os tipos</small>
+    <small id="tipoItensRapidosAtual">Produtos</small>
   </div>
 
   <div class="pdv-quick-actions">
+
+    <button
+      type="button"
+      class="btn-abrir-modal-comandas btn-toggle-rapidos-balcao"
+      id="btnToggleRapidosBalcao"
+      aria-expanded="true"
+      aria-controls="produtosRapidos"
+    >
+      <i data-lucide="chevron-up" width="13" height="13"></i>
+      <span>Ocultar rápidos</span>
+    </button>
 
     <button
       type="button"
@@ -378,11 +389,11 @@
       </button>
 
       <div class="tipo-itens-caixa-menu" id="menuTiposItensCaixa" style="display:none;">
-        <button type="button" class="active" data-tipo-item-caixa="todos">
+        <button type="button" data-tipo-item-caixa="todos">
           <i data-lucide="layout-grid" width="14" height="14"></i>
           Todos os itens
         </button>
-        <button type="button" data-tipo-item-caixa="produto">
+        <button type="button" class="active" data-tipo-item-caixa="produto">
           <i data-lucide="package" width="14" height="14"></i>
           Produtos
         </button>
@@ -648,7 +659,7 @@
 
     <div class="modal-header">
       <div>
-        <h3 id="tituloModalItensCaixa">Todos os Itens</h3>
+        <h3 id="tituloModalItensCaixa">Produtos</h3>
         <p class="modal-subtitle">
           Selecione um item para adicionar à venda.
         </p>
@@ -682,8 +693,8 @@
       </div>
 
       <div class="modal-itens-tipos" id="filtrosTiposModalCaixa">
-        <button type="button" class="active" data-tipo-modal-caixa="todos">Todos</button>
-        <button type="button" data-tipo-modal-caixa="produto">Produtos</button>
+        <button type="button" data-tipo-modal-caixa="todos">Todos</button>
+        <button type="button" class="active" data-tipo-modal-caixa="produto">Produtos</button>
         <button type="button" data-tipo-modal-caixa="servico">Serviços</button>
         <button type="button" data-tipo-modal-caixa="taxa_outro">Taxas e outros</button>
       </div>
@@ -773,6 +784,49 @@
       ></div>
 
       <div class="jogo-caixa-resumo" id="jogoCaixaResumo"></div>
+
+      <div
+        class="jogo-caixa-mensalistas-incluidos"
+        id="jogoCaixaMensalistasIncluidos"
+        style="display:none;"
+      ></div>
+
+      <div class="jogo-caixa-adicionar-avulso" id="jogoCaixaAdicionarAvulso">
+        <div class="jogo-caixa-adicionar-avulso-header">
+          <div>
+            <strong>Adicionar avulso neste jogo</strong>
+            <small>O jogador será cobrado somente nesta ocorrência.</small>
+          </div>
+        </div>
+
+        <div class="jogo-caixa-adicionar-avulso-grid">
+          <input
+            class="input"
+            id="novoAvulsoJogoNome"
+            placeholder="Nome do jogador"
+            autocomplete="off"
+          />
+
+          <input
+            class="input input-money"
+            id="novoAvulsoJogoValor"
+            placeholder="Valor"
+            inputmode="decimal"
+            autocomplete="off"
+          />
+
+          <select class="input" id="novoAvulsoJogoTime">
+            <option value="">Sem time</option>
+            <option value="A">Time A</option>
+            <option value="B">Time B</option>
+          </select>
+
+          <button class="btn-secondary" type="button" id="btnAdicionarAvulsoJogoCaixa">
+            <i data-lucide="user-plus" width="15" height="15"></i>
+            <span>Adicionar</span>
+          </button>
+        </div>
+      </div>
 
       <div class="jogo-caixa-rateio">
   <div class="input-group">

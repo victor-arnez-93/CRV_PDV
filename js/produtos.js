@@ -424,7 +424,7 @@ function itemControlaEstoque(produto) {
 }
 
 function itemVisivelNoCaixa(produto) {
-  return produto?.exibir_caixa !== false;
+  return produto?.ativo !== false;
 }
 
 function tiposDaAbaCatalogo(aba = tipoAbaAtivo) {
@@ -595,22 +595,15 @@ function atualizarFormularioPorTipoItem({
 
 function sincronizarTogglesCatalogo() {
   const ativo = document.getElementById("produtoAtivo");
-  const exibirCaixa = document.getElementById("produtoExibirCaixa");
   const rapido = document.getElementById("produtoRapido");
 
-  if (!ativo || !exibirCaixa || !rapido) return;
+  if (!ativo || !rapido) return;
 
   if (!ativo.checked) {
-    exibirCaixa.checked = false;
     rapido.checked = false;
   }
 
-  if (!exibirCaixa.checked) {
-    rapido.checked = false;
-  }
-
-  exibirCaixa.disabled = !ativo.checked;
-  rapido.disabled = !ativo.checked || !exibirCaixa.checked;
+  rapido.disabled = !ativo.checked;
 }
 
 function toggleCategoriaOutros() {
@@ -815,7 +808,7 @@ async function carregarProdutos() {
 
     await crvOfflineDB.salvarCache(
       "caixa_produtos",
-      itensAtivos.filter(itemVisivelNoCaixa)
+      itensAtivos
     );
 
 await crvOfflineDB.salvarCache(
@@ -901,7 +894,25 @@ function getProdutosFiltrados() {
     const passaFiltro =
       filtroAtivo === "todos" ||
       (filtroAtivo === "ativos" && produto.ativo) ||
-      (filtroAtivo === "inativos" && !produto.ativo);
+      (filtroAtivo === "inativos" && !produto.ativo) ||
+      (
+        filtroAtivo === "baixo_estoque" &&
+        produto.ativo &&
+        itemControlaEstoque(produto) &&
+        Number(produto.estoque || 0) > 0 &&
+        Number(produto.estoque || 0) <= 5
+      ) ||
+      (
+        filtroAtivo === "sem_estoque" &&
+        produto.ativo &&
+        itemControlaEstoque(produto) &&
+        Number(produto.estoque || 0) <= 0
+      ) ||
+      (
+        filtroAtivo === "rapidos" &&
+        produto.ativo &&
+        produto.produto_rapido === true
+      );
 
     const categoria = String(produto.categoria || "");
 
@@ -1067,14 +1078,6 @@ function renderProdutos() {
                 : ""
             }
 
-            ${
-              !itemVisivelNoCaixa(produto)
-                ? `<span class="badge-caixa-oculto">
-                     <i data-lucide="eye-off" width="11" height="11"></i>
-                     Fora do Caixa
-                   </span>`
-                : ""
-            }
           </div>
 
           ${!produto.ativo ? `<span class="badge badge-danger">Inativo</span>` : ""}
@@ -1170,7 +1173,6 @@ function abrirModalNovo() {
   document.getElementById("produtoCategoriaOutros").value = "";
   atualizarFormularioPorTipoItem({ categoriaAtual: "" });
   document.getElementById("produtoAtivo").checked = true;
-  document.getElementById("produtoExibirCaixa").checked = true;
 
   const produtoRapido = document.getElementById("produtoRapido");
 
@@ -1233,7 +1235,6 @@ async function abrirModalEditar(id) {
   document.getElementById("produtoCodigo").value = produto.codigo || "";
   atualizarFormularioPorTipoItem({ categoriaAtual: produto.categoria || "" });
   document.getElementById("produtoAtivo").checked = produto.ativo === true;
-  document.getElementById("produtoExibirCaixa").checked = itemVisivelNoCaixa(produto);
 
   const produtoRapido = document.getElementById("produtoRapido");
 
@@ -1291,9 +1292,6 @@ async function duplicarProduto(id) {
 
   document.getElementById("produtoAtivo").checked =
     produto.ativo === true;
-
-  document.getElementById("produtoExibirCaixa").checked =
-    itemVisivelNoCaixa(produto);
 
   document.getElementById("produtoRapido").checked =
     produto.produto_rapido === true;
@@ -1580,8 +1578,7 @@ async function salvarProduto() {
   const codigo = String(document.getElementById("produtoCodigo")?.value || "").trim();
   const categoria = obterCategoriaProduto();
   const ativo = document.getElementById("produtoAtivo")?.checked === true;
-  const exibirCaixa = ativo && document.getElementById("produtoExibirCaixa")?.checked === true;
-  const produtoRapido = exibirCaixa && document.getElementById("produtoRapido")?.checked === true;
+  const produtoRapido = ativo && document.getElementById("produtoRapido")?.checked === true;
 
   if (!nome) {
     await abrirAlertaProduto({
@@ -1646,7 +1643,8 @@ async function salvarProduto() {
       produto_rapido: produtoRapido,
       tipo_item: tipoItem,
       controla_estoque: controlaEstoque,
-      exibir_caixa: exibirCaixa,
+      // Compatibilidade com a coluna antiga: item ativo é sempre pesquisável.
+      exibir_caixa: ativo,
       updated_at: new Date().toISOString()
     };
 
@@ -1916,9 +1914,9 @@ if (produtoNome) {
   });
 }
 
-  ["produtoAtivo", "produtoExibirCaixa"].forEach(id => {
-    document.getElementById(id)?.addEventListener("change", sincronizarTogglesCatalogo);
-  });
+  document
+    .getElementById("produtoAtivo")
+    ?.addEventListener("change", sincronizarTogglesCatalogo);
 
   document.getElementById("produtoControlaEstoque")?.addEventListener("change", () => {
     atualizarFormularioPorTipoItem();

@@ -30,6 +30,7 @@
 .filtros-right {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .produtos-filtros-extra {
@@ -57,6 +58,11 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-display);
 }
 
 .filtro-btn:hover { border-color: var(--crv-orange); color: var(--text-primary); }
@@ -110,6 +116,7 @@
   gap: 10px;
   transition: all var(--transition);
   position: relative;
+  min-height: 260px;
 }
 
 .produto-card:hover {
@@ -1383,7 +1390,6 @@
 }
 
 .produto-tipo-badge,
-.badge-caixa-oculto,
 .produto-sem-estoque {
   display: inline-flex;
   align-items: center;
@@ -1397,29 +1403,9 @@
 
 .produto-tipo-badge {
   padding: 3px 8px;
-  border: 1px solid rgba(0, 212, 255, .24);
-  background: rgba(0, 212, 255, .08);
-  color: var(--crv-cyan);
-}
-
-.produto-tipo-badge.tipo-servico {
-  border-color: rgba(84, 205, 22, .25);
-  background: rgba(84, 205, 22, .08);
-  color: var(--crv-green);
-}
-
-.produto-tipo-badge.tipo-taxa,
-.produto-tipo-badge.tipo-outro {
-  border-color: rgba(212, 168, 67, .28);
-  background: rgba(212, 168, 67, .10);
-  color: var(--crv-orange);
-}
-
-.badge-caixa-oculto {
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 80, 80, .25);
-  background: rgba(255, 80, 80, .08);
-  color: #FF5050;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
 }
 
 .produto-sem-estoque {
@@ -1428,13 +1414,16 @@
   letter-spacing: 0;
 }
 
-.produto-card.tipo-servico {
-  border-top-color: rgba(84, 205, 22, .38);
-}
-
+.produto-card.tipo-servico,
 .produto-card.tipo-taxa,
 .produto-card.tipo-outro {
-  border-top-color: rgba(212, 168, 67, .42);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .produto-card,
+[data-theme="dark"] .catalogo-tabs,
+[data-theme="dark"] .produtos-filtros {
+  background: #111111;
 }
 
 .form-row-estoque-margem.sem-controle-estoque {

@@ -562,7 +562,7 @@
 
       </div>
 
-<div class="form-row">
+<div class="form-row" id="grupoValorPrevistoJogo">
 
   <div class="input-group">
     <label class="input-label">Valor previsto do jogo</label>
@@ -573,13 +573,17 @@
 
 <div class="form-row agenda-mensal-box" id="boxMensal">
 
+  <div class="agenda-ciclo-info" id="infoCicloMensal">
+    Ao salvar, o sistema fechará todas as ocorrências deste mesmo dia e horário até o fim do mês.
+  </div>
+
   <div class="input-group">
     <label class="input-label">Valor mensal</label>
     <input class="input" id="valorMensal" placeholder="Ex: 800,00">
   </div>
 
   <div class="input-group">
-    <label class="input-label">Dia do pagamento</label>
+    <label class="input-label">Dia previsto de pagamento</label>
     <input
       type="number"
       min="1"
@@ -638,7 +642,7 @@
 
           <div>
             <strong>Jogadores</strong>
-            <small>Mensalistas pagam uma vez por ciclo (4 jogos); avulsos são cobrados por jogo.</small>
+            <small>Mensalistas pagam uma vez no mês; convidados avulsos são cobrados somente no jogo em que participarem.</small>
           </div>
 
           <button class="btn-ghost" id="btnAdicionarJogador" type="button">
@@ -719,6 +723,14 @@
     </p>
 
     <div class="agenda-aviso-actions">
+
+      <button
+        class="btn-ghost"
+        id="btnAvisoSecundario"
+        style="display:none;"
+      >
+        Outra ação
+      </button>
 
       <button
         class="btn-ghost"

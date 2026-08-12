@@ -149,15 +149,24 @@ function competenciaAgenda(dataISO) {
   return data.slice(0, 7);
 }
 
+function calcularVencimentoCompetenciaAgenda(competencia, diaPagamento) {
+  const [ano, mes] = String(competencia || "").split("-").map(Number);
+
+  if (!ano || !mes) return null;
+
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  const diaSeguro = Math.min(
+    Math.max(Number(diaPagamento || 1), 1),
+    ultimoDia
+  );
+
+  return `${ano}-${String(mes).padStart(2, "0")}-${String(diaSeguro).padStart(2, "0")}`;
+}
+
 function somarDiasAgenda(dataISO, dias) {
   const data = new Date(`${String(dataISO).slice(0, 10)}T12:00:00`);
   data.setDate(data.getDate() + dias);
   return data.toISOString().slice(0, 10);
-}
-
-function calcularFimCicloMensalAgenda(dataInicio, qtdJogos = 4) {
-  const jogos = Math.max(1, Number(qtdJogos || 4));
-  return somarDiasAgenda(dataInicio, (jogos - 1) * 7);
 }
 
 function formatarDataCurtaAgenda(dataISO) {
@@ -178,19 +187,34 @@ function formatarDataCompletaAgenda(dataISO) {
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
-function obterPagamentoPrevistoMensalidadeAgenda(datas = []) {
-  if (!Array.isArray(datas) || !datas.length) return null;
+function obterPagamentoPrevistoMensalidadeAgenda(mensalidade, competencia) {
+  const vencimentoRegistrado = String(
+    mensalidade?.data_vencimento || ""
+  ).slice(0, 10);
 
-  // A mensalidade do horário costuma ser recebida no segundo jogo do mês,
-  // quando a data já passou do dia 5. A previsão é somente informativa.
-  return datas[1] || datas[0] || null;
+  if (vencimentoRegistrado) return vencimentoRegistrado;
+
+  return calcularVencimentoCompetenciaAgenda(
+    mensalidade?.competencia || competencia,
+    mensalidade?.dia_pagamento || 1
+  );
 }
 
 function mensalidadeVencidaParaAvisoAgenda(jogo, mensalidade) {
   if (!jogo || !mensalidade) return false;
   if (mensalidade.status === "pago") return false;
 
-  const dia = Number(jogo.dia_pagamento_mensal || 0);
+  const vencimentoCiclo = String(mensalidade.data_vencimento || "").slice(0, 10);
+
+  if (vencimentoCiclo) {
+    return hojeISOAgenda() >= vencimentoCiclo;
+  }
+
+  const dia = Number(
+    mensalidade.dia_pagamento ||
+    jogo.dia_pagamento_mensal ||
+    0
+  );
   if (!dia) return true;
 
   const hoje = hojeISOAgenda();
@@ -214,7 +238,11 @@ function buscarMensalidadeAgenda(jogo) {
   if (!jogo) return null;
 
   const origemId = obterAgendaOrigemMensal(jogo);
-  const dataJogo = String(jogo.data_agendamento || hojeISOAgenda()).slice(0, 10);
+  const dataJogo = String(
+    jogo.horario_original_data ||
+    jogo.data_agendamento ||
+    hojeISOAgenda()
+  ).slice(0, 10);
 
   return mensalidadesAgenda.find(m => {
     const inicio = String(m.data_inicio || "").slice(0, 10);
@@ -247,10 +275,20 @@ function jogadorPendenteAgenda(jogador) {
 }
 
 function obterResumoPagamentoAgenda(jogo) {
-  const jogadores = (jogadoresPorAgenda[jogo.id] || [])
+  const todosJogadores = (jogadoresPorAgenda[jogo.id] || [])
     .filter(j => j.removido !== true);
 
-  const total = jogadores.length;
+  // Mensalistas pertencem à mensalidade do ciclo e nunca entram como
+  // cobrança individual em cada ocorrência. Aqui ficam somente os avulsos.
+  const jogadores = todosJogadores.filter(j => {
+    return !(
+      j.mensalista === true &&
+      j.cobrar_no_jogo === false
+    );
+  });
+
+  const total = todosJogadores.length;
+  const totalCobravel = jogadores.length;
   const pagos = jogadores.filter(jogadorPagoAgenda).length;
   const comandas = jogadores.filter(jogadorEmComandaAgenda).length;
   const pendentes = jogadores.filter(jogadorPendenteAgenda).length;
@@ -267,10 +305,22 @@ function obterResumoPagamentoAgenda(jogo) {
     .filter(jogadorPendenteAgenda)
     .reduce((acc, j) => acc + Number(j.valor || 0), 0);
 
+  const ehMensal = jogoEhMensalAgenda(jogo);
+  const mensalidade = ehMensal ? buscarMensalidadeAgenda(jogo) : null;
+  const mensalidadePaga = String(mensalidade?.status || "").toLowerCase() === "pago";
+
   let texto = "Pagamento pendente";
   let classe = "pendente";
 
-  if (total > 0 && pendentes === 0 && comandas === 0) {
+  if (ehMensal && !mensalidade) {
+    texto = "Mensalidade não localizada";
+    classe = "pendente";
+  } else if (ehMensal && !mensalidadePaga) {
+    texto = pagos > 0 || comandas > 0
+      ? "Mensalidade e avulsos pendentes"
+      : "Mensalidade pendente";
+    classe = pagos > 0 || comandas > 0 ? "parcial" : "pendente";
+  } else if (totalCobravel === 0 || (pendentes === 0 && comandas === 0)) {
     texto = "Pagamento quitado";
     classe = "pago";
   } else if (pagos > 0 || comandas > 0) {
@@ -280,12 +330,15 @@ function obterResumoPagamentoAgenda(jogo) {
 
   return {
     total,
+    totalCobravel,
     pagos,
     comandas,
     pendentes,
     recebido,
     emComanda,
     pendente,
+    mensalidade,
+    mensalidadePaga,
     texto,
     classe
   };
@@ -485,6 +538,16 @@ document
     document.getElementById("valorMensal").value = "";
 
     aplicarValorPadraoAgendaNoModal();
+  });
+
+  ["dataAgendamento", "horaInicio", "horaFim"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => {
+      alternarCamposMensais();
+
+      if (id !== "dataAgendamento") {
+        aplicarValorPadraoAgendaNoModal();
+      }
+    });
   });
 
   document
@@ -783,8 +846,10 @@ function abrirModalAviso({
   titulo = "Aviso",
   texto = "",
   confirmarTexto = "Entendi",
+  secundarioTexto = "",
   mostrarCancelar = false,
   onConfirm = null,
+  onSecondary = null,
   campoMotivo = false,
   placeholderMotivo = "Informe o motivo..."
 }) {
@@ -820,12 +885,37 @@ function abrirModalAviso({
   const btnCancelar =
     document.getElementById("btnAvisoCancelar");
 
+  const btnSecundario =
+    document.getElementById("btnAvisoSecundario");
+
   btnConfirmar.textContent = confirmarTexto;
 
   btnCancelar.style.display =
     mostrarCancelar
       ? "inline-flex"
       : "none";
+
+  if (btnSecundario) {
+    btnSecundario.textContent = secundarioTexto || "Outra ação";
+    btnSecundario.style.display =
+      secundarioTexto && typeof onSecondary === "function"
+        ? "inline-flex"
+        : "none";
+
+    btnSecundario.onclick = () => {
+      const motivo = campoMotivo
+        ? document.getElementById("modalAvisoMotivo")?.value.trim() || ""
+        : "";
+
+      if (campoMotivo && !motivo) {
+        document.getElementById("modalAvisoMotivo")?.focus();
+        return;
+      }
+
+      fecharModalAviso();
+      onSecondary(motivo);
+    };
+  }
 
   btnConfirmar.onclick = () => {
 
@@ -903,198 +993,39 @@ function empresaUsaAgendaEsportiva() {
   );
 }
 
-function dataEhMesmoDiaSemana(dataBase, dataAlvo) {
-  return obterDiaSemanaAgenda(dataBase) === obterDiaSemanaAgenda(dataAlvo);
-}
-
-function jogoMensalModelo(jogo) {
-  return (
-    jogoEhMensalAgenda(jogo) &&
-    !jogo.recorrencia_origem_id &&
-    jogo.status_jogo !== "cancelado" &&
-    jogo.status_jogo !== "fechado"
-  );
-}
-
-function buscarExcecaoAgenda(modelo, dataAlvo) {
-  return excecoesAgenda.find(exc => {
-    return (
-      String(exc.agenda_origem_id) === String(modelo.id) &&
-      String(exc.data_original || "").slice(0, 10) === String(dataAlvo).slice(0, 10)
-    );
-  }) || null;
-}
-
 async function gerarOcorrenciasMensaisParaData(dataAlvo) {
-  if (!dataAlvo) return;
-  if (!empresaUsaAgendaEsportiva()) return;
-
-  const modelos = agendaDados.filter(jogo => {
-    if (!jogoMensalModelo(jogo)) return false;
-
-    const dataBase =
-      String(jogo.data_agendamento || "").slice(0, 10);
-
-    if (!dataBase) return false;
-    if (dataAlvo <= dataBase) return false;
-
-    return dataEhMesmoDiaSemana(dataBase, dataAlvo);
-  });
-
-  for (const modelo of modelos) {
-const excecao = buscarExcecaoAgenda(modelo, dataAlvo);
-
-if (excecao && excecao.cancelado === true) {
-  continue;
-}
-
-const dataOcorrencia =
-  excecao?.data_nova || dataAlvo;
-
-const jaExiste =
-  agendaDados.some(jogo => {
-    return (
-      String(jogo.recorrencia_origem_id || "") === String(modelo.id) &&
-      (
-        String(jogo.data_agendamento || "").slice(0, 10) === String(dataAlvo).slice(0, 10) ||
-        String(jogo.data_agendamento || "").slice(0, 10) === String(dataOcorrencia).slice(0, 10) ||
-        String(jogo.horario_original_data || "").slice(0, 10) === String(dataAlvo).slice(0, 10)
-      )
-    );
-  });
-
-if (jaExiste) continue;
-
-const horaInicioOcorrencia =
-  excecao?.hora_inicio_nova || modelo.hora_inicio;
-
-const horaFimOcorrencia =
-  excecao?.hora_fim_nova || modelo.hora_fim;
-
-const payloadOcorrencia = {
-      empresa_id: APP_EMPRESA_ID,
-      cliente_nome: modelo.cliente_nome,
-      cliente_telefone: modelo.cliente_telefone || null,
-      data_agendamento: dataOcorrencia,
-      hora_inicio: horaInicioOcorrencia,
-      hora_fim: horaFimOcorrencia,
-      local_recurso: modelo.local_recurso,
-      campo_id: modelo.campo_id || null,
-      tipo_jogo: modelo.tipo_jogo || "mensalista",
-      status_jogo: "agendado",
-      recorrencia: "avulso",
-      recorrencia_origem_id: modelo.id,
-      ocorrencia_gerada: true,
-      valor_previsto: modelo.valor_previsto || 0,
-      valor_mensal: modelo.valor_mensal || 0,
-      dia_pagamento_mensal: modelo.dia_pagamento_mensal || null,
-      observacoes: modelo.observacoes || null,
-
-      horario_original_data: dataAlvo,
-      horario_original_inicio: modelo.hora_inicio || null,
-      horario_original_fim: modelo.hora_fim || null,
-      horario_alterado: !!excecao,
-      motivo_alteracao_horario: excecao?.motivo || null,
-      alterado_apenas_ocorrencia: !!excecao,
-
-      permite_avulsos: modelo.permite_avulsos === true,
-      permite_time_avulso: modelo.permite_time_avulso === true,
-
-      usar_times: modelo.usar_times === true,
-      time_a: modelo.time_a || null,
-      time_b: modelo.time_b || null,
-      total_jogadores: modelo.total_jogadores || 0,
-      total_pago_jogadores: 0,
-      total_pendente_jogadores: 0,
-      atualizado_em: new Date().toISOString()
-    };
-
-    const { data: novaOcorrencia, error } = await sb
-      .from("agenda")
-      .insert([payloadOcorrencia])
-      .select("id")
-      .single();
-
-    if (error) {
-      console.warn("[AGENDA RECORRÊNCIA]", error);
-      continue;
-    }
-
-    const jogadoresModelo =
-      (jogadoresPorAgenda[modelo.id] || [])
-        .filter(j => j.removido !== true);
-
-    if (jogadoresModelo.length) {
-      const jogadoresNovaOcorrencia =
-        jogadoresModelo.map(j => ({
-          empresa_id: APP_EMPRESA_ID,
-          agenda_id: novaOcorrencia.id,
-          nome: j.nome,
-          time_jogador: j.time_jogador || null,
-          valor: 0,
-          forma_pagamento: null,
-          pago: false,
-          status_pagamento: "pendente",
-          pago_em: null,
-          removido: false,
-origem_jogador: j.origem_jogador || "mensalista",
-mensalista: j.mensalista !== undefined ? j.mensalista : true,
-cobrar_no_jogo: j.cobrar_no_jogo !== undefined
-  ? j.cobrar_no_jogo
-  : String(j.origem_jogador || "mensalista") !== "mensalista"
-        }));
-
-      await sb
-        .from("agenda_jogadores")
-        .insert(jogadoresNovaOcorrencia);
-    }
-
-    await garantirMensalidadeAgenda(modelo, dataAlvo);
+  if (
+    !dataAlvo ||
+    !empresaUsaAgendaEsportiva() ||
+    navigator.onLine === false ||
+    !window.sb
+  ) {
+    return;
   }
-}
 
-async function garantirMensalidadeAgenda(modelo, dataAlvo) {
-  if (!modelo || !modelo.id || !dataAlvo) return;
-
-  const dataInicio = String(dataAlvo).slice(0, 10);
-  const qtdJogos = 4;
-  const dataFim = calcularFimCicloMensalAgenda(dataInicio, qtdJogos);
-
-  const jaExiste = mensalidadesAgenda.some(m => {
-    const inicio = String(m.data_inicio || "").slice(0, 10);
-    const fim = String(m.data_fim || "").slice(0, 10);
+  const dataReferencia = String(dataAlvo).slice(0, 10);
+  const ciclosAtivos = mensalidadesAgenda.filter(mensalidade => {
+    const inicio = String(mensalidade.data_inicio || "").slice(0, 10);
+    const fim = String(mensalidade.data_fim || "").slice(0, 10);
 
     return (
-      String(m.agenda_origem_id) === String(modelo.id) &&
+      mensalidade.status !== "cancelado" &&
+      mensalidade.renovacao_status !== "cancelada" &&
       inicio &&
       fim &&
-      dataInicio >= inicio &&
-      dataInicio <= fim
+      dataReferencia >= inicio &&
+      dataReferencia <= fim
     );
   });
 
-  if (jaExiste) return;
+  for (const mensalidade of ciclosAtivos) {
+    const { error } = await sb.rpc("materializar_ciclo_mensal_agenda", {
+      p_mensalidade_id: mensalidade.id
+    });
 
-  const payload = {
-    empresa_id: APP_EMPRESA_ID,
-    agenda_origem_id: modelo.id,
-    competencia: competenciaAgenda(dataInicio),
-    valor: Number(modelo.valor_mensal || 0),
-    status: "pendente",
-    data_inicio: dataInicio,
-    data_fim: dataFim,
-    quantidade_jogos_prevista: qtdJogos,
-    quantidade_jogos_usados: 0,
-    renovacao_status: "ativa",
-    observacoes: `Ciclo mensal de ${formatarDataCurtaAgenda(dataInicio)} até ${formatarDataCurtaAgenda(dataFim)}`
-  };
-
-  const { error } = await sb
-    .from("agenda_mensalidades")
-    .insert([payload]);
-
-  if (error) {
-    console.warn("[AGENDA MENSALIDADE]", error);
+    if (error) {
+      console.warn("[AGENDA][MATERIALIZAR CICLO]", error);
+    }
   }
 }
 
@@ -1486,18 +1417,16 @@ function calcularStatusVisual(jogo) {
 
   const resumoPagamento = obterResumoPagamentoAgenda(jogo);
 
-  if (
-    resumoPagamento.total > 0 &&
-    resumoPagamento.classe === "pago"
-  ) {
-    return "fechado";
-  }
-
   const hoje = hojeISOAgenda();
   const dataJogo = String(jogo.data_agendamento || "").slice(0, 10);
 
   if (dataJogo > hoje) return "agendado";
-  if (dataJogo < hoje) return "cobranca";
+  if (dataJogo < hoje) {
+    return (resumoPagamento.total > 0 || jogoEhMensalAgenda(jogo)) &&
+      resumoPagamento.classe === "pago"
+      ? "fechado"
+      : "cobranca";
+  }
 
   const agora = new Date();
   const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
@@ -1508,7 +1437,10 @@ function calcularStatusVisual(jogo) {
   if (minutosAgora < inicio) return "agendado";
   if (minutosAgora >= inicio && minutosAgora < fim) return "andamento";
 
-  return "cobranca";
+  return (resumoPagamento.total > 0 || jogoEhMensalAgenda(jogo)) &&
+    resumoPagamento.classe === "pago"
+    ? "fechado"
+    : "cobranca";
 }
 
 // ======================================================
@@ -1674,21 +1606,6 @@ container
   });
 
 container
-  .querySelectorAll(".btn-apagar-jogo")
-  .forEach(btn => {
-
-    btn.addEventListener("click", e => {
-
-      e.stopPropagation();
-
-      apagarJogo(btn.dataset.id);
-
-    });
-
-  });
-
-
-container
   .querySelectorAll(".btn-renovar-mensalidade")
   .forEach(btn => {
     btn.addEventListener("click", e => {
@@ -1763,6 +1680,19 @@ const textoCicloMensal =
         ${jogo.cliente_nome || "-"}
       </div>
 
+      ${
+        status === "cancelado"
+          ? `<div class="agenda-card-aviso cancelado">
+               Jogo cancelado: ${jogo.motivo_cancelamento || "motivo não informado"}
+             </div>`
+          : jogo.horario_alterado === true
+            ? `<div class="agenda-card-aviso alterado">
+                 Horário alterado somente nesta ocorrência
+                 ${jogo.motivo_alteracao_horario ? ` · ${jogo.motivo_alteracao_horario}` : ""}
+               </div>`
+            : ""
+      }
+
 <div class="agenda-card-cobranca-info">
 
   <div class="agenda-card-cobranca-linha">
@@ -1816,12 +1746,12 @@ const textoCicloMensal =
       <div class="agenda-card-footer">
 
         <div class="agenda-card-total">
-          <span>Recebido</span>
+          <span>${ehMensal ? "Avulsos recebidos" : "Recebido"}</span>
           <strong>${fmtAgenda(recebido)}</strong>
         </div>
 
         <div class="agenda-card-total">
-          <span>Pendente</span>
+          <span>${ehMensal ? "Avulsos pendentes" : "Pendente"}</span>
           <strong>${
             status === "cancelado"
               ? fmtAgenda(0)
@@ -1866,15 +1796,6 @@ ${
     `
     : ""
 }
-
-  <button
-    class="btn-apagar-jogo"
-    data-id="${jogo.id}"
-    title="Apagar definitivamente"
-    type="button"
-  >
-    <i data-lucide="trash-2"></i>
-  </button>
 
 </div>
 
@@ -2174,6 +2095,13 @@ function aplicarModoModal() {
     if (el) el.disabled = !podeEditarAgenda;
   });
 
+  // A recorrência controla ciclo, mensalidade e forma de cobrança. Evita
+  // conversões silenciosas de um jogo já criado entre mensal e avulso.
+  const tipoJogo = document.getElementById("tipoJogo");
+  if (tipoJogo && !modoNovo) {
+    tipoJogo.disabled = true;
+  }
+
   const statusJogo = document.getElementById("statusJogo");
 
   if (statusJogo) {
@@ -2200,6 +2128,7 @@ document.querySelectorAll(".agenda-jogador-row").forEach(row => {
 
   const nome = row.querySelector(".jogador-nome");
   const valor = row.querySelector(".jogador-valor");
+  const origem = row.querySelector(".jogador-origem");
   const pagamento = row.querySelector(".jogador-pagamento");
   const pago = row.querySelector(".jogador-pago");
   const remover = row.querySelector(".agenda-remover-jogador");
@@ -2212,9 +2141,17 @@ document.querySelectorAll(".agenda-jogador-row").forEach(row => {
     time.disabled = !podeEditarAgenda;
   }
 
+  if (origem) {
+    origem.disabled = !podeEditarAgenda;
+  }
+
   if (valor) {
-    valor.disabled = true;
-    valor.style.display = "none";
+    const jogadorEhAvulso = !origem || origem.value === "avulso";
+
+    row.classList.toggle("jogador-avulso", jogadorEhAvulso);
+
+    valor.disabled = !podeEditarAgenda || !jogadorEhAvulso;
+    valor.style.display = jogadorEhAvulso ? "block" : "none";
   }
 
   if (pagamento) {
@@ -2260,6 +2197,10 @@ function alternarTimesJogo() {
   document
     .querySelectorAll(".jogador-time")
     .forEach(select => {
+      select.closest(".agenda-jogador-row")?.classList.toggle(
+        "usa-times",
+        usarTimes
+      );
       select.style.display = usarTimes ? "block" : "none";
 
       if (!usarTimes) {
@@ -2281,12 +2222,88 @@ function alternarCamposMensais() {
   const boxMensal =
     document.getElementById("boxMensal");
 
+  const grupoValorPrevisto =
+    document.getElementById("grupoValorPrevistoJogo");
+
+  const boxAlteracao =
+    document.getElementById("boxAlteracaoHorario");
+
+  const infoCiclo =
+    document.getElementById("infoCicloMensal");
+
+  const jogoAtual = agendaDados.find(jogo => {
+    return String(jogo.id) === String(agendaAtualId);
+  });
+
   if (boxMensal) {
     boxMensal.classList.toggle(
       "ativo",
       ehMensal
     );
   }
+
+  if (grupoValorPrevisto) {
+    grupoValorPrevisto.style.display = ehMensal ? "none" : "grid";
+  }
+
+  if (ehMensal) {
+    const valorPrevisto = document.getElementById("valorPrevisto");
+    if (valorPrevisto) valorPrevisto.value = "";
+  }
+
+  if (boxAlteracao) {
+    const mostrarAlteracao =
+      ehMensal &&
+      modoModalAgenda !== "novo" &&
+      jogoAtual;
+
+    boxAlteracao.classList.toggle("ativo", Boolean(mostrarAlteracao));
+
+    const infoOriginal = document.getElementById("infoHorarioOriginal");
+
+    if (infoOriginal && mostrarAlteracao) {
+      const dataOriginal =
+        jogoAtual.horario_original_data || jogoAtual.data_agendamento;
+      const inicioOriginal =
+        jogoAtual.horario_original_inicio || jogoAtual.hora_inicio;
+      const fimOriginal =
+        jogoAtual.horario_original_fim || jogoAtual.hora_fim;
+
+      infoOriginal.textContent =
+        `Horário original desta ocorrência: ${formatarDataCompletaAgenda(dataOriginal)} · ` +
+        `${formatarHora(inicioOriginal)} às ${formatarHora(fimOriginal)}. ` +
+        "Alterações de data ou hora afetam somente este jogo.";
+    }
+  }
+
+  if (infoCiclo && ehMensal) {
+    const dataBase =
+      document.getElementById("dataAgendamento")?.value || hojeISOAgenda();
+    const datas = obterDatasDoDiaAteFimDoMesAgenda(dataBase);
+
+    infoCiclo.textContent = modoModalAgenda === "novo"
+      ? `Ao salvar, ${datas.length} jogo(s) deste mesmo dia e horário serão fechados até o fim do mês: ${datas.map(formatarDataCurtaAgenda).join(" • ")}.`
+      : "O elenco mensal é sincronizado nas ocorrências futuras deste ciclo. Convidados avulsos permanecem apenas neste jogo.";
+  }
+}
+
+function obterDatasDoDiaAteFimDoMesAgenda(dataISO) {
+  const base = new Date(`${String(dataISO || hojeISOAgenda()).slice(0, 10)}T12:00:00`);
+  const diaSemana = base.getDay();
+  const ultimoDia = new Date(base.getFullYear(), base.getMonth() + 1, 0, 12);
+  const datas = [];
+
+  for (
+    let data = new Date(base);
+    data <= ultimoDia;
+    data.setDate(data.getDate() + 1)
+  ) {
+    if (data.getDay() === diaSemana) {
+      datas.push(data.toISOString().slice(0, 10));
+    }
+  }
+
+  return datas;
 }
 
 // ======================================================
@@ -2416,6 +2433,10 @@ function adicionarLinhaJogador(jogador = {}) {
 
   if (jogador.id) {
     row.dataset.jogadorId = jogador.id;
+  }
+
+  if (jogador.jogador_origem_id) {
+    row.dataset.jogadorOrigemId = jogador.jogador_origem_id;
   }
 
   const tipoJogo =
@@ -2555,6 +2576,11 @@ function adicionarLinhaJogador(jogador = {}) {
       el.addEventListener("change", atualizarTotalizadorModal);
     });
 
+  row.querySelector(".jogador-origem")?.addEventListener("change", () => {
+    aplicarModoModal();
+    atualizarTotalizadorModal();
+  });
+
   aplicarModoModal();
 
   alternarTimesJogo();
@@ -2585,6 +2611,9 @@ function obterJogadoresModal() {
 
       return {
         id: row.dataset.jogadorId || null,
+
+        jogador_origem_id:
+          row.dataset.jogadorOrigemId || null,
 
         nome:
           row.querySelector(".jogador-nome")?.value.trim(),
@@ -2704,8 +2733,18 @@ if (novoFim <= novoInicio) {
   novoFim += 1440;
 }
 
-  const novoDiaSemana =
-    obterDiaSemanaAgenda(data);
+  const datasNovas =
+    novoEhMensal && !agendaAtualId
+      ? obterDatasDoDiaAteFimDoMesAgenda(data)
+      : [data];
+
+  const jogoAtual = agendaDados.find(jogo => {
+    return String(jogo.id) === String(agendaAtualId);
+  });
+
+  const origemCicloAtual = jogoAtual && jogoEhMensalAgenda(jogoAtual)
+    ? String(obterAgendaOrigemMensal(jogoAtual))
+    : null;
 
   return agendaDados.some(jogo => {
 
@@ -2719,6 +2758,20 @@ if (novoFim <= novoInicio) {
     if (
       jogo.status_jogo ===
       "cancelado"
+    ) {
+      return false;
+    }
+
+    const origemCicloExistente = jogoEhMensalAgenda(jogo)
+      ? String(obterAgendaOrigemMensal(jogo))
+      : null;
+
+    // As ocorrências da mesma série não conflitam entre si durante a edição
+    // do elenco ou dos dados do ciclo.
+    if (
+      origemCicloAtual &&
+      origemCicloExistente &&
+      origemCicloAtual === origemCicloExistente
     ) {
       return false;
     }
@@ -2753,45 +2806,10 @@ if (fimExistente <= inicioExistente) {
       return false;
     }
 
-    const jogoExistenteEhMensal =
-      jogoEhMensalAgenda(jogo);
+    const dataExistente =
+      String(jogo.data_agendamento || "").slice(0, 10);
 
-    const diaSemanaExistente =
-      obterDiaSemanaAgenda(jogo.data_agendamento);
-
-    if (
-      novoEhMensal &&
-      jogoExistenteEhMensal &&
-      novoDiaSemana === diaSemanaExistente
-    ) {
-      return true;
-    }
-
-    if (
-      novoEhMensal &&
-      !jogoExistenteEhMensal &&
-      novoDiaSemana === diaSemanaExistente
-    ) {
-      return true;
-    }
-
-    if (
-      !novoEhMensal &&
-      jogoExistenteEhMensal &&
-      novoDiaSemana === diaSemanaExistente
-    ) {
-      return true;
-    }
-
-    if (
-      !novoEhMensal &&
-      !jogoExistenteEhMensal &&
-      String(jogo.data_agendamento || "").slice(0, 10) === data
-    ) {
-      return true;
-    }
-
-    return false;
+    return datasNovas.includes(dataExistente);
 
   });
 
@@ -2877,6 +2895,27 @@ if (fimMinutos <= inicioMinutos) {
   );
 }
 
+const tipoJogoSelecionado =
+  document.getElementById("tipoJogo")?.value || "avulso";
+
+const valorMensalSelecionado = normalizarMoedaAgenda(
+  document.getElementById("valorMensal")?.value || 0
+);
+
+const diaPagamentoSelecionado = Number(
+  document.getElementById("diaPagamentoMensal")?.value || 0
+);
+
+if (tipoJogoSelecionado === "mensalista") {
+  if (valorMensalSelecionado <= 0) {
+    return mostrarErro("Informe um valor mensal maior que zero.");
+  }
+
+  if (diaPagamentoSelecionado < 1 || diaPagamentoSelecionado > 31) {
+    return mostrarErro("Informe o dia previsto de pagamento entre 1 e 31.");
+  }
+}
+
     if (existeConflitoHorario()) {
 
       return mostrarErro(
@@ -2915,6 +2954,7 @@ const usarTimes =
 
 jogadoresNormalizados.push({
   id: jogador.id || null,
+  jogador_origem_id: jogador.jogador_origem_id || null,
   nome: nomeLimpo,
   time_jogador: usarTimes ? jogador.time_jogador || null : null,
   valor: Number(jogador.valor || 0),
@@ -2945,18 +2985,45 @@ const recebido =
 const jogoAtual =
   agendaDados.find(j => String(j.id) === String(agendaAtualId));
 
+if (agendaAtualId) {
+  const idsMantidosAntesDeSalvar = new Set(
+    jogadores
+      .filter(jogador => jogador.id)
+      .map(jogador => String(jogador.id))
+  );
+
+  const jogadorProtegidoRemovido =
+    (jogadoresPorAgenda[agendaAtualId] || []).find(jogador => {
+      const removido = !idsMantidosAntesDeSalvar.has(String(jogador.id));
+      const protegido =
+        jogador.pago === true ||
+        Boolean(jogador.comanda_id) ||
+        Boolean(jogador.venda_id);
+
+      return removido && protegido;
+    });
+
+  if (jogadorProtegidoRemovido) {
+    return mostrarErro(
+      `O jogador ${jogadorProtegidoRemovido.nome || ""} já possui pagamento ou comanda vinculada. Ele não pode ser removido.`
+    );
+  }
+}
+
 let statusJogo =
   modoModalAgenda === "novo"
     ? "agendado"
     : jogoAtual?.status_jogo || "agendado";
 
     const ehOcorrenciaMensal =
-  jogoAtual &&
-  jogoAtual.recorrencia_origem_id &&
-  jogoAtual.ocorrencia_gerada === true;
+  jogoAtual && jogoEhMensalAgenda(jogoAtual);
 
 const dataOriginalOcorrencia =
-  String(jogoAtual?.data_agendamento || "").slice(0, 10);
+  String(
+    jogoAtual?.horario_original_data ||
+    jogoAtual?.data_agendamento ||
+    ""
+  ).slice(0, 10);
 
 const horarioFoiAlterado =
   ehOcorrenciaMensal &&
@@ -2965,6 +3032,15 @@ const horarioFoiAlterado =
     String(inicio) !== formatarHora(jogoAtual.hora_inicio) ||
     String(fim) !== formatarHora(jogoAtual.hora_fim)
   );
+
+const motivoAlteracaoInformado =
+  document.getElementById("motivoAlteracaoHorario")?.value.trim() || "";
+
+if (horarioFoiAlterado && !motivoAlteracaoInformado) {
+  return mostrarErro(
+    "Informe claramente o motivo da alteração de data ou horário deste jogo mensal."
+  );
+}
 
     const payload = {
 
@@ -2995,38 +3071,32 @@ const horarioFoiAlterado =
   campoArena?.id || null,
 
       tipo_jogo:
-        document.getElementById(
-          "tipoJogo"
-        ).value,
+        tipoJogoSelecionado,
 
       status_jogo:
         statusJogo,
 
 recorrencia:
-  document.getElementById("tipoJogo")?.value === "mensalista"
+  tipoJogoSelecionado === "mensalista"
     ? "mensal"
     : "avulso",
 
       valor_previsto:
-        normalizarMoedaAgenda(
-          document.getElementById(
-            "valorPrevisto"
-          ).value
-        ),
+        tipoJogoSelecionado === "mensalista"
+          ? 0
+          : normalizarMoedaAgenda(
+              document.getElementById("valorPrevisto")?.value || 0
+            ),
 
       valor_mensal:
-        normalizarMoedaAgenda(
-          document.getElementById(
-            "valorMensal"
-          ).value
-        ),
+        tipoJogoSelecionado === "mensalista"
+          ? valorMensalSelecionado
+          : 0,
 
       dia_pagamento_mensal:
-        Number(
-          document.getElementById(
-            "diaPagamentoMensal"
-          ).value || 0
-        ) || null,
+        tipoJogoSelecionado === "mensalista"
+          ? diaPagamentoSelecionado
+          : null,
 
       observacoes:
         document.getElementById(
@@ -3034,28 +3104,29 @@ recorrencia:
         ).value.trim() || null,
 
 permite_avulsos:
+  tipoJogoSelecionado === "mensalista" ||
   jogadores.some(j => j.origem_jogador === "avulso"),
 
 permite_time_avulso:
-  false,
+  document.getElementById("usarTimesJogo")?.checked === true,
 
 motivo_alteracao_horario:
   document.getElementById("motivoAlteracaoHorario")?.value.trim() || null,
 
 horario_original_data:
-  horarioFoiAlterado
-    ? dataOriginalOcorrencia
-    : jogoAtual?.horario_original_data || jogoAtual?.data_agendamento || null,
+  jogoAtual?.horario_original_data ||
+  jogoAtual?.data_agendamento ||
+  null,
 
 horario_original_inicio:
-  horarioFoiAlterado
-    ? jogoAtual?.hora_inicio || null
-    : jogoAtual?.horario_original_inicio || jogoAtual?.hora_inicio || null,
+  jogoAtual?.horario_original_inicio ||
+  jogoAtual?.hora_inicio ||
+  null,
 
 horario_original_fim:
-  horarioFoiAlterado
-    ? jogoAtual?.hora_fim || null
-    : jogoAtual?.horario_original_fim || jogoAtual?.hora_fim || null,
+  jogoAtual?.horario_original_fim ||
+  jogoAtual?.hora_fim ||
+  null,
 
 horario_alterado:
   horarioFoiAlterado || jogoAtual?.horario_alterado === true,
@@ -3099,6 +3170,11 @@ alterado_apenas_ocorrencia:
 // ======================================================
 
 if (!navigator.onLine) {
+  if (tipoJogoSelecionado === "mensalista") {
+    return mostrarErro(
+      "A criação e a alteração de ciclos mensais exigem conexão para fechar todas as datas com segurança."
+    );
+  }
 
   const agendaOfflineId =
     agendaAtualId ||
@@ -3158,15 +3234,96 @@ if (!navigator.onLine) {
   return;
 }
 
+    if (!agendaAtualId && tipoJogoSelecionado === "mensalista") {
+      const mensalistas = jogadores
+        .filter(jogador => jogador.origem_jogador === "mensalista")
+        .map(jogador => ({
+          nome: jogador.nome,
+          time_jogador: jogador.time_jogador || null
+        }));
+
+      const avulsosPrimeiroJogo = jogadores
+        .filter(jogador => jogador.origem_jogador === "avulso")
+        .map(jogador => ({
+          nome: jogador.nome,
+          time_jogador: jogador.time_jogador || null,
+          valor: Number(jogador.valor || 0)
+        }));
+
+      const { error } = await sb.rpc("criar_ciclo_mensal_agenda", {
+        p_dados: {
+          cliente_nome: clienteNome,
+          cliente_telefone:
+            document.getElementById("clienteTelefone")?.value.trim() || null,
+          data_inicio: data,
+          hora_inicio: inicio,
+          hora_fim: fim,
+          campo_id: campoArena?.id || null,
+          local_recurso: local,
+          valor_mensal: valorMensalSelecionado,
+          dia_pagamento: diaPagamentoSelecionado,
+          permite_avulsos: true,
+          permite_time_avulso:
+            document.getElementById("usarTimesJogo")?.checked === true,
+          usar_times:
+            document.getElementById("usarTimesJogo")?.checked === true,
+          time_a:
+            document.getElementById("usarTimesJogo")?.checked === true
+              ? document.getElementById("timeA")?.value.trim() || null
+              : null,
+          time_b:
+            document.getElementById("usarTimesJogo")?.checked === true
+              ? document.getElementById("timeB")?.value.trim() || null
+              : null,
+          observacoes:
+            document.getElementById("observacoes")?.value.trim() || null,
+          operador_criacao_id:
+            sessionStorage.getItem("CRV_OPERADOR_ID") || null,
+          mensalistas,
+          avulsos_primeiro_jogo: avulsosPrimeiroJogo
+        }
+      });
+
+      if (error) throw error;
+
+      mostrarSucesso(
+        `Ciclo mensal criado com ${obterDatasDoDiaAteFimDoMesAgenda(data).length} jogo(s) previsto(s).`
+      );
+
+      await sincronizarAgendaVisual();
+
+      setTimeout(() => {
+        fecharModalJogo();
+      }, 700);
+
+      return;
+    }
+
     let agendaId =
       agendaAtualId;
+
+    if (agendaId && horarioFoiAlterado) {
+      const { error: erroReagendamento } = await sb.rpc(
+        "reagendar_ocorrencia_agenda",
+        {
+          p_agenda_id: agendaId,
+          p_nova_data: data,
+          p_nova_hora_inicio: inicio,
+          p_nova_hora_fim: fim,
+          p_motivo: motivoAlteracaoInformado
+        }
+      );
+
+      if (erroReagendamento) throw erroReagendamento;
+    }
 
     if (agendaId) {
 
       const { error } = await sb
         .from("agenda")
         .update(payload)
-        .eq("id", agendaId);
+        .eq("id", agendaId)
+        .eq("empresa_id", APP_EMPRESA_ID);
 
       if (error) {
         throw error;
@@ -3192,57 +3349,110 @@ if (!navigator.onLine) {
 
     }
 
-if (horarioFoiAlterado) {
-  const motivoAlteracao =
-    document.getElementById("motivoAlteracaoHorario")?.value.trim() ||
-    document.getElementById("observacoes")?.value.trim() ||
-    "Alteração temporária de horário";
+    let jogadoresParaPersistir = jogadores;
+    let jogadoresExistentesParaPersistir = jogadoresPorAgenda[agendaId] || [];
 
-  const origemMensalId =
-    jogoAtual.recorrencia_origem_id;
+    if (jogoAtual && tipoJogoSelecionado === "mensalista") {
+      const agendaOrigemId = obterAgendaOrigemMensal(jogoAtual);
+      const mensalidadeAtual = buscarMensalidadeAgenda(jogoAtual);
+      const competenciaAtual =
+        mensalidadeAtual?.competencia ||
+        competenciaAgenda(dataOriginalOcorrencia || data);
 
-  const { error: excecaoError } = await sb
-    .from("agenda_excecoes")
-    .upsert([{
-      empresa_id: APP_EMPRESA_ID,
-      agenda_origem_id: origemMensalId,
-      data_original: dataOriginalOcorrencia,
-      hora_inicio_original: jogoAtual.hora_inicio,
-      hora_fim_original: jogoAtual.hora_fim,
-      data_nova: data,
-      hora_inicio_nova: inicio,
-      hora_fim_nova: fim,
-      tipo: "alteracao",
-      motivo: motivoAlteracao,
-      cancelado: false,
-      atualizado_em: new Date().toISOString()
-    }], {
-      onConflict: "empresa_id,agenda_origem_id,data_original"
-    });
+      const mensalistas = jogadores
+        .filter(jogador => jogador.origem_jogador === "mensalista")
+        .map(jogador => ({
+          id:
+            String(agendaId) === String(agendaOrigemId)
+              ? jogador.id || null
+              : jogador.jogador_origem_id || null,
+          nome: jogador.nome,
+          time_jogador: jogador.time_jogador || null
+        }));
 
-  if (excecaoError) {
-    throw excecaoError;
-  }
+      const { error: erroElenco } = await sb.rpc(
+        "salvar_mensalistas_ciclo_agenda",
+        {
+          p_agenda_origem_id: agendaOrigemId,
+          p_competencia: competenciaAtual,
+          p_mensalistas: mensalistas
+        }
+      );
 
-  await sb
-    .from("agenda")
-    .update({
-      status_jogo: "cancelado",
-      motivo_cancelamento: `Horário mensal alterado temporariamente para ${data}`,
-      cancelado_em: new Date().toISOString(),
-      atualizado_em: new Date().toISOString()
-    })
-    .eq("empresa_id", APP_EMPRESA_ID)
-    .eq("recorrencia_origem_id", origemMensalId)
-    .eq("data_agendamento", dataOriginalOcorrencia)
-    .neq("id", agendaId);
-}
+      if (erroElenco) throw erroElenco;
 
-    const jogadoresExistentes =
-      jogadoresPorAgenda[agendaId] || [];
+      const dadosModelo = {
+        cliente_nome: clienteNome,
+        cliente_telefone:
+          document.getElementById("clienteTelefone")?.value.trim() || null,
+        valor_mensal: valorMensalSelecionado,
+        dia_pagamento_mensal: diaPagamentoSelecionado,
+        permite_avulsos: true,
+        permite_time_avulso:
+          document.getElementById("usarTimesJogo")?.checked === true,
+        usar_times:
+          document.getElementById("usarTimesJogo")?.checked === true,
+        time_a:
+          document.getElementById("usarTimesJogo")?.checked === true
+            ? document.getElementById("timeA")?.value.trim() || null
+            : null,
+        time_b:
+          document.getElementById("usarTimesJogo")?.checked === true
+            ? document.getElementById("timeB")?.value.trim() || null
+            : null,
+        observacoes:
+          document.getElementById("observacoes")?.value.trim() || null,
+        atualizado_em: new Date().toISOString()
+      };
+
+      const { error: erroModelo } = await sb
+        .from("agenda")
+        .update(dadosModelo)
+        .eq("id", agendaOrigemId)
+        .eq("empresa_id", APP_EMPRESA_ID);
+
+      if (erroModelo) throw erroModelo;
+
+      if (mensalidadeAtual && mensalidadeAtual.status !== "pago") {
+        const dataVencimento = calcularVencimentoCompetenciaAgenda(
+          competenciaAtual,
+          diaPagamentoSelecionado
+        );
+
+        const { error: erroMensalidade } = await sb
+          .from("agenda_mensalidades")
+          .update({
+            valor: valorMensalSelecionado,
+            dia_pagamento: diaPagamentoSelecionado,
+            data_vencimento: dataVencimento,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq("id", mensalidadeAtual.id)
+          .eq("empresa_id", APP_EMPRESA_ID)
+          .neq("status", "pago");
+
+        if (erroMensalidade) throw erroMensalidade;
+      }
+
+      // O elenco mensal foi sincronizado pela RPC. A persistência direta
+      // abaixo cuida apenas dos convidados avulsos desta ocorrência.
+      jogadoresParaPersistir = jogadores.filter(jogador => {
+        return jogador.origem_jogador === "avulso";
+      });
+
+      jogadoresExistentesParaPersistir =
+        (jogadoresPorAgenda[agendaId] || []).filter(jogador => {
+          return !(
+            jogador.mensalista === true &&
+            jogador.cobrar_no_jogo === false
+          );
+        });
+    }
+
+    const jogadoresExistentes = jogadoresExistentesParaPersistir;
 
     const idsMantidos =
-      jogadores
+      jogadoresParaPersistir
         .filter(j => j.id)
         .map(j => String(j.id));
 
@@ -3277,13 +3487,14 @@ if (horarioFoiAlterado) {
       }
     }
 
-    for (const jogador of jogadores) {
+    for (const jogador of jogadoresParaPersistir) {
       if (jogador.id) {
         const { error } = await sb
           .from("agenda_jogadores")
 .update({
   nome: jogador.nome,
   time_jogador: jogador.time_jogador || null,
+  valor: Number(jogador.valor || 0),
   origem_jogador: jogador.origem_jogador || "mensalista",
   mensalista: jogador.mensalista === true,
   cobrar_no_jogo: jogador.cobrar_no_jogo === true,
@@ -3301,7 +3512,7 @@ if (horarioFoiAlterado) {
   agenda_id: agendaId,
   nome: jogador.nome,
   time_jogador: jogador.time_jogador || null,
-  valor: 0,
+  valor: Number(jogador.valor || 0),
   forma_pagamento: null,
   pago: false,
   status_pagamento: "pendente",
@@ -3348,14 +3559,27 @@ function cancelarJogo(id) {
 
   if (!jogo) return;
 
+  if (navigator.onLine === false) {
+    abrirModalAviso({
+      titulo: "Cancelamento online",
+      texto: "Para preservar o ciclo e o histórico corretamente, cancele o jogo quando a conexão estiver disponível."
+    });
+    return;
+  }
+
+  const ehMensal = jogoEhMensalAgenda(jogo);
+
   abrirModalAviso({
 
-    titulo: "Cancelar jogo",
+    titulo: ehMensal ? "Cancelar horário mensal" : "Cancelar jogo",
 
-    texto:
-      `Informe o motivo do cancelamento de ${jogo.cliente_nome || "este jogo"}.`,
+    texto: ehMensal
+      ? `Informe o motivo. Você pode cancelar somente o jogo de ${formatarDataCompletaAgenda(jogo.data_agendamento)} ou todas as ocorrências restantes deste ciclo.`
+      : `Informe o motivo do cancelamento de ${jogo.cliente_nome || "este jogo"}.`,
 
-    confirmarTexto: "Cancelar jogo",
+    confirmarTexto: ehMensal ? "Somente este jogo" : "Cancelar jogo",
+
+    secundarioTexto: ehMensal ? "Restante do mês" : "",
 
     mostrarCancelar: true,
 
@@ -3364,105 +3588,59 @@ function cancelarJogo(id) {
     placeholderMotivo:
       "Ex: cliente desistiu, chuva, sem time, reagendado...",
 
-    onConfirm: async motivo => {
+    onConfirm: motivo =>
+      executarCancelamentoJogoAgenda(jogo, motivo, false),
 
-      try {
-
-        const { error } = await sb
-          .from("agenda")
-          .update({
-            status_jogo: "cancelado",
-            motivo_cancelamento: motivo,
-            cancelado_em: new Date().toISOString(),
-            atualizado_em: new Date().toISOString()
-          })
-          .eq("id", id)
-          .eq("empresa_id", APP_EMPRESA_ID);
-
-        if (error) {
-          throw error;
-        }
-
-await sincronizarAgendaVisual();
-
-        crvToast({
-          titulo: "Jogo cancelado",
-          mensagem: "O horário foi liberado na agenda.",
-          tipo: "success"
-        });
-
-      } catch (err) {
-
-        abrirModalAviso({
-          titulo: "Erro",
-          texto:
-            err.message ||
-            "Erro ao cancelar jogo."
-        });
-
-      }
-
-    }
+    onSecondary: ehMensal
+      ? motivo => executarCancelamentoJogoAgenda(jogo, motivo, true)
+      : null
 
   });
 }
 
-function apagarJogo(id) {
+async function executarCancelamentoJogoAgenda(jogo, motivo, restanteCiclo) {
+  try {
+    let error = null;
 
-  const jogo =
-    agendaDados.find(j => String(j.id) === String(id));
+    if (restanteCiclo) {
+      const mensalidade = buscarMensalidadeAgenda(jogo);
 
-  abrirModalAviso({
-
-    titulo: "Apagar definitivamente",
-
-    texto:
-      `Isso vai apagar ${jogo?.cliente_nome || "este jogo"} do banco e remover o histórico vinculado. Deseja continuar?`,
-
-    confirmarTexto: "Apagar",
-
-    mostrarCancelar: true,
-
-    onConfirm: async () => {
-
-      try {
-
-        await sb
-          .from("agenda_jogadores")
-          .delete()
-          .eq("agenda_id", id);
-
-        await sb
-          .from("agenda")
-          .delete()
-          .eq("id", id);
-
-await sincronizarAgendaVisual();
-
-        crvToast({
-          titulo: "Jogo apagado",
-          mensagem: "Registro removido definitivamente.",
-          tipo: "success"
-        });
-
-      } catch (err) {
-
-        abrirModalAviso({
-          titulo: "Erro",
-          texto:
-            err.message ||
-            "Erro ao apagar."
-        });
-
+      if (!mensalidade) {
+        throw new Error("Não foi possível localizar o ciclo mensal deste jogo.");
       }
 
+      ({ error } = await sb.rpc("cancelar_restante_ciclo_mensal_agenda", {
+        p_agenda_origem_id: obterAgendaOrigemMensal(jogo),
+        p_competencia: mensalidade.competencia,
+        p_a_partir_de:
+          jogo.horario_original_data || jogo.data_agendamento,
+        p_motivo: motivo
+      }));
+    } else {
+      ({ error } = await sb.rpc("cancelar_ocorrencia_agenda", {
+        p_agenda_id: jogo.id,
+        p_motivo: motivo
+      }));
     }
 
-  });
+    if (error) throw error;
 
+    await sincronizarAgendaVisual();
+
+    crvToast({
+      titulo: restanteCiclo ? "Ciclo mensal cancelado" : "Jogo cancelado",
+      mensagem: restanteCiclo
+        ? "As ocorrências restantes foram canceladas e o histórico foi preservado."
+        : "Apenas esta ocorrência foi cancelada e o horário foi liberado.",
+      tipo: "success"
+    });
+  } catch (err) {
+    abrirModalAviso({
+      titulo: "Erro ao cancelar",
+      texto: err.message || "Não foi possível cancelar o jogo."
+    });
+  }
 }
-
-
 
 function obterJogoOrigemMensalidade(mensalidade) {
   return agendaDados.find(jogo => {
@@ -3645,12 +3823,6 @@ async function renovarMensalidadeAgenda(id) {
   const datasProximoMes =
     obterDatasProximoMesMensalidade(jogo, proximaCompetencia);
 
-  const primeiraData =
-    datasProximoMes[0] || `${proximaCompetencia}-01`;
-
-  const ultimaData =
-    datasProximoMes[datasProximoMes.length - 1] || primeiraData;
-
   const horario =
     obterResumoHorarioRenovacaoAgenda(jogo);
 
@@ -3717,51 +3889,20 @@ async function renovarMensalidadeAgenda(id) {
 
       try {
 
-        const dataInicio = primeiraData;
-        const dataFim = ultimaData;
-
-        const { error } = await sb
-          .from("agenda_mensalidades")
-          .upsert(
-            [{
-              empresa_id: APP_EMPRESA_ID,
-              agenda_origem_id: mensalidade.agenda_origem_id,
-              competencia: proximaCompetencia,
-              valor: Number(
-                mensalidade.valor ||
-                jogo.valor_mensal ||
-                0
-              ),
-              status: "pendente",
-              data_inicio: dataInicio,
-              data_fim: dataFim,
-              quantidade_jogos_prevista:
-                datasProximoMes.length ||
-                Number(
-                  mensalidade.quantidade_jogos_prevista || 4
-                ),
-              quantidade_jogos_usados: 0,
-              renovacao_status: "ativa",
-              observacoes:
-                `Próximo mês criado pela agenda: ${formatarDataCurtaAgenda(dataInicio)} até ${formatarDataCurtaAgenda(dataFim)}`,
-              atualizado_em: new Date().toISOString()
-            }],
-            {
-              onConflict:
-                "empresa_id,agenda_origem_id,competencia"
-            }
-          );
+        const { error } = await sb.rpc("renovar_ciclo_mensal_agenda", {
+          p_agenda_origem_id: mensalidade.agenda_origem_id,
+          p_competencia: `${proximaCompetencia}-01`,
+          p_valor_mensal: Number(
+            mensalidade.valor || jogo.valor_mensal || 0
+          ),
+          p_dia_pagamento: Number(
+            mensalidade.dia_pagamento ||
+            jogo.dia_pagamento_mensal ||
+            1
+          )
+        });
 
         if (error) throw error;
-
-        await sb
-          .from("agenda_mensalidades")
-          .update({
-            renovacao_status: "renovada",
-            atualizado_em: new Date().toISOString()
-          })
-          .eq("id", mensalidade.id)
-          .eq("empresa_id", APP_EMPRESA_ID);
 
         await sincronizarAgendaVisual();
 
@@ -3787,54 +3928,6 @@ async function renovarMensalidadeAgenda(id) {
 
   });
 
-}
-
-async function cancelarMensalidadeAgenda(id) {
-  const mensalidade =
-    encontrarMensalidadePorId(id);
-
-  if (!mensalidade) return;
-
-  const jogo =
-    obterJogoOrigemMensalidade(mensalidade);
-
-  abrirModalAviso({
-    titulo: "Cancelar mensalidade",
-    texto: `Cancelar mensalidade de ${jogo?.cliente_nome || "mensalista"}?`,
-    confirmarTexto: "Cancelar mensalidade",
-    mostrarCancelar: true,
-    onConfirm: async () => {
-      try {
-        const { error } = await sb
-          .from("agenda_mensalidades")
-          .update({
-            status: "cancelado",
-            renovacao_status: "cancelada",
-            atualizado_em: new Date().toISOString()
-          })
-          .eq("id", id)
-          .eq("empresa_id", APP_EMPRESA_ID);
-
-        if (error) throw error;
-
-        await carregarAgenda();
-
-        renderizarMensalidadesAgenda();
-
-        crvToast({
-          titulo: "Mensalidade cancelada",
-          mensagem: "Registro atualizado com sucesso.",
-          tipo: "success"
-        });
-
-      } catch (err) {
-        abrirModalAviso({
-          titulo: "Erro",
-          texto: err.message || "Erro ao cancelar mensalidade."
-        });
-      }
-    }
-  });
 }
 
 function contarJogosMensaisUsadosNaCompetencia(agendaOrigemId, competencia) {
@@ -5172,7 +5265,10 @@ function renderizarMensaisDoMesAgenda(dataISO) {
           horario,
           datas,
           pagamentoPrevisto:
-            obterPagamentoPrevistoMensalidadeAgenda(datas)
+            obterPagamentoPrevistoMensalidadeAgenda(
+              mensalidade,
+              competencia
+            )
         };
       })
       .filter(Boolean)
@@ -5200,8 +5296,8 @@ function renderizarMensaisDoMesAgenda(dataISO) {
       <span>
         ${
           itens.length === 1
-            ? "1 mensalista encontrado"
-            : `${itens.length} mensalista(s) encontrado(s)`
+            ? "1 horário mensal encontrado"
+            : `${itens.length} horários mensais encontrados`
         }
       </span>
     </div>
@@ -5226,6 +5322,7 @@ function renderizarMensaisDoMesAgenda(dataISO) {
 
             <div class="agenda-mensal-info">
               ${horario.originalTexto} • ${jogo.local_recurso || "-"}
+              • ${fmtAgenda(mensalidade.valor || jogo.valor_mensal || 0)}
             </div>
 
             <div class="agenda-mensal-datas">

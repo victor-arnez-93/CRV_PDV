@@ -31,6 +31,7 @@
 .periodo-btns {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .periodo-btn {
@@ -78,6 +79,16 @@
 
 .relatorio-card:hover { transform: translateY(-2px); }
 .relatorio-card .card-title { display: flex; align-items: center; gap: 5px; }
+
+[data-theme="dark"] .relatorio-periodo,
+[data-theme="dark"] .relatorio-card,
+[data-theme="dark"] .grafico-card,
+[data-theme="dark"] .relatorio-top,
+[data-theme="dark"] .relatorio-jogos,
+[data-theme="dark"] .relatorio-estoque-baixo,
+[data-theme="dark"] .relatorio-caixas {
+  background: #111111;
+}
 
 /* ===== GRÁFICOS ===== */
 .relatorio-graficos {
@@ -281,9 +292,10 @@
 
 #topProdutos,
 #topProdutosLucro {
-  max-height: 330px;
+  max-height: 180px;
   overflow-y: auto;
   padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 #topProdutos::-webkit-scrollbar,
@@ -409,10 +421,18 @@
 }
 
 #listaJogosRelatorio,
-#historicoCaixas {
-  max-height: 250px;
+#listaEstoqueBaixo {
+  max-height: 200px;
   overflow-y: auto;
   padding-right: 4px;
+  overscroll-behavior: contain;
+}
+
+#historicoCaixas {
+  max-height: 252px;
+  overflow-y: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 #listaJogosRelatorio::-webkit-scrollbar,
@@ -433,9 +453,7 @@
 }
 
 #listaEstoqueBaixo {
-  max-height: 230px;
-  overflow-y: auto;
-  padding-right: 4px;
+  max-height: 200px;
 }
 
 .estoque-baixo-item {
@@ -677,16 +695,15 @@
 .periodo-btns,
 .periodo-botoes {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
 .periodo-btn {
-  width: fit-content;
-  max-width: min(260px, 100%);
-  min-width: 210px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   min-height: 42px;
   height: 42px;
   margin: 0 auto;
@@ -1091,9 +1108,9 @@
 .page-header .btn-primary,
 .page-header .btn-secondary,
 .periodo-btn {
-  width: fit-content;
-  max-width: min(235px, 100%);
-  min-width: 190px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   min-height: 40px;
   height: 40px;
   padding: 0 14px;

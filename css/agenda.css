@@ -616,6 +616,45 @@ body.light .status-cobranca {
   display: grid;
 }
 
+.agenda-ciclo-info {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid rgba(212,168,67,.28);
+  border-radius: var(--radius-md);
+  background: rgba(212,168,67,.07);
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.agenda-card-aviso {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.agenda-card-aviso.alterado {
+  border: 1px solid rgba(212,168,67,.30);
+  background: rgba(212,168,67,.08);
+  color: #D4A843;
+}
+
+.agenda-card-aviso.cancelado {
+  border: 1px solid rgba(255,80,80,.28);
+  background: rgba(255,80,80,.08);
+  color: #FF6B6B;
+}
+
+[data-theme="dark"] .agenda-card,
+[data-theme="dark"] .agenda-inline-panel,
+[data-theme="dark"] .agenda-config-inline-panel,
+[data-theme="dark"] .agenda-modal-card {
+  background: #111111;
+}
+
 .agenda-alteracao-box {
   display: none;
   flex-direction: column;
@@ -1668,6 +1707,22 @@ body.light .agenda-alteracao-info {
 
 .agenda-jogador-row.modo-agendamento:has(.jogador-origem) {
   grid-template-columns: minmax(240px, 1fr) 150px 42px;
+}
+
+.agenda-jogador-row.modo-agendamento.jogador-avulso:has(.jogador-origem) {
+  grid-template-columns: minmax(220px, 1fr) 150px 120px 42px;
+}
+
+.agenda-jogador-row.modo-agendamento.usa-times:not(:has(.jogador-origem)) {
+  grid-template-columns: minmax(200px, 1fr) 130px 120px 42px;
+}
+
+.agenda-jogador-row.modo-agendamento.usa-times:has(.jogador-origem):not(.jogador-avulso) {
+  grid-template-columns: minmax(200px, 1fr) 150px 130px 42px;
+}
+
+.agenda-jogador-row.modo-agendamento.usa-times.jogador-avulso:has(.jogador-origem) {
+  grid-template-columns: minmax(190px, 1fr) 150px 130px 120px 42px;
 }
 
 .jogador-origem {
@@ -3061,6 +3116,26 @@ body.light .agenda-alteracao-info {
 
   .agenda-jogador-row.modo-agendamento {
     grid-template-columns: 1fr auto;
+  }
+
+  .agenda-jogador-row.modo-agendamento.jogador-avulso:has(.jogador-origem),
+  .agenda-jogador-row.modo-agendamento.usa-times:not(:has(.jogador-origem)),
+  .agenda-jogador-row.modo-agendamento.usa-times:has(.jogador-origem):not(.jogador-avulso),
+  .agenda-jogador-row.modo-agendamento.usa-times.jogador-avulso:has(.jogador-origem) {
+    grid-template-columns: 1fr 42px;
+  }
+
+  .agenda-jogador-row.modo-agendamento .jogador-origem,
+  .agenda-jogador-row.modo-agendamento .jogador-time,
+  .agenda-jogador-row.modo-agendamento .jogador-valor {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .agenda-jogador-row.modo-agendamento .agenda-remover-jogador {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .agenda-remover-jogador {

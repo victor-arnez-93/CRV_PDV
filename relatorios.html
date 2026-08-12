@@ -149,8 +149,11 @@
         <span class="periodo-label">Período</span>
         <div class="periodo-btns">
           <button class="periodo-btn active" data-periodo="hoje" onclick="setPeriodo(this,'hoje')">Hoje</button>
-          <button class="periodo-btn" data-periodo="semana" onclick="setPeriodo(this,'semana')">7 dias</button>
-          <button class="periodo-btn" data-periodo="mes" onclick="setPeriodo(this,'mes')">30 dias</button>
+          <button class="periodo-btn" data-periodo="semana" onclick="setPeriodo(this,'semana')">Semanal</button>
+          <button class="periodo-btn" data-periodo="mes" onclick="setPeriodo(this,'mes')">Mensal</button>
+          <button class="periodo-btn" data-periodo="trimestre" onclick="setPeriodo(this,'trimestre')">Trimestral</button>
+          <button class="periodo-btn" data-periodo="semestre" onclick="setPeriodo(this,'semestre')">Semestral</button>
+          <button class="periodo-btn" data-periodo="ano" onclick="setPeriodo(this,'ano')">Anual</button>
         </div>
         <div class="periodo-custom">
           <input class="input" type="date" id="dataInicio" style="height:36px;font-size:0.85rem;" />
@@ -265,6 +268,7 @@
       <div class="card relatorio-caixas">
         <div class="grafico-header" style="margin-bottom:16px;">
           <h3>Histórico de caixas</h3>
+          <span class="badge badge-info" id="badgeCaixasQtd">0 caixa(s)</span>
         </div>
         <div id="historicoCaixas"></div>
       </div>

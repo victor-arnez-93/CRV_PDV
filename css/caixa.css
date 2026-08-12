@@ -1493,6 +1493,103 @@ body.light .jogo-caixa-status.cobranca {
   line-height: 1.45;
 }
 
+.jogo-caixa-mensalistas-incluidos,
+.jogo-caixa-adicionar-avulso {
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.jogo-caixa-mensalistas-header,
+.jogo-caixa-adicionar-avulso-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.jogo-caixa-mensalistas-header strong,
+.jogo-caixa-adicionar-avulso-header strong {
+  display: block;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: .86rem;
+}
+
+.jogo-caixa-mensalistas-header small,
+.jogo-caixa-adicionar-avulso-header small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: .7rem;
+  line-height: 1.35;
+}
+
+.jogo-caixa-mensalistas-header > span {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: .64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.jogo-caixa-mensalistas-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 112px;
+  overflow-y: auto;
+}
+
+.jogo-caixa-mensalista-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  font-size: .69rem;
+  font-weight: 800;
+}
+
+.jogo-caixa-mensalista-chip.pago {
+  border-color: rgba(84, 205, 22, .32);
+  color: var(--crv-green);
+}
+
+.jogo-caixa-mensalista-chip.pendente {
+  border-color: rgba(212, 168, 67, .34);
+  color: #d4a843;
+}
+
+.jogo-caixa-adicionar-avulso-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 120px 120px auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.jogo-caixa-adicionar-avulso-grid .input,
+.jogo-caixa-adicionar-avulso-grid button {
+  min-height: 40px;
+  height: 40px;
+}
+
+.jogo-caixa-adicionar-avulso-grid button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .jogo-caixa-rateio {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
@@ -1563,11 +1660,11 @@ body.light .jogo-caixa-status.cobranca {
 
 .jogo-caixa-jogador-row {
   display: grid;
-  grid-template-columns: 28px minmax(130px, 1fr) 100px 120px 96px;
+  grid-template-columns: 28px minmax(130px, 1fr) 100px 120px 96px 38px;
   gap: 8px;
   align-items: center;
 
-  min-width: 560px;
+  min-width: 620px;
   width: 100%;
 
   padding: 8px 10px;
@@ -1702,6 +1799,25 @@ body.light .jogo-caixa-status.cobranca {
 .jogo-caixa-btn-comanda:disabled {
   opacity: .45;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.jogo-caixa-btn-remover {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  color: var(--text-muted);
+}
+
+.jogo-caixa-btn-remover:hover:not(:disabled) {
+  color: var(--crv-red);
+  border-color: color-mix(in srgb, var(--crv-red) 48%, var(--border));
+}
+
+.jogo-caixa-btn-remover:disabled {
+  opacity: .35;
   pointer-events: none;
 }
 
@@ -2129,8 +2245,8 @@ body.light .jogo-caixa-status.cobranca {
   }
 
   .jogo-caixa-jogador-row {
-    grid-template-columns: 30px minmax(220px, 1fr) 130px 150px 120px;
-    min-width: 760px;
+    grid-template-columns: 30px minmax(220px, 1fr) 130px 150px 120px 40px;
+    min-width: 820px;
   }
 }
 
@@ -3173,6 +3289,15 @@ body.light .jogo-caixa-status.cobranca {
     font-size: 1.05rem;
   }
 
+  .jogo-caixa-adicionar-avulso-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .jogo-caixa-adicionar-avulso-grid #novoAvulsoJogoNome,
+  .jogo-caixa-adicionar-avulso-grid button {
+    grid-column: 1 / -1;
+  }
+
 .jogo-caixa-rateio {
   grid-template-columns: 1fr;
 }
@@ -3189,6 +3314,7 @@ body.light .jogo-caixa-status.cobranca {
   .jogo-caixa-jogador-row {
     grid-template-columns: 28px minmax(0, 1fr);
     gap: 8px;
+    min-width: 0;
   }
 
   .jogo-caixa-valor-input,
@@ -3196,6 +3322,11 @@ body.light .jogo-caixa-status.cobranca {
   .jogo-caixa-btn-comanda {
     grid-column: 2;
     width: 100%;
+  }
+
+  .jogo-caixa-btn-remover {
+    grid-column: 1;
+    justify-self: center;
   }
 
   .jogo-caixa-btn-comanda {
@@ -3511,12 +3642,34 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 .quick-item.tipo-servico {
-  border-color: rgba(84, 205, 22, .30);
+  border-color: var(--border);
 }
 
 .quick-item.tipo-taxa,
 .quick-item.tipo-outro {
-  border-color: rgba(212, 168, 67, .34);
+  border-color: var(--border);
+}
+
+.pdv-quick-actions .btn-abrir-modal-comandas,
+.pdv-quick-actions > a,
+.modal-itens-tipos button,
+.tipo-itens-caixa-menu button,
+.quick-item,
+.produto-caixa-item {
+  font-family: var(--font-display);
+}
+
+.btn-toggle-rapidos-balcao {
+  display: none;
+}
+
+[data-theme="dark"] .quick-item,
+[data-theme="dark"] .produto-caixa-item,
+[data-theme="dark"] .tipo-itens-caixa-menu,
+[data-theme="dark"] .pdv-cart,
+[data-theme="dark"] .pdv-manual,
+[data-theme="dark"] .pdv-atividade {
+  background: #111111;
 }
 
 .modal-itens-tipos {
@@ -3828,6 +3981,10 @@ body.caixa-modo-balcao .pdv-quick-header {
   margin: 10px 0 7px;
 }
 
+body.caixa-modo-balcao .btn-toggle-rapidos-balcao {
+  display: inline-flex;
+}
+
 body.caixa-modo-balcao .pdv-quick-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
@@ -3838,6 +3995,18 @@ body.caixa-modo-balcao .pdv-quick-grid {
   padding: 0 3px 6px 0;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+body.caixa-modo-balcao.rapidos-balcao-ocultos .pdv-quick-grid {
+  display: none;
+  min-height: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+body.caixa-modo-balcao.rapidos-balcao-ocultos .pdv-quick-header {
+  margin-bottom: 2px;
 }
 
 body.caixa-modo-balcao .pdv-quick-grid .quick-item {
@@ -3977,13 +4146,13 @@ body.caixa-modo-balcao .pdv-finalizar {
     margin: 0;
   }
 
-  .caixa-infobar-actions {
+  body.caixa-modo-balcao .caixa-infobar-actions {
     width: 100%;
     margin-left: 0;
   }
 
-  .caixa-infobar-actions .caixa-view-toggle,
-  .caixa-infobar-actions #btnFecharCaixa {
+  body.caixa-modo-balcao .caixa-infobar-actions .caixa-view-toggle,
+  body.caixa-modo-balcao .caixa-infobar-actions #btnFecharCaixa {
     flex: 1 1 0;
     width: auto;
     min-width: 0;
@@ -4031,12 +4200,12 @@ body.caixa-modo-balcao .pdv-finalizar {
     flex-direction: column;
   }
 
-  .caixa-infobar-actions {
+  body.caixa-modo-balcao .caixa-infobar-actions {
     flex-direction: column;
   }
 
-  .caixa-infobar-actions .caixa-view-toggle,
-  .caixa-infobar-actions #btnFecharCaixa {
+  body.caixa-modo-balcao .caixa-infobar-actions .caixa-view-toggle,
+  body.caixa-modo-balcao .caixa-infobar-actions #btnFecharCaixa {
     width: 100%;
   }
 
