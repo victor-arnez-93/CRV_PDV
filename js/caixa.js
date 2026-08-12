@@ -64,6 +64,15 @@ const CRV_CAIXA_BALCAO_SIDEBAR_KEY = "crv-caixa-balcao-sidebar-anterior";
 const CRV_CAIXA_MODO_RAPIDO_LEGADO_KEY = "crv-caixa-modo-rapido";
 const CRV_CAIXA_SIDEBAR_LEGADO_KEY = "crv-caixa-sidebar-anterior";
 
+function operadorCaixaRestritoAoBalcao() {
+  const operadorId = sessionStorage.getItem("CRV_OPERADOR_ID");
+  const perfil = String(
+    sessionStorage.getItem("CRV_OPERADOR_PERFIL") || ""
+  ).toLowerCase();
+
+  return Boolean(operadorId && perfil !== "admin");
+}
+
 const TIPOS_ITEM_CAIXA = {
   produto: {
     singular: "produto",
@@ -117,29 +126,39 @@ function aplicarModoBalcaoCaixa(ativo, { persistir = true } = {}) {
   const shell = document.querySelector(".app-shell");
   const botao = document.getElementById("btnModoBalcao");
 
-  if (!body || !shell || !botao) return;
+  if (!body || !shell) return;
+
+  const operadorRestrito = operadorCaixaRestritoAoBalcao();
 
   const estavaAtivo = modoBalcaoCaixa;
-  modoBalcaoCaixa = ativo === true;
+  modoBalcaoCaixa = operadorRestrito || ativo === true;
 
   body.classList.toggle("caixa-modo-balcao", modoBalcaoCaixa);
+  body.classList.toggle("caixa-operador-restrito", operadorRestrito);
 
   if (modoBalcaoCaixa && !estavaAtivo) {
     rapidosBalcaoOcultos = true;
   }
 
   aplicarEstadoRapidosBalcaoCaixa();
-  botao.classList.toggle("active", modoBalcaoCaixa);
-  botao.setAttribute("aria-pressed", String(modoBalcaoCaixa));
-  botao.title = modoBalcaoCaixa
-    ? "Voltar ao modo completo"
-    : "Ativar modo balcão";
+  if (botao) {
+    botao.classList.toggle("active", modoBalcaoCaixa);
+    botao.setAttribute("aria-pressed", String(modoBalcaoCaixa));
+    botao.setAttribute("aria-disabled", String(operadorRestrito));
+    botao.title = operadorRestrito
+      ? "Modo balcão obrigatório para este operador"
+      : modoBalcaoCaixa
+        ? "Voltar ao modo completo"
+        : "Ativar modo balcão";
 
-  botao.innerHTML = modoBalcaoCaixa
-    ? `<i data-lucide="layout-dashboard" width="16" height="16"></i><span>Modo completo</span>`
-    : `<i data-lucide="calculator" width="16" height="16"></i><span>Modo balcão</span>`;
+    botao.innerHTML = modoBalcaoCaixa
+      ? `<i data-lucide="layout-dashboard" width="16" height="16"></i><span>Modo completo</span>`
+      : `<i data-lucide="calculator" width="16" height="16"></i><span>Modo balcão</span>`;
+  }
 
-  if (modoBalcaoCaixa) {
+  const podeRecolherSidebar = window.matchMedia("(min-width: 769px)").matches;
+
+  if (modoBalcaoCaixa && podeRecolherSidebar) {
     if (
       !estavaAtivo &&
       localStorage.getItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY) === null
@@ -151,7 +170,7 @@ function aplicarModoBalcaoCaixa(ativo, { persistir = true } = {}) {
     }
 
     shell.classList.add("sidebar-collapsed");
-  } else if (estavaAtivo) {
+  } else if (!modoBalcaoCaixa && estavaAtivo && podeRecolherSidebar) {
     const sidebarAnterior =
       localStorage.getItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY) === "1";
 
@@ -159,7 +178,7 @@ function aplicarModoBalcaoCaixa(ativo, { persistir = true } = {}) {
     localStorage.removeItem(CRV_CAIXA_BALCAO_SIDEBAR_KEY);
   }
 
-  if (persistir) {
+  if (persistir && !operadorRestrito) {
     localStorage.setItem(
       CRV_CAIXA_MODO_BALCAO_KEY,
       modoBalcaoCaixa ? "1" : "0"
@@ -204,15 +223,37 @@ function setupModoBalcaoCaixa() {
   migrarPreferenciasModoBalcaoCaixa();
 
   botao.dataset.ready = "1";
-  botao.addEventListener("click", () => {
+  botao.addEventListener("click", async () => {
+    if (operadorCaixaRestritoAoBalcao()) {
+      await alertaCaixa(
+        "Modo balcão obrigatório",
+        "Este operador usa o Caixa somente no modo balcão. A conta principal ou um operador Admin pode acessar o modo completo."
+      );
+      return;
+    }
+
     aplicarModoBalcaoCaixa(!modoBalcaoCaixa);
   });
 
   const modoSalvo =
     localStorage.getItem(CRV_CAIXA_MODO_BALCAO_KEY) === "1";
 
-  aplicarModoBalcaoCaixa(modoSalvo, { persistir: false });
+  aplicarModoBalcaoCaixa(
+    operadorCaixaRestritoAoBalcao() ? true : modoSalvo,
+    { persistir: false }
+  );
 }
+
+function reaplicarAcessoOperadorCaixa() {
+  const modoSalvo = localStorage.getItem(CRV_CAIXA_MODO_BALCAO_KEY) === "1";
+
+  aplicarModoBalcaoCaixa(
+    operadorCaixaRestritoAoBalcao() ? true : modoSalvo,
+    { persistir: false }
+  );
+}
+
+document.addEventListener("crv:operador-alterado", reaplicarAcessoOperadorCaixa);
 
 function aplicarEstadoRapidosBalcaoCaixa() {
   const body = document.body;
@@ -2450,6 +2491,14 @@ function validarDescricaoCobrancaAvulsa(descricao) {
 }
 
 async function adicionarManual() {
+  if (operadorCaixaRestritoAoBalcao()) {
+    await alertaCaixa(
+      "Ação restrita",
+      "Cobranças avulsas ficam disponíveis somente para a conta principal ou para operadores Admin."
+    );
+    return;
+  }
+
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Caixa fechado",
@@ -4393,62 +4442,66 @@ function atualizarInterfaceModoPDV() {
 }
 
 // ======================================================
-// SINCRONIZAÇÃO AUTOMÁTICA DE JOGOS PAGOS SEM VENDA
+// RECONCILIAÇÃO DE FALHAS DE JOGOS NO CAIXA ATUAL
 // ======================================================
 async function verificarJogosPendentesSincronizacaoCaixa() {
+  jogosPendentesSincronizacaoCaixa = [];
+  removerAvisoSincronizacaoJogosCaixa();
+
   if (!caixaPermiteJogos()) return;
-  if (!caixa || caixa.status !== "aberto") return;
+  if (!caixa || caixa.status !== "aberto" || !sistemaOnline()) return;
+
+  const aberturaCaixa = new Date(caixa.data_abertura || 0);
+
+  if (Number.isNaN(aberturaCaixa.getTime())) return;
 
   try {
-    await carregarJogosCaixa();
+    const { data: jogadoresFalhos, error: erroJogadores } = await sb
+      .from("agenda_jogadores")
+      .select("id, agenda_id, valor, forma_pagamento, status_pagamento, pago, pago_em, venda_id, removido")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("pago", true)
+      .eq("status_pagamento", STATUS_JOGADOR_CAIXA.PAGO_DIRETO)
+      .is("venda_id", null)
+      .gte("pago_em", aberturaCaixa.toISOString())
+      .limit(1000);
 
-    const jogosComRecebimento = jogosCaixa.filter(jogo => {
-      const jogadores = jogadoresCaixaPorAgenda[jogo.id] || [];
+    if (erroJogadores) throw erroJogadores;
 
-const totalPago = jogadores
-  .filter(jogador => {
-    return (
-      jogador.pago === true &&
-      !jogador.venda_id &&
-      String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
-    );
-  })
-  .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0);
-
-      return totalPago > 0;
+    const recebimentosSemVenda = (jogadoresFalhos || []).filter(jogador => {
+      return (
+        jogador.removido !== true &&
+        Boolean(jogador.agenda_id) &&
+        Number(jogador.valor || 0) > 0 &&
+        String(jogador.forma_pagamento || "").toLowerCase() !== "comanda"
+      );
     });
 
-    if (!jogosComRecebimento.length) {
-      jogosPendentesSincronizacaoCaixa = [];
-      removerAvisoSincronizacaoJogosCaixa();
+    if (!recebimentosSemVenda.length) {
       return;
     }
 
-    const idsJogos = jogosComRecebimento.map(jogo => jogo.id);
+    const idsJogos = [
+      ...new Set(recebimentosSemVenda.map(jogador => jogador.agenda_id))
+    ];
 
-    const { data: vendasAgenda, error } = await sb
-      .from("vendas")
-      .select("origem_id, agenda_id, origem")
+    const { data: jogos, error: erroJogos } = await sb
+      .from("agenda")
+      .select("*")
       .eq("empresa_id", obterEmpresaId())
-      .in("origem", ["agenda", "agenda_avulso"])
-      .in("agenda_id", idsJogos);
+      .in("id", idsJogos);
 
-    if (error) throw error;
+    if (erroJogos) throw erroJogos;
 
-    const idsComVenda = new Set(
-      (vendasAgenda || [])
-        .map(venda => venda.agenda_id || venda.origem_id)
-        .filter(Boolean)
-        .map(id => String(id))
-    );
-
-    jogosPendentesSincronizacaoCaixa = jogosComRecebimento.filter(jogo => {
-      return !idsComVenda.has(String(jogo.id));
+    jogosPendentesSincronizacaoCaixa = (jogos || []).filter(jogo => {
+      return String(jogo.status_jogo || "").toLowerCase() !== "cancelado";
     });
 
     renderAvisoSincronizacaoJogosCaixa();
 
   } catch (err) {
+    jogosPendentesSincronizacaoCaixa = [];
+    removerAvisoSincronizacaoJogosCaixa();
     console.error("[CAIXA][SYNC JOGOS]", err);
   }
 }
@@ -4463,24 +4516,31 @@ function renderAvisoSincronizacaoJogosCaixa() {
   if (!pdvLeft) return;
 
   const aviso = document.createElement("div");
+  const quantidade = jogosPendentesSincronizacaoCaixa.length;
+  const rotuloCobranca = quantidade === 1
+    ? "1 cobrança de jogo precisa"
+    : `${quantidade} cobranças de jogos precisam`;
 
   aviso.className = "card aviso-sync-jogos-caixa";
   aviso.id = "avisoSyncJogosCaixa";
 
   aviso.innerHTML = `
-    <div>
-      <strong>
-        ${jogosPendentesSincronizacaoCaixa.length} jogo(s) pago(s) sem venda
-      </strong>
+    <div class="aviso-sync-jogos-caixa-conteudo">
+      <i data-lucide="triangle-alert" width="18" height="18"></i>
+      <div>
+        <strong>
+          ${rotuloCobranca} de reconciliação
+        </strong>
 
-      <span>
-        Existem cobranças da agenda que ainda não entraram no caixa.
-      </span>
+        <span>
+          Uma baixa feita durante este caixa não concluiu a integração com vendas. Nenhum histórico anterior foi considerado.
+        </span>
+      </div>
     </div>
 
     <button class="btn-secondary" type="button" id="btnSincronizarJogosPendentes">
       <i data-lucide="refresh-cw" width="15" height="15"></i>
-      <span>Sincronizar tudo</span>
+      <span>Reprocessar agora</span>
     </button>
   `;
 
@@ -4503,13 +4563,14 @@ async function sincronizarJogosPendentesCaixa() {
   if (!jogosPendentesSincronizacaoCaixa.length) return;
 
   const confirmar = await abrirConfirmacaoCaixa({
-    titulo: "Sincronizar jogos pendentes",
+    titulo: "Reprocessar cobranças de jogos",
     mensagem: `
-      Sincronizar
+      Reprocessar com segurança
       <strong>${jogosPendentesSincronizacaoCaixa.length}</strong>
-      jogo(s) já pago(s) que ainda não entraram no caixa?
+      cobrança(s) feita(s) depois da abertura deste caixa?<br><br>
+      O processo confere vendas existentes antes de criar ou atualizar os lançamentos.
     `,
-    textoConfirmar: "Sincronizar tudo"
+    textoConfirmar: "Reprocessar"
   });
 
   if (!confirmar) return;
@@ -4533,7 +4594,7 @@ atualizarInfobar();
 
     await alertaCaixa(
       "Sincronização concluída",
-      "Jogos pendentes foram lançados no caixa, vendas e relatórios."
+      "As cobranças foram reconciliadas com caixa, vendas e relatórios."
     );
 
   } catch (err) {

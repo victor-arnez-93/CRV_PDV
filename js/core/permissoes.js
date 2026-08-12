@@ -49,6 +49,19 @@ window.crvPermissoes = (() => {
     return labels[codigo] || codigo;
   }
 
+  function labelPerfil(perfil) {
+    const labels = {
+      admin: "Admin",
+      gerente: "Gerente",
+      operador: "Operador",
+      caixa: "Caixa",
+      agenda: "Agenda",
+      relatorios: "Relatórios"
+    };
+
+    return labels[String(perfil || "").toLowerCase()] || perfil || "Operador";
+  }
+
   function perfilPadraoPermissoes(perfil) {
     const permissoes = {
       admin: [
@@ -105,9 +118,11 @@ window.crvPermissoes = (() => {
     return permissoes[perfil] || permissoes.operador;
   }
 
-  function permissoesEspeciaisPorPerfil() {
+  function permissoesEspeciaisPorPerfil(perfil) {
+    const perfilNormalizado = String(perfil || "operador").toLowerCase();
+
     return {
-      venda_manual: true,
+      venda_manual: perfilNormalizado === "admin",
       desconto: true,
       cancelar_venda: true,
       abrir_caixa: true,
@@ -172,7 +187,7 @@ window.crvPermissoes = (() => {
           </div>
 
           <span class="operador-perfil">
-            ${op.perfil}
+            ${labelPerfil(op.perfil)}
           </span>
         </div>
 

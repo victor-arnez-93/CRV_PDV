@@ -383,6 +383,7 @@
         class="btn-abrir-modal-comandas"
         id="btnTiposItensCaixa"
         aria-expanded="false"
+        aria-controls="menuTiposItensCaixa"
       >
         <i data-lucide="sliders-horizontal" width="13" height="13"></i>
         Tipos
@@ -770,7 +771,12 @@
         </p>
       </div>
 
-      <button class="btn-ghost" style="padding:6px;" id="btnFecharFinalizarJogo">
+      <button
+        class="btn-ghost modal-close-jogo-caixa"
+        type="button"
+        id="btnFecharFinalizarJogo"
+        aria-label="Fechar cobrança do jogo"
+      >
         <i data-lucide="x" width="16" height="16"></i>
       </button>
     </div>
@@ -800,26 +806,35 @@
         </div>
 
         <div class="jogo-caixa-adicionar-avulso-grid">
-          <input
-            class="input"
-            id="novoAvulsoJogoNome"
-            placeholder="Nome do jogador"
-            autocomplete="off"
-          />
+          <label class="jogo-caixa-campo jogo-caixa-campo-nome">
+            <span>Jogador</span>
+            <input
+              class="input"
+              id="novoAvulsoJogoNome"
+              placeholder="Nome do jogador"
+              autocomplete="off"
+            />
+          </label>
 
-          <input
-            class="input input-money"
-            id="novoAvulsoJogoValor"
-            placeholder="Valor"
-            inputmode="decimal"
-            autocomplete="off"
-          />
+          <label class="jogo-caixa-campo">
+            <span>Valor</span>
+            <input
+              class="input input-money"
+              id="novoAvulsoJogoValor"
+              placeholder="0,00"
+              inputmode="decimal"
+              autocomplete="off"
+            />
+          </label>
 
-          <select class="input" id="novoAvulsoJogoTime">
-            <option value="">Sem time</option>
-            <option value="A">Time A</option>
-            <option value="B">Time B</option>
-          </select>
+          <label class="jogo-caixa-campo">
+            <span>Time</span>
+            <select class="input" id="novoAvulsoJogoTime">
+              <option value="">Sem time</option>
+              <option value="A">Time A</option>
+              <option value="B">Time B</option>
+            </select>
+          </label>
 
           <button class="btn-secondary" type="button" id="btnAdicionarAvulsoJogoCaixa">
             <i data-lucide="user-plus" width="15" height="15"></i>

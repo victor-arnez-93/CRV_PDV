@@ -3,6 +3,7 @@
   let primeiraCarga = true;
   let estadoSync = "sincronizado";
   let pendencias = 0;
+  let ocultarBadgeTimer = null;
 
   function garantirStatusRedeVisual() {
     let badge = document.getElementById("crvNetworkBadge");
@@ -11,19 +12,9 @@
 
     badge = document.createElement("div");
     badge.id = "crvNetworkBadge";
-    badge.style.position = "fixed";
-    badge.style.right = "18px";
-    badge.style.bottom = "18px";
-    badge.style.zIndex = "999998";
-    badge.style.padding = "9px 13px";
-    badge.style.borderRadius = "999px";
-    badge.style.fontSize = ".72rem";
-    badge.style.fontWeight = "800";
-    badge.style.letterSpacing = ".08em";
-    badge.style.textTransform = "uppercase";
-    badge.style.backdropFilter = "blur(14px)";
-    badge.style.transition = "all .25s ease";
-    badge.style.pointerEvents = "none";
+    badge.className = "crv-network-badge";
+    badge.setAttribute("role", "status");
+    badge.setAttribute("aria-live", "polite");
     document.body.appendChild(badge);
 
     return badge;
@@ -36,9 +27,29 @@
     badge.style.boxShadow = sombra;
   }
 
+  function mostrarBadge(badge) {
+    clearTimeout(ocultarBadgeTimer);
+    badge.classList.remove("is-dismissed");
+  }
+
+  function ocultarBadgeSincronizadoDepois(badge) {
+    clearTimeout(ocultarBadgeTimer);
+    ocultarBadgeTimer = setTimeout(() => {
+      if (
+        estadoSync === "sincronizado" &&
+        pendencias === 0 &&
+        crvSistemaOnline()
+      ) {
+        badge.classList.add("is-dismissed");
+      }
+    }, 4200);
+  }
+
   function atualizarBadgeRede() {
     const badge = garantirStatusRedeVisual();
     const online = crvSistemaOnline();
+
+    mostrarBadge(badge);
 
     if (estadoSync === "sincronizando") {
       badge.textContent = `SINCRONIZANDO • ${pendencias} PENDENTE(S)`;
@@ -76,6 +87,11 @@
         "1px solid rgba(84,205,22,.55)",
         "0 0 18px rgba(84,205,22,.25)"
       );
+
+      if (pendencias === 0) {
+        ocultarBadgeSincronizadoDepois(badge);
+      }
+
       return;
     }
 

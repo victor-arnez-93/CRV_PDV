@@ -168,6 +168,20 @@
     <h2>Dados da empresa</h2>
 
     <div class="form-grid">
+      <div class="form-group full">
+        <label for="cfgNomeContaPrincipal">Nome da conta principal</label>
+        <input
+          id="cfgNomeContaPrincipal"
+          type="text"
+          placeholder="Ex: André"
+          autocomplete="name"
+        />
+        <small class="config-field-help">
+          Nome da pessoa responsável pela conta principal. Ele aparece nas
+          saudações; o nome fantasia abaixo continua identificando o negócio.
+        </small>
+      </div>
+
       <div class="form-group">
         <label>Nome fantasia</label>
         <input id="cfgNomeFantasia" type="text" placeholder="Ex: Comércio Modelo" />
@@ -392,7 +406,8 @@
               <div>
                 <h2>Operadores internos</h2>
                 <p class="config-muted">
-                  Cadastre funcionários ou responsáveis que usarão o sistema dentro desta empresa.
+                  Cadastre funcionários ou responsáveis que usarão esta mesma
+                  empresa sem compartilhar a senha da conta principal.
                 </p>
               </div>
 
@@ -400,6 +415,20 @@
                 <i class="fa-solid fa-user-plus"></i>
                 <span>Novo operador</span>
               </button>
+            </div>
+
+            <div class="operadores-acesso-nota">
+              <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+              <div>
+                <strong>Conta principal e operadores são acessos diferentes</strong>
+                <p>
+                  A conta principal é do responsável pelo negócio e possui
+                  acesso completo. Operadores com perfil diferente de Admin
+                  usam o Caixa somente no modo balcão e não acessam cobrança
+                  avulsa. As telas liberadas continuam configuráveis no escudo
+                  de cada operador.
+                </p>
+              </div>
             </div>
 
             <div class="operadores-lista" id="listaOperadores">
@@ -461,7 +490,9 @@
       <input type="hidden" id="operadorIdEdicao" />
 
       <p class="config-muted">
-        Defina o nome, usuário interno e perfil de acesso.
+        Defina o nome, usuário interno e perfil. O perfil Admin possui acesso
+        completo; os demais usam o Caixa no modo balcão e seguem as telas
+        liberadas nas permissões.
       </p>
 
       <div class="form-row">
@@ -485,12 +516,12 @@
         <div class="input-group">
           <label class="input-label" for="operadorPerfil">Perfil</label>
           <select class="input" id="operadorPerfil">
-            <option value="admin">Admin</option>
-            <option value="gerente">Gerente</option>
-            <option value="operador">Operador</option>
-            <option value="caixa">Caixa</option>
-            <option value="agenda">Agenda</option>
-            <option value="relatorios">Relatórios</option>
+            <option value="admin">Admin — acesso completo</option>
+            <option value="gerente">Gerente — gestão operacional</option>
+            <option value="operador">Operador — operação básica</option>
+            <option value="caixa">Caixa — vendas e comandas</option>
+            <option value="agenda">Agenda — horários e clientes</option>
+            <option value="relatorios">Relatórios — consulta gerencial</option>
           </select>
         </div>
       </div>

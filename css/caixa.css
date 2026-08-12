@@ -171,14 +171,26 @@
 .aviso-sync-jogos-caixa {
   margin-bottom: 14px;
   padding: 14px 16px;
-
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
-
   border-color: rgba(255,193,7,.35);
   background: rgba(255,193,7,.08);
+  overflow: hidden;
+}
+
+.aviso-sync-jogos-caixa-conteudo {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.aviso-sync-jogos-caixa-conteudo > svg {
+  margin-top: 1px;
+  color: #ffd56a;
 }
 
 .aviso-sync-jogos-caixa strong {
@@ -192,12 +204,16 @@
   display: block;
   color: var(--text-secondary);
   font-size: .82rem;
+  line-height: 1.4;
 }
 
 .aviso-sync-jogos-caixa .btn-secondary {
-  flex-shrink: 0;
+  width: auto;
+  max-width: 210px;
   min-height: 42px;
   padding: 0 18px;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 /* ===== MODO VENDA / COMANDA ===== */
@@ -1153,28 +1169,41 @@
 }
 
 .modal-finalizar-jogo-caixa {
-  max-width: 900px;
-  max-height: 88vh;
-
+  width: min(1120px, calc(100vw - 40px));
+  max-width: 1120px;
+  max-height: min(92dvh, 820px);
   display: flex;
   flex-direction: column;
-
   overflow: hidden;
 }
 
 .modal-finalizar-jogo-caixa .modal-body {
   flex: 1;
   min-height: 0;
-
   overflow-y: auto;
   overflow-x: hidden;
-
-  padding-right: 6px;
-  padding-bottom: 6px;
+  padding: 1px 7px 5px 1px;
+  scrollbar-gutter: stable;
 }
 
 .modal-finalizar-jogo-caixa .modal-footer {
   flex-shrink: 0;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-close-jogo-caixa {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
 }
 
 .modal-jogo-search {
@@ -1377,11 +1406,11 @@ body.light .jogo-caixa-status.cobranca {
 .jogo-caixa-resumo {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .jogo-caixa-resumo div {
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -1495,7 +1524,7 @@ body.light .jogo-caixa-status.cobranca {
 
 .jogo-caixa-mensalistas-incluidos,
 .jogo-caixa-adicionar-avulso {
-  padding: 13px 14px;
+  padding: 11px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
@@ -1571,15 +1600,33 @@ body.light .jogo-caixa-status.cobranca {
 
 .jogo-caixa-adicionar-avulso-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 120px 120px auto;
-  gap: 8px;
-  margin-top: 10px;
+  grid-template-columns: minmax(220px, 1fr) 126px 142px 144px;
+  gap: 9px;
+  align-items: end;
+  margin-top: 9px;
+}
+
+.jogo-caixa-campo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.jogo-caixa-campo > span {
+  color: var(--text-muted);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
 
 .jogo-caixa-adicionar-avulso-grid .input,
 .jogo-caixa-adicionar-avulso-grid button {
-  min-height: 40px;
-  height: 40px;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  height: 42px;
 }
 
 .jogo-caixa-adicionar-avulso-grid button {
@@ -1596,7 +1643,7 @@ body.light .jogo-caixa-status.cobranca {
   gap: 10px;
   align-items: end;
 
-  padding: 10px;
+  padding: 9px 10px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(212,160,23,.25);
   background: rgba(212,160,23,.07);
@@ -1638,14 +1685,13 @@ body.light .jogo-caixa-status.cobranca {
   flex-direction: column;
   gap: 8px;
 
-  max-height: 300px;
-  overflow-x: auto;
+  min-height: 164px;
+  max-height: min(280px, 34dvh);
+  overflow-x: hidden;
   overflow-y: auto;
-
-  padding-right: 6px;
-  padding-bottom: 8px;
-
+  padding: 2px 6px 5px 0;
   width: 100%;
+  scrollbar-gutter: stable;
 }
 
 .jogo-caixa-jogadores::-webkit-scrollbar {
@@ -1660,13 +1706,11 @@ body.light .jogo-caixa-status.cobranca {
 
 .jogo-caixa-jogador-row {
   display: grid;
-  grid-template-columns: 28px minmax(130px, 1fr) 100px 120px 96px 38px;
+  grid-template-columns: 28px minmax(150px, 1fr) 110px 136px 110px 40px;
   gap: 8px;
   align-items: center;
-
-  min-width: 620px;
+  min-width: 0;
   width: 100%;
-
   padding: 8px 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -1803,11 +1847,17 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 .jogo-caixa-btn-remover {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   color: var(--text-muted);
 }
 
@@ -2241,12 +2291,12 @@ body.light .jogo-caixa-status.cobranca {
   }
 
   .jogo-caixa-jogadores {
-    max-height: 360px;
+    max-height: min(280px, 34dvh);
   }
 
   .jogo-caixa-jogador-row {
-    grid-template-columns: 30px minmax(220px, 1fr) 130px 150px 120px 40px;
-    min-width: 820px;
+    grid-template-columns: 30px minmax(180px, 1fr) 120px 146px 116px 42px;
+    min-width: 0;
   }
 }
 
@@ -2828,6 +2878,26 @@ body.light .jogo-caixa-status.cobranca {
     font-size: .84rem;
   }
 
+  .caixa-infobar-actions {
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .caixa-infobar-actions .caixa-view-toggle,
+  .caixa-infobar-actions #btnFecharCaixa {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: 180px;
+    min-height: 46px;
+    height: 46px;
+    margin: 0;
+    font-size: .8rem;
+  }
+
 #btnFecharCaixa {
   width: 100%;
   max-width: 320px;
@@ -2860,16 +2930,22 @@ body.light .jogo-caixa-status.cobranca {
   /* --- PDV GRID --- */
 
   .pdv-grid {
+    width: 100%;
+    min-width: 0;
     grid-template-columns: 1fr;
     gap: 12px;
   }
 
 .pdv-left {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .pdv-right {
+  width: 100%;
+  min-width: 0;
   order: 1;
 }
 
@@ -3290,10 +3366,10 @@ body.light .jogo-caixa-status.cobranca {
   }
 
   .jogo-caixa-adicionar-avulso-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(112px, .42fr);
   }
 
-  .jogo-caixa-adicionar-avulso-grid #novoAvulsoJogoNome,
+  .jogo-caixa-campo-nome,
   .jogo-caixa-adicionar-avulso-grid button {
     grid-column: 1 / -1;
   }
@@ -3307,25 +3383,57 @@ body.light .jogo-caixa-status.cobranca {
 }
 
   .jogo-caixa-resumo {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .jogo-caixa-resumo div {
+    min-width: 0;
+    padding: 9px 8px;
+  }
+
+  .jogo-caixa-resumo strong {
+    font-size: .88rem;
   }
 
   .jogo-caixa-jogador-row {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr) minmax(88px, .58fr) 38px;
     gap: 8px;
     min-width: 0;
   }
 
-  .jogo-caixa-valor-input,
-  .jogo-caixa-jogador-row select,
-  .jogo-caixa-btn-comanda {
+  .jogo-caixa-jogador-row .jogo-caixa-check {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .jogo-caixa-jogador-nome {
     grid-column: 2;
+    grid-row: 1;
+  }
+
+  .jogo-caixa-valor-input {
+    grid-column: 3;
+    grid-row: 1;
     width: 100%;
   }
 
+  .jogo-caixa-jogador-row select {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .jogo-caixa-btn-comanda {
+    grid-column: 3 / 5;
+    grid-row: 2;
+    width: 100%;
+    max-width: none;
+  }
+
   .jogo-caixa-btn-remover {
-    grid-column: 1;
+    grid-column: 4;
+    grid-row: 1;
     justify-self: center;
   }
 
@@ -3355,6 +3463,47 @@ body.light .jogo-caixa-status.cobranca {
     overscroll-behavior: contain;
     border-radius: 18px 18px 0 0;
     padding: 18px 14px;
+  }
+
+  .modal-finalizar-jogo-caixa {
+    display: flex;
+    width: 100%;
+    max-height: 94dvh;
+    padding: 16px 12px 12px;
+    overflow: hidden;
+  }
+
+  .modal-finalizar-jogo-caixa .modal-header {
+    margin-bottom: 10px;
+  }
+
+  .modal-finalizar-jogo-caixa .modal-subtitle {
+    font-size: .72rem;
+    line-height: 1.35;
+  }
+
+  .modal-finalizar-jogo-caixa .modal-body {
+    gap: 9px;
+    overflow-y: auto;
+  }
+
+  .modal-finalizar-jogo-caixa .modal-footer {
+    display: grid;
+    grid-template-columns: minmax(100px, .72fr) minmax(0, 1.28fr);
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .modal-finalizar-jogo-caixa .modal-footer button {
+    width: 100%;
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  .jogo-caixa-jogadores {
+    min-height: 176px;
+    max-height: min(330px, 42dvh);
   }
 
   .modal-header {
@@ -3419,14 +3568,17 @@ body.light .jogo-caixa-status.cobranca {
   }
 }
 
+@media (max-width: 768px) {
   .aviso-sync-jogos-caixa {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: stretch;
-    text-align: center;
+    gap: 11px;
+    text-align: left;
   }
 
   .aviso-sync-jogos-caixa .btn-secondary {
     width: 100%;
+    max-width: none;
     justify-content: center;
   }
 
@@ -3483,6 +3635,7 @@ body.light .jogo-caixa-status.cobranca {
 
     font-size: .76rem;
   }
+}
 
 @media (max-width: 380px) {
   .main-content {
@@ -3755,13 +3908,13 @@ body.light .jogo-caixa-status.cobranca {
   }
 
   .tipo-itens-caixa-menu {
-    position: fixed;
-    top: auto;
-    right: 14px;
-    bottom: 18px;
-    left: 14px;
-    width: auto;
-    max-height: min(320px, 70dvh);
+    position: absolute;
+    top: calc(100% + 7px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    width: min(220px, calc(100vw - 28px));
+    max-height: min(280px, 56dvh);
   }
 }
 
@@ -3977,6 +4130,12 @@ body.caixa-modo-balcao .pdv-atividade {
   display: none;
 }
 
+body.caixa-operador-restrito #btnModoBalcao,
+body.caixa-operador-restrito #btnToggleCobrancaAvulsa,
+body.caixa-operador-restrito .pdv-manual {
+  display: none !important;
+}
+
 body.caixa-modo-balcao .pdv-quick-header {
   margin: 10px 0 7px;
 }
@@ -4128,6 +4287,34 @@ body.caixa-modo-balcao .pdv-finalizar {
     display: none;
   }
 
+  #viewCaixaAberto,
+  .pdv-grid,
+  .pdv-left,
+  .pdv-right {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .caixa-infobar-actions {
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+    padding: 12px;
+    justify-content: center;
+  }
+
+  .caixa-infobar-actions .caixa-view-toggle,
+  .caixa-infobar-actions #btnFecharCaixa {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: 180px;
+    min-height: 46px;
+    height: 46px;
+    margin: 0;
+  }
+
   body.caixa-modo-balcao .caixa-infobar {
     display: flex;
     padding: 10px;
@@ -4212,5 +4399,39 @@ body.caixa-modo-balcao .pdv-finalizar {
   body.caixa-modo-balcao #btnFecharCaixa {
     width: 100%;
     max-width: none;
+  }
+
+  .jogo-caixa-jogador-row {
+    grid-template-columns: 26px minmax(0, 1fr) 38px;
+  }
+
+  .jogo-caixa-jogador-nome {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .jogo-caixa-valor-input,
+  .jogo-caixa-jogador-row select,
+  .jogo-caixa-btn-comanda {
+    grid-column: 2 / 4;
+    width: 100%;
+    max-width: none;
+  }
+
+  .jogo-caixa-valor-input {
+    grid-row: 2;
+  }
+
+  .jogo-caixa-jogador-row select {
+    grid-row: 3;
+  }
+
+  .jogo-caixa-btn-comanda {
+    grid-row: 4;
+  }
+
+  .jogo-caixa-btn-remover {
+    grid-column: 3;
+    grid-row: 1;
   }
 }

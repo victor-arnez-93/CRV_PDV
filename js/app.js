@@ -184,6 +184,14 @@ function crvSalvarOperadorAtual(operador) {
   }
 }
 
+function crvNotificarTrocaOperador(operador = null) {
+  document.dispatchEvent(new CustomEvent("crv:operador-alterado", {
+    detail: {
+      operador: operador || crvObterOperadorAtual()
+    }
+  }));
+}
+
 window.CRV_PERMISSOES_OPERADOR = {
   modulos: {},
   especiais: {},
@@ -700,9 +708,17 @@ if (!pronto) {
 async function crvCarregarNomeUsuario() {
   const user = crvObterUserGlobal();
 
+  if (user?.user_metadata?.nome) {
+    return crvCapitalizarNome(user.user_metadata.nome);
+  }
+
   if (user?.nome) return crvCapitalizarNome(user.nome);
   if (user?.nome_completo) return crvCapitalizarNome(user.nome_completo);
   if (user?.name) return crvCapitalizarNome(user.name);
+
+  if (window.APP_USER?.nome) {
+    return crvCapitalizarNome(window.APP_USER.nome);
+  }
 
   const pronto = await crvAguardarSupabaseGlobal();
 
@@ -743,6 +759,16 @@ async function crvCarregarNomeUsuario() {
   }
 }
 
+async function crvObterNomePessoaAtual() {
+  const operador = crvObterOperadorAtual();
+
+  if (operador.id && operador.nome) {
+    return crvCapitalizarNome(operador.nome);
+  }
+
+  return crvCarregarNomeUsuario();
+}
+
 async function crvAtualizarSaudacao() {
   const greetEl = document.getElementById("greetingText");
   const greetDate = document.getElementById("greetingDate");
@@ -756,13 +782,10 @@ async function crvAtualizarSaudacao() {
         ? "Boa tarde"
         : "Boa noite";
 
-const nomeEmpresa =
-  window.APP_EMPRESA_NOME ||
-  window.APP_CONFIG?.nome_fantasia ||
-  window.APP_CONFIG?.nome ||
-  "";
-
-    greetEl.textContent = `${saudacao}, ${nomeEmpresa} 👋`;
+    const nomePessoa = await crvObterNomePessoaAtual();
+    greetEl.textContent = nomePessoa
+      ? `${saudacao}, ${nomePessoa} 👋`
+      : `${saudacao} 👋`;
   }
 
   if (greetDate) {
@@ -1021,19 +1044,21 @@ async function crvPreencherModalUsuarioGlobal() {
     window.APP_USER?.email ||
     "";
 
-  const nome =
-    window.APP_USER?.nome ||
-    user?.user_metadata?.nome ||
-    email.split("@")[0] ||
-    "Usuário";
+  const operadorAtual = crvObterOperadorAtual();
+  const nome = operadorAtual.id
+    ? operadorAtual.nome
+    : await crvCarregarNomeUsuario() || "Usuário";
 
   if (nomeEl) nomeEl.textContent = crvCapitalizarNome(nome);
-  if (emailEl) emailEl.textContent = email || "E-mail não encontrado";
+  if (emailEl) {
+    emailEl.textContent = operadorAtual.id
+      ? `Operador interno · sessão de ${email || "conta principal"}`
+      : email || "E-mail não encontrado";
+  }
   if (perfilEl) perfilEl.textContent = window.APP_USER?.perfil || "Operador";
-    const operadorAtual = crvObterOperadorAtual();
 
   if (operadorEl) {
-    operadorEl.textContent = operadorAtual.nome || "Conta principal";
+    operadorEl.textContent = operadorAtual.nome || `${nome || "Conta"} · principal`;
   }
 
   if (perfilEl) {
@@ -1230,6 +1255,10 @@ async function crvAbrirModalTrocarOperadorGlobal() {
     modalExistente.remove();
   }
 
+  const operadorAntesDaTroca = crvObterOperadorAtual();
+  const nomeContaPrincipal = await crvCarregarNomeUsuario();
+  const exigeSenhaParaPrincipal = Boolean(operadorAntesDaTroca.id);
+
   const modal = document.createElement("div");
   modal.id = "modalTrocarOperador";
   modal.className = "modal-overlay";
@@ -1257,10 +1286,10 @@ async function crvAbrirModalTrocarOperadorGlobal() {
         <label class="input-label">Operador</label>
 
         <select class="input" id="selectTrocarOperador">
-          <option value="">Conta principal — acesso completo</option>
+          <option value="" id="optionContaPrincipal">Conta principal — acesso completo</option>
         </select>
 
-        <label class="input-label" style="margin-top:12px;">Senha interna</label>
+        <label class="input-label" id="labelSenhaTrocarOperador" style="margin-top:12px;">Senha interna</label>
 
         <input
           class="input"
@@ -1293,18 +1322,32 @@ async function crvAbrirModalTrocarOperadorGlobal() {
   const select = document.getElementById("selectTrocarOperador");
   const senhaInput = document.getElementById("senhaTrocarOperador");
   const feedback = document.getElementById("feedbackTrocarOperador");
+  const optionContaPrincipal = document.getElementById("optionContaPrincipal");
 
-  const labelSenha = senhaInput?.previousElementSibling;
+  const labelSenha = document.getElementById("labelSenhaTrocarOperador");
+
+  if (optionContaPrincipal) {
+    optionContaPrincipal.textContent = nomeContaPrincipal
+      ? `${nomeContaPrincipal} — conta principal (acesso completo)`
+      : "Conta principal — acesso completo";
+  }
 
 select.addEventListener("change", () => {
   const usandoContaPrincipal = !select.value;
+  const mostrarSenha = !usandoContaPrincipal || exigeSenhaParaPrincipal;
 
   if (labelSenha) {
-    labelSenha.style.display = usandoContaPrincipal ? "none" : "";
+    labelSenha.style.display = mostrarSenha ? "" : "none";
+    labelSenha.textContent = usandoContaPrincipal
+      ? "Senha da conta principal"
+      : "Senha interna do operador";
   }
 
   if (senhaInput) {
-    senhaInput.style.display = usandoContaPrincipal ? "none" : "";
+    senhaInput.style.display = mostrarSenha ? "" : "none";
+    senhaInput.placeholder = usandoContaPrincipal
+      ? "Confirme a senha da conta principal"
+      : "Digite a senha interna";
     senhaInput.value = "";
   }
 });
@@ -1333,7 +1376,6 @@ select.dispatchEvent(new Event("change"));
     if (error) throw error;
 
     (data || [])
-      .filter(operador => operador.usuario !== "admin")
       .forEach(operador => {
         const option = document.createElement("option");
         option.value = operador.id;
@@ -1353,17 +1395,50 @@ select.dispatchEvent(new Event("change"));
     const senha = String(senhaInput.value || "").trim();
 
     if (!operadorId) {
-      crvLimparOperadorAtual();
+      if (exigeSenhaParaPrincipal && !senha) {
+        feedback.textContent = "Digite a senha da conta principal para retomar o acesso completo.";
+        feedback.style.color = "#FF7070";
+        return;
+      }
 
-      await crvCarregarPermissoesOperadorAtual();
-      crvAplicarPermissoesInterface();
-      crvValidarPermissaoPaginaAtual();
+      try {
+        if (exigeSenhaParaPrincipal) {
+          const emailConta = window.USER?.email || window.APP_USER?.email || "";
 
-      fechar();
+          if (!emailConta) {
+            throw new Error("E-mail da conta principal não encontrado.");
+          }
 
-      await crvPreencherModalUsuarioGlobal();
+          feedback.textContent = "Confirmando conta principal...";
+          feedback.style.color = "var(--text-secondary)";
 
-      crvAvisoGlobal("Sessão voltou para a conta principal.", "sucesso");
+          const { error } = await sb.auth.signInWithPassword({
+            email: emailConta,
+            password: senha
+          });
+
+          if (error) {
+            throw new Error("Senha da conta principal inválida.");
+          }
+        }
+
+        crvLimparOperadorAtual();
+
+        await crvCarregarPermissoesOperadorAtual();
+        crvAplicarPermissoesInterface();
+        crvValidarPermissaoPaginaAtual();
+        await crvAtualizarSaudacao();
+        crvNotificarTrocaOperador();
+
+        fechar();
+
+        await crvPreencherModalUsuarioGlobal();
+
+        crvAvisoGlobal("Sessão voltou para a conta principal.", "sucesso");
+      } catch (err) {
+        feedback.textContent = err.message || "Não foi possível confirmar a conta principal.";
+        feedback.style.color = "#FF7070";
+      }
 
       return;
     }
@@ -1396,6 +1471,8 @@ select.dispatchEvent(new Event("change"));
       await crvCarregarPermissoesOperadorAtual();
       crvAplicarPermissoesInterface();
       crvValidarPermissaoPaginaAtual();
+      await crvAtualizarSaudacao();
+      crvNotificarTrocaOperador(data);
 
       fechar();
 
@@ -1700,3 +1777,10 @@ crvInicializarModalUsuario();
     lucide.createIcons();
   }
 });
+
+document.addEventListener("crv:identidade-atualizada", async () => {
+  await crvAtualizarSaudacao();
+  await crvPreencherModalUsuarioGlobal();
+});
+
+window.crvObterNomePessoaAtual = crvObterNomePessoaAtual;

@@ -131,23 +131,24 @@ function dataVendaEhHoje(venda) {
   );
 }
 
-async function aplicarNomeFantasiaDashboard() {
+async function aplicarNomePessoaDashboard() {
   try {
     const greetingText = document.getElementById("greetingText");
 
-    if (!greetingText || !window.APP_EMPRESA_ID || !window.sb) return;
+    if (!greetingText) return;
 
-    const { data, error } = await sb
-      .from("empresas")
-      .select("nome_fantasia")
-      .eq("id", window.APP_EMPRESA_ID)
-      .maybeSingle();
+    const operadorNome = String(
+      sessionStorage.getItem("CRV_OPERADOR_NOME") || ""
+    ).trim();
 
-    if (error) throw error;
+    const nomePessoa = operadorNome || String(
+      window.USER?.user_metadata?.nome ||
+      window.APP_USER?.nome ||
+      window.USER?.email?.split("@")[0] ||
+      ""
+    ).trim();
 
-    const nomeFantasia = String(data?.nome_fantasia || "").trim();
-
-    if (!nomeFantasia) return;
+    if (!nomePessoa) return;
 
     const hora = new Date().getHours();
 
@@ -158,10 +159,10 @@ async function aplicarNomeFantasiaDashboard() {
           ? "Boa tarde"
           : "Boa noite";
 
-    greetingText.textContent = `${saudacao}, ${nomeFantasia} 👋`;
+    greetingText.textContent = `${saudacao}, ${nomePessoa} 👋`;
 
   } catch (err) {
-    console.warn("[DASHBOARD][NOME FANTASIA]", err);
+    console.warn("[DASHBOARD][NOME PESSOA]", err);
   }
 }
 
@@ -174,7 +175,7 @@ async function initDashboard() {
 
   logSistema("DASHBOARD", "Inicializando dashboard...");
 
-  await aplicarNomeFantasiaDashboard();
+  await aplicarNomePessoaDashboard();
 
   document.documentElement.classList.toggle(
   "crv-agenda-ativa",

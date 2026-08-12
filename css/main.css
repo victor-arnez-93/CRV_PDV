@@ -284,6 +284,36 @@ p { line-height: 1.6; color: var(--text-secondary); }
   min-height: calc(100vh - 60px);
 }
 
+/* ===== ESTADO DE REDE ===== */
+.crv-network-badge {
+  position: fixed;
+  right: 18px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 999998;
+  max-width: calc(100vw - 28px);
+  padding: 9px 13px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+  transition:
+    opacity .25s ease,
+    visibility .25s ease,
+    transform .25s ease;
+}
+
+.crv-network-badge.is-dismissed {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+}
+
 /* ===== OVERLAY MOBILE ===== */
 .sidebar-overlay {
   display: none;
@@ -1146,8 +1176,36 @@ html[data-theme="dark"] .comandas-header > :first-child {
 
 /* ===== RESPONSIVE — MOBILE ===== */
 @media (max-width: 768px) {
-  .app-shell {
+  .app-shell,
+  .app-shell.sidebar-collapsed {
     grid-template-columns: 1fr;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-logo {
+    padding: 20px 20px 16px;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-logo-img {
+    height: 120px;
+  }
+
+  .app-shell.sidebar-collapsed .nav-section-label,
+  .app-shell.sidebar-collapsed .nav-item {
+    font-size: inherit;
+  }
+
+  .app-shell.sidebar-collapsed .nav-section-head {
+    justify-content: flex-start;
+  }
+
+  .app-shell.sidebar-collapsed .nav-item {
+    justify-content: flex-start;
+    padding: 12px 14px;
+  }
+
+  .app-shell.sidebar-collapsed .sidebar-footer-label,
+  .app-shell.sidebar-collapsed .sidebar-footer-logo {
+    display: block;
   }
 
   .sidebar {
@@ -1172,6 +1230,16 @@ html[data-theme="dark"] .comandas-header > :first-child {
 
   .main-content {
     padding: 20px 16px;
+  }
+
+  .crv-network-badge {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 20px);
+    padding: 7px 10px;
+    font-size: .63rem;
+    letter-spacing: .055em;
+    white-space: normal;
   }
 
   .topbar {

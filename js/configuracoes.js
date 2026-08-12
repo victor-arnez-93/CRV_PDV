@@ -136,6 +136,44 @@ function valor(id) {
   return el ? String(el.value || "").trim() : "";
 }
 
+function obterNomeContaPrincipalConfiguracao() {
+  return String(
+    window.USER?.user_metadata?.nome ||
+    window.APP_USER?.nome ||
+    window.USER?.email?.split("@")[0] ||
+    ""
+  ).trim();
+}
+
+async function salvarNomeContaPrincipal(nome) {
+  const nomeAtual = obterNomeContaPrincipalConfiguracao();
+
+  if (nome === nomeAtual) return;
+
+  const metadataAtual = window.USER?.user_metadata || {};
+  const { data, error } = await sb.auth.updateUser({
+    data: {
+      ...metadataAtual,
+      nome
+    }
+  });
+
+  if (error) throw error;
+
+  if (data?.user) {
+    window.USER = data.user;
+  }
+
+  window.APP_USER = {
+    ...(window.APP_USER || {}),
+    nome
+  };
+
+  document.dispatchEvent(new CustomEvent("crv:identidade-atualizada", {
+    detail: { nome }
+  }));
+}
+
 function normalizarTipoNegocio(tipo) {
   const codigo = String(tipo || "").trim();
   return ALIASES_TIPOS_NEGOCIO[codigo] || codigo;
@@ -384,6 +422,12 @@ async function carregarConfiguracoes() {
 // ======================================================
 
 function preencherFormulario(data) {
+  const nomeContaPrincipal = document.getElementById("cfgNomeContaPrincipal");
+
+  if (nomeContaPrincipal) {
+    nomeContaPrincipal.value = obterNomeContaPrincipalConfiguracao();
+  }
+
   document.getElementById("cfgNomeFantasia").value =
     data.nome_fantasia || "";
 
@@ -729,7 +773,7 @@ async function enviarLogoEmpresa(empresaId) {
 // ======================================================
 function liberarEdicaoConfiguracao() {
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset, #cfgLogoFile"
+    "#cfgNomeContaPrincipal, #cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset, #cfgLogoFile"
   ).forEach(el => {
     el.disabled = false;
   });
@@ -775,6 +819,13 @@ async function salvarConfiguracoes() {
     }
 
     const tipoNegocio = normalizarTipoNegocio(valor("cfgTipoNegocio"));
+    const nomeContaPrincipal = valor("cfgNomeContaPrincipal");
+
+    if (nomeContaPrincipal.length < 2) {
+      cfgFeedback("Informe o nome da pessoa responsável pela conta principal.", "erro");
+      document.getElementById("cfgNomeContaPrincipal")?.focus();
+      return;
+    }
 
     if (!tipoNegocio) {
       cfgFeedback("Selecione o tipo de negócio.", "erro");
@@ -815,6 +866,8 @@ async function salvarConfiguracoes() {
         "Nenhuma empresa foi atualizada. Verifique se o usuário tem permissão para editar esta empresa."
       );
     }
+
+    await salvarNomeContaPrincipal(nomeContaPrincipal);
 
     CONFIG_EMPRESA = data;
     LOGO_REMOVER_PENDENTE = false;
@@ -905,7 +958,7 @@ function aplicarBloqueioConfiguracao() {
   }
 
   document.querySelectorAll(
-    "#cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset, #cfgLogoFile"
+    "#cfgNomeContaPrincipal, #cfgNomeFantasia, #cfgRazaoSocial, #cfgCnpj, #cfgTelefone, #cfgWhatsapp, #cfgEmail, #cfgEndereco, #cfgCidade, #cfgUf, #cfgCategoriaNegocio, #cfgTipoNegocio, #cfgFundoPreset, #cfgLogoFile"
   ).forEach(el => {
     el.disabled = true;
   });
