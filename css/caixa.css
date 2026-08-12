@@ -3892,44 +3892,375 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 @media (max-width: 700px) {
+  #viewCaixaAberto,
+  .pdv-grid,
+  .pdv-left,
+  .pdv-right {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pdv-left {
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  /* ======================================================
+     CABEÇALHO DOS ITENS RÁPIDOS
+  ====================================================== */
+
   .pdv-quick-header {
-    align-items: flex-start;
-    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+    margin: 14px 0 10px;
+    overflow: visible;
   }
 
   .pdv-quick-title-wrap {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 3px;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 5px 8px;
   }
 
-  .pdv-quick-actions {
-    gap: 6px;
-  }
-
-  .tipo-itens-caixa-menu {
-    position: absolute;
-    top: calc(100% + 7px);
-    right: 0;
-    bottom: auto;
-    left: auto;
-    width: min(220px, calc(100vw - 28px));
-    max-height: min(280px, 56dvh);
-  }
-}
-
-@media (max-width: 520px) {
-  .pdv-quick-header {
-    flex-direction: column;
+  .pdv-quick-title-wrap small {
+    max-width: 100%;
+    white-space: normal;
   }
 
   .pdv-quick-actions {
     width: 100%;
-    justify-content: space-between;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pdv-quick-actions #btnVerTodosProdutos,
+  .pdv-quick-actions #btnTiposItensCaixa,
+  .pdv-quick-actions #btnToggleRapidosBalcao {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 38px;
+    height: 38px;
+    margin: 0;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: .72rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .tipo-itens-caixa-wrap {
+    position: relative;
+    min-width: 0;
+    justify-self: start;
   }
 
   .pdv-quick-actions > a {
-    margin-left: auto;
+    min-width: 0;
+    margin: 0;
+    justify-self: end;
+    align-self: center;
+    white-space: nowrap;
+  }
+
+  /* ======================================================
+     MENU TIPOS — MODO COMPLETO
+  ====================================================== */
+
+  .tipo-itens-caixa-menu {
+    position: absolute;
+    z-index: 300;
+    top: calc(100% + 7px);
+    right: auto;
+    bottom: auto;
+    left: 0;
+    width: min(230px, calc(100vw - 24px));
+    max-height: min(280px, 56dvh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 7px;
+  }
+
+  .tipo-itens-caixa-menu button {
+    min-height: 40px;
+    padding: 9px 11px;
+    font-size: .76rem;
+  }
+
+  /* ======================================================
+     AÇÕES — MODO BALCÃO
+  ====================================================== */
+
+  body.caixa-modo-balcao .pdv-quick-actions {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  body.caixa-modo-balcao .btn-toggle-rapidos-balcao {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  body.caixa-modo-balcao .tipo-itens-caixa-wrap {
+    justify-self: end;
+  }
+
+  body.caixa-modo-balcao .tipo-itens-caixa-menu {
+    right: 0;
+    left: auto;
+  }
+
+  /* ======================================================
+     BOTÕES DO MODO COMPLETO
+  ====================================================== */
+
+  .pdv-left > #btnToggleCobrancaAvulsa,
+  .pdv-left > #btnToggleAtividadesRecentes {
+    box-sizing: border-box;
+    width: min(100%, 320px);
+    max-width: 320px;
+    min-height: 42px;
+    height: 42px;
+    margin: 8px auto 10px;
+    padding: 0 15px;
+    align-self: center;
+    justify-content: center;
+    font-size: .76rem;
+    line-height: 1;
+    gap: 7px;
+  }
+
+  /* ======================================================
+     MODAL VER TODOS — COMPLETO E BALCÃO
+  ====================================================== */
+
+  #modalProdutosCaixa.modal-overlay {
+    z-index: 1000000;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  #modalProdutosCaixa .modal-produtos-caixa {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 520px !important;
+    height: min(720px, calc(100dvh - 20px));
+    max-height: calc(100dvh - 20px);
+    margin: 0;
+    padding: 16px 13px 13px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 18px;
+  }
+
+  #modalProdutosCaixa .modal-header {
+    flex: 0 0 auto;
+    min-width: 0;
+    margin-bottom: 11px;
+    gap: 10px;
+  }
+
+  #modalProdutosCaixa .modal-header > div:first-child {
+    min-width: 0;
+  }
+
+  #modalProdutosCaixa .modal-header h3 {
+    margin: 0 0 2px;
+    font-size: 1rem;
+  }
+
+  #modalProdutosCaixa .modal-subtitle {
+    font-size: .76rem;
+    line-height: 1.3;
+  }
+
+  #modalProdutosCaixa .modal-close {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+  }
+
+  #modalProdutosCaixa .modal-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  #modalProdutosCaixa .pdv-search-wrap {
+    flex: 0 0 auto;
+    width: 100%;
+    margin: 0;
+  }
+
+  #modalProdutosCaixa .pdv-search {
+    width: 100%;
+    height: 44px;
+    padding-right: 12px;
+    font-size: 16px;
+  }
+
+  #modalProdutosCaixa .modal-itens-tipos {
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 6px;
+    padding: 1px 1px 5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  #modalProdutosCaixa .modal-itens-tipos::-webkit-scrollbar {
+    display: none;
+  }
+
+  #modalProdutosCaixa .modal-itens-tipos button {
+    min-height: 34px;
+    padding: 7px 11px;
+    font-size: .68rem;
+    white-space: nowrap;
+  }
+
+  #modalProdutosCaixa .lista-produtos-caixa {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 10px;
+    padding: 0 4px 4px 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #modalProdutosCaixa .lista-produtos-caixa > .empty-state {
+    grid-column: 1 / -1;
+  }
+
+  #modalProdutosCaixa .produto-caixa-item {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 126px;
+    padding: 11px;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  #modalProdutosCaixa .produto-caixa-nome {
+    min-width: 0;
+    font-size: .82rem;
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+  }
+
+  #modalProdutosCaixa .produto-caixa-meta {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  #modalProdutosCaixa .produto-caixa-tipo {
+    max-width: 100%;
+    padding: 2px 5px;
+    font-size: .54rem;
+    white-space: nowrap;
+  }
+
+  #modalProdutosCaixa .produto-caixa-categoria {
+    max-width: 100%;
+    font-size: .59rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  #modalProdutosCaixa .produto-caixa-bottom {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-end;
+    gap: 5px;
+  }
+
+  #modalProdutosCaixa .produto-caixa-preco {
+    min-width: 0;
+    font-size: .94rem;
+    white-space: nowrap;
+  }
+
+  #modalProdutosCaixa .produto-caixa-estoque,
+  #modalProdutosCaixa .produto-caixa-sem-estoque {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: .59rem;
+    line-height: 1.1;
+    text-align: right;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 520px) {
+  .pdv-quick-actions {
+    gap: 7px;
+  }
+
+  .pdv-quick-actions #btnVerTodosProdutos,
+  .pdv-quick-actions #btnTiposItensCaixa,
+  .pdv-quick-actions #btnToggleRapidosBalcao {
+    min-height: 36px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: .68rem;
+  }
+
+  .pdv-quick-actions > a {
+    font-size: .68rem !important;
+  }
+
+  body.caixa-modo-balcao .pdv-quick-actions {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  #modalProdutosCaixa .modal-produtos-caixa {
+    padding: 14px 11px 11px;
+  }
+
+  #modalProdutosCaixa .lista-produtos-caixa {
+    gap: 8px;
+  }
+
+  #modalProdutosCaixa .produto-caixa-item {
+    min-height: 124px;
+    padding: 10px 9px;
+  }
+
+  #modalProdutosCaixa .produto-caixa-nome {
+    font-size: .78rem;
+  }
+
+  #modalProdutosCaixa .produto-caixa-preco {
+    font-size: .9rem;
   }
 }
 
