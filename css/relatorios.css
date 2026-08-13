@@ -118,6 +118,46 @@
   min-height: 200px;
 }
 
+.grafico-horas-scroll {
+  width: 100%;
+  height: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
+}
+
+.grafico-horas-inner {
+  position: relative;
+
+  min-width: 100%;
+  height: 100%;
+}
+
+.grafico-horas-scroll::-webkit-scrollbar {
+  height: 7px;
+}
+
+.grafico-horas-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, .06);
+  border-radius: 999px;
+}
+
+.grafico-horas-scroll::-webkit-scrollbar-thumb {
+  background: var(--crv-orange);
+  border-radius: 999px;
+}
+
+[data-theme="light"] .grafico-horas-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 56, 135, .08);
+}
+
+[data-theme="light"] .grafico-horas-scroll::-webkit-scrollbar-thumb {
+  background: var(--crv-blue);
+}
+
 .grafico-donut-wrap {
   min-height: 180px;
   max-height: 180px;

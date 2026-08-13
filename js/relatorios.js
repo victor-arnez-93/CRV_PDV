@@ -17,6 +17,8 @@ let itensData = [];
 let produtosData = [];
 let caixasHistorico = [];
 let agendaFechadaData = [];
+let configuracaoAgendaRelatorio = null;
+let tipoNegocioRelatorio = "";
 let nomeFantasiaRelatorio = "empresa";
 
 const TIPOS_COM_AGENDA_ESPORTIVA = [
@@ -31,7 +33,8 @@ const TIPOS_COM_AGENDA_ESPORTIVA = [
   "futvolei",
   "futevolei",
   "volei_areia",
-  "quadras"
+  "quadras",
+  "quadras_esportivas"
 ];
 
 function normalizarFormaPagamentoRelatorio(forma) {
@@ -61,11 +64,19 @@ function labelFormaPagamentoRelatorio(forma) {
 }
 
 function empresaUsaAgendaEsportiva() {
-  if (typeof window.crvSegmentoArena === "function") {
-    return window.crvSegmentoArena();
+  if (
+    typeof window.crvSegmentoArena === "function" &&
+    window.crvSegmentoArena()
+  ) {
+    return true;
   }
 
-  const tipo = String(window.CRV_CONFIG?.empresa?.tipo_negocio || "")
+  const tipo = String(
+    window.CRV_CONFIG?.empresa?.tipo_negocio ||
+    tipoNegocioRelatorio ||
+    window.APP_EMPRESA_TIPO ||
+    ""
+  )
     .toLowerCase()
     .trim();
 
@@ -254,17 +265,25 @@ produtos = Array.isArray(produtosSupabase)
   ? produtosSupabase.filter(produto => produto.controla_estoque !== false)
   : [];
 
-            const { data: empresaSupabase, error: erroEmpresa } = await sb
+const { data: empresaSupabase, error: erroEmpresa } = await sb
         .from("empresas")
-        .select("nome_fantasia,nome")
+        .select("nome_fantasia,nome,tipo_negocio")
         .eq("id", empresaId)
         .maybeSingle();
 
       if (erroEmpresa) throw erroEmpresa;
 
-      empresa = empresaSupabase || null;
+empresa = empresaSupabase || null;
 
-      vendas = Array.isArray(vendasSupabase)
+tipoNegocioRelatorio = String(
+  empresa?.tipo_negocio ||
+  window.CRV_CONFIG?.empresa?.tipo_negocio ||
+  ""
+)
+  .toLowerCase()
+  .trim();
+
+vendas = Array.isArray(vendasSupabase)
         ? vendasSupabase
         : [];
 
@@ -344,16 +363,40 @@ produtos = Array.isArray(produtosSupabase)
       window.APP_STATUS?.supabase_ok &&
       window.sb
     ) {
-      const { data: jogosAgenda } = await sb
-        .from("agenda")
-        .select("id, tipo_jogo, local_recurso, hora_inicio, hora_fim, data_agendamento, cliente_nome, total_pago_jogadores, total_pendente_jogadores, total_jogadores, status_jogo")
-        .eq("empresa_id", empresaId)
-        .in("status_jogo", ["fechado", "pago", "cobranca"])
-        .order("data_agendamento", { ascending: false })
-        .limit(200);
-      agendaFechadaData = Array.isArray(jogosAgenda) ? jogosAgenda : [];
+      const [jogosResp, configAgendaResp] = await Promise.all([
+        sb
+          .from("agenda")
+          .select("id, tipo_jogo, local_recurso, hora_inicio, hora_fim, data_agendamento, cliente_nome, total_pago_jogadores, total_pendente_jogadores, total_jogadores, status_jogo")
+          .eq("empresa_id", empresaId)
+          .in("status_jogo", ["fechado", "pago", "cobranca"])
+          .order("data_agendamento", { ascending: false })
+          .limit(200),
+
+        sb
+          .from("agenda_configuracao")
+          .select("hora_abertura,hora_fechamento")
+          .eq("empresa_id", empresaId)
+          .maybeSingle()
+      ]);
+
+      if (jogosResp.error) {
+        console.warn("[RELATÓRIOS][AGENDA]", jogosResp.error);
+        agendaFechadaData = [];
+      } else {
+        agendaFechadaData = Array.isArray(jogosResp.data)
+          ? jogosResp.data
+          : [];
+      }
+
+      if (configAgendaResp.error) {
+        console.warn("[RELATÓRIOS][GRADE]", configAgendaResp.error);
+        configuracaoAgendaRelatorio = null;
+      } else {
+        configuracaoAgendaRelatorio = configAgendaResp.data || null;
+      }
     } else {
       agendaFechadaData = [];
+      configuracaoAgendaRelatorio = null;
     }
 
     nomeFantasiaRelatorio =
@@ -478,15 +521,21 @@ function getIntervaloPeriodo() {
 function dataVendaRelatorio(data) {
   if (!data) return null;
 
-  const valor = String(data).trim();
+  let valor = String(data).trim().replace(" ", "T");
 
-  // Se já vier ISO completo com timezone, respeita
-  if (/z$/i.test(valor) || /[+-]\d{2}:\d{2}$/.test(valor)) {
-    return new Date(valor);
+  const temTimezone =
+    /z$/i.test(valor) ||
+    /[+-]\d{2}:\d{2}$/.test(valor);
+
+  if (valor.includes("T") && !temTimezone) {
+    valor += "Z";
   }
 
-  // Se vier sem timezone, trata como horário local do sistema
-  return new Date(valor.replace(" ", "T"));
+  const dataNormalizada = new Date(valor);
+
+  return Number.isNaN(dataNormalizada.getTime())
+    ? null
+    : dataNormalizada;
 }
 
 function formatarDataVendaRelatorio(data) {
@@ -656,27 +705,131 @@ function renderProdutosEstoqueBaixo() {
 // ======================================================
 // GRÁFICO HORAS
 // ======================================================
+function horaParaMinutosRelatorio(hora) {
+  const partes = String(hora || "")
+    .slice(0, 5)
+    .split(":")
+    .map(Number);
+
+  const h = partes[0];
+  const m = partes[1] || 0;
+
+  if (!Number.isFinite(h) || !Number.isFinite(m)) {
+    return null;
+  }
+
+  return h * 60 + m;
+}
+
+function obterHorasGraficoRelatorio(vendas = []) {
+  const diaCompleto = Array.from({ length: 24 }, (_, i) => i);
+
+  if (!empresaUsaAgendaEsportiva() || !configuracaoAgendaRelatorio) {
+    return diaCompleto;
+  }
+
+  const abertura = horaParaMinutosRelatorio(
+    configuracaoAgendaRelatorio.hora_abertura
+  );
+
+  let fechamento = horaParaMinutosRelatorio(
+    configuracaoAgendaRelatorio.hora_fechamento
+  );
+
+  if (abertura === null || fechamento === null) {
+    return diaCompleto;
+  }
+
+  if (fechamento <= abertura) {
+    fechamento += 1440;
+  }
+
+  const primeiraHora = Math.floor(abertura / 60);
+  const limiteHora = Math.ceil(fechamento / 60);
+  const horas = [];
+
+  for (let hora = primeiraHora; hora < limiteHora; hora++) {
+    horas.push(hora % 24);
+  }
+
+  if (!horas.length) {
+    return diaCompleto;
+  }
+
+  const existeVendaForaDaGrade = vendas.some(venda => {
+    const horaVenda = obterHoraVendaRelatorio(venda.data);
+    return horaVenda !== null && !horas.includes(horaVenda);
+  });
+
+  return existeVendaForaDaGrade
+    ? diaCompleto
+    : horas;
+}
+
+function obterHoraVendaRelatorio(data) {
+  const dataVenda = dataVendaRelatorio(data);
+
+  if (!dataVenda) return null;
+
+  const partes = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(dataVenda);
+
+  const hora = Number(
+    partes.find(parte => parte.type === "hour")?.value
+  );
+
+  return Number.isFinite(hora) ? hora : null;
+}
 
 function renderGraficoHoras(vendas) {
-  const horas = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}h`);
-  const dados = Array(14).fill(0);
+  const horasNumericas = obterHorasGraficoRelatorio(vendas);
 
-vendas.forEach(venda => {
-  const dataVenda = dataVendaRelatorio(venda.data);
-  if (!dataVenda || Number.isNaN(dataVenda.getTime())) return;
+  const horas = horasNumericas.map(hora =>
+    `${String(hora).padStart(2, "0")}h`
+  );
 
-  const hora = dataVenda.getHours();
-  const index = hora - 7;
+  const dados = Array(horasNumericas.length).fill(0);
 
-  if (index >= 0 && index < 14) {
-    dados[index] += Number(venda.total || 0);
+  vendas.forEach(venda => {
+    const hora = obterHoraVendaRelatorio(venda.data);
+
+    if (hora === null) return;
+
+    const index = horasNumericas.indexOf(hora);
+
+    if (index >= 0) {
+      dados[index] += Number(venda.total || 0);
+    }
+  });
+
+  const canvas = document.getElementById("chartHoras");
+  const scroll = document.getElementById("graficoHorasScroll");
+  const inner = document.getElementById("graficoHorasInner");
+
+  if (!canvas) return;
+
+  if (scroll && inner) {
+    const larguraVisivel = scroll.clientWidth || 0;
+
+    const larguraGrafico = Math.max(
+      larguraVisivel,
+      horasNumericas.length * 72
+    );
+
+    inner.style.width = `${larguraGrafico}px`;
+    scroll.scrollLeft = 0;
   }
-});
 
-  const ctx = document.getElementById("chartHoras")?.getContext("2d");
+  const ctx = canvas.getContext("2d");
+
   if (!ctx) return;
 
-  if (chartHoras) chartHoras.destroy();
+  if (chartHoras) {
+    chartHoras.destroy();
+  }
 
   chartHoras = new Chart(ctx, {
     type: "bar",
@@ -693,7 +846,11 @@ vendas.forEach(venda => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } }
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
     }
   });
 }
