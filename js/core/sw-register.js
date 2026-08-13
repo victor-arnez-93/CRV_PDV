@@ -10,9 +10,16 @@
 
   window.addEventListener("load", async () => {
     try {
-      await navigator.serviceWorker.register("./service-worker.js", {
-        scope: "./"
-      });
+        const registration =
+          await navigator.serviceWorker.register(
+            "./service-worker.js",
+            {
+              scope: "./",
+              updateViaCache: "none"
+            }
+          );
+
+        await registration.update();
     } catch (err) {
       console.warn("[CRV OFFLINE] Service Worker não registrado.", err);
     }

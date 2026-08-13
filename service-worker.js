@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "crv-pdv-caixa";
-const CACHE_NAME = `${CACHE_PREFIX}-v3-20260812`;
+const CACHE_NAME = `${CACHE_PREFIX}-v4-20260813`;
 
 const APP_SHELL = [
   "./caixa.html",
@@ -25,6 +25,26 @@ const APP_SHELL = [
   "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
 ];
+
+const APP_SHELL_URLS = new Set(
+  APP_SHELL.map(caminho => {
+    const url = new URL(caminho, self.location.href);
+
+    url.search = "";
+    url.hash = "";
+
+    return url.href;
+  })
+);
+
+function normalizarUrlServiceWorker(url) {
+  const normalizada = new URL(url.href);
+
+  normalizada.search = "";
+  normalizada.hash = "";
+
+  return normalizada.href;
+}
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -60,23 +80,25 @@ self.addEventListener("activate", event => {
   })());
 });
 
-function deveIgnorar(request, url) {
+function deveInterceptar(request, url) {
   if (request.method !== "GET") {
-    return true;
-  }
-
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return true;
+    return false;
   }
 
   if (
-    request.mode === "navigate" &&
-    !url.pathname.endsWith("/caixa.html")
+    url.protocol !== "http:" &&
+    url.protocol !== "https:"
   ) {
-    return true;
+    return false;
   }
 
-  return url.hostname.endsWith("supabase.co");
+  if (url.hostname.endsWith("supabase.co")) {
+    return false;
+  }
+
+  return APP_SHELL_URLS.has(
+    normalizarUrlServiceWorker(url)
+  );
 }
 
 async function buscarOnlinePrimeiro(request) {
@@ -86,37 +108,67 @@ async function buscarOnlinePrimeiro(request) {
     const resposta = await fetch(request);
 
     if (resposta.ok || resposta.type === "opaque") {
-      await cache.put(request, resposta.clone());
+      try {
+        await cache.put(
+          request,
+          resposta.clone()
+        );
+      } catch (cacheErr) {
+        console.warn(
+          "[CRV OFFLINE] Não foi possível atualizar um recurso no cache.",
+          cacheErr
+        );
+      }
     }
 
     return resposta;
+
   } catch (err) {
-    const respostaCache = await cache.match(request, {
-      ignoreSearch: true
-    });
+    const respostaCache = await cache.match(
+      request,
+      {
+        ignoreSearch: true
+      }
+    );
 
     if (respostaCache) {
       return respostaCache;
     }
 
-    if (request.mode === "navigate") {
-      const caixaCache = await cache.match("./caixa.html");
+    if (
+      request.mode === "navigate" ||
+      request.destination === "document"
+    ) {
+      const caixaCache = await cache.match(
+        "./caixa.html"
+      );
 
       if (caixaCache) {
         return caixaCache;
       }
     }
 
-    throw err;
+    return new Response(
+      "Recurso indisponível enquanto o dispositivo está offline.",
+      {
+        status: 503,
+        statusText: "Offline",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8"
+        }
+      }
+    );
   }
 }
 
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
 
-  if (deveIgnorar(event.request, url)) {
+  if (!deveInterceptar(event.request, url)) {
     return;
   }
 
-  event.respondWith(buscarOnlinePrimeiro(event.request));
+  event.respondWith(
+    buscarOnlinePrimeiro(event.request)
+  );
 });
