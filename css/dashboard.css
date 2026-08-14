@@ -493,6 +493,47 @@ html.crv-agenda-ativa .dash-only-agenda {
     white-space: nowrap;
   }
 
+  /* --- AÇÕES OPERACIONAIS --- */
+
+  .dash-operacional-mini {
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+
+  .dash-op-mini-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px 12px;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .dash-op-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+
+  .dash-op-mini-card > div:last-child {
+    min-width: 0;
+  }
+
+  .dash-op-mini-card strong,
+  .dash-op-mini-card span:not(.dash-op-plus) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* O topo já mantém o indicador compacto; o selo flutuante não deve
+     cobrir títulos e gráficos em telas pequenas. */
+  #crvNetworkBadge {
+    display: none !important;
+  }
+
   /* --- CARDS --- */
 
   .dash-cards {

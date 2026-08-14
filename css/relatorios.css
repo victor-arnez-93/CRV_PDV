@@ -830,7 +830,8 @@
     max-width: 100%;
   }
 
-.page-header-actions {
+.page-header-actions,
+.header-actions {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -840,19 +841,22 @@
   text-align: center;
 }
 
-.page-header-actions > * {
+.page-header-actions > *,
+.header-actions > * {
   align-self: center;
 }
 
 .page-header-actions button,
 .page-header-actions a,
+.header-actions button,
+.header-actions a,
 .page-header .btn,
 .page-header button,
 .page-header .btn-primary,
 .page-header .btn-secondary {
-  width: 220px;
-  max-width: 220px;
-  min-width: 220px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   min-height: 42px;
   height: 42px;
   margin: 0;
@@ -865,6 +869,10 @@
   white-space: nowrap;
   align-self: center;
 }
+
+  #crvNetworkBadge {
+    display: none !important;
+  }
 
   /* =========================================
      PERÍODO
@@ -1299,6 +1307,8 @@
 
 .page-header-actions button,
 .page-header-actions a,
+.header-actions button,
+.header-actions a,
 .page-header .btn,
 .page-header button,
 .page-header .btn-primary,

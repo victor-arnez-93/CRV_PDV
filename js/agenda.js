@@ -1346,7 +1346,12 @@ function verificarAvisosFimDeJogo() {
 
     const faltam = fimMinutos - minutosAgora;
 
-    if (faltam > 0 && faltam <= 5 && jogo.status_jogo !== "fechado") {
+    if (
+      minutosAgora >= inicioMinutos &&
+      faltam > 0 &&
+      faltam <= 5 &&
+      jogo.status_jogo !== "fechado"
+    ) {
       const chave = `${jogo.id}-fim-5min`;
 
       if (!avisosJogosEmitidos.has(chave)) {

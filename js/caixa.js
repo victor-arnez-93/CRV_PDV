@@ -4847,7 +4847,12 @@ function verificarAvisosFimDeJogoCaixa() {
 
     const faltam = fimMinutos - minutosAgora;
 
-    if (faltam > 0 && faltam <= 5 && jogo.status_jogo !== "fechado") {
+    if (
+      minutosAgora >= inicioMinutos &&
+      faltam > 0 &&
+      faltam <= 5 &&
+      jogo.status_jogo !== "fechado"
+    ) {
       const chave = `${jogo.id}-fim-5min-caixa`;
 
       if (!avisosJogosCaixaEmitidos.has(chave)) {
@@ -4892,6 +4897,7 @@ function setupModalSelecionarJogo() {
   const btnConfirmarFinalizar = document.getElementById("btnConfirmarFinalizarJogo");
   const btnAdicionarAvulso = document.getElementById("btnAdicionarAvulsoJogoCaixa");
   const inputValorAvulso = document.getElementById("novoAvulsoJogoValor");
+  const inputValorTotalJogo = document.getElementById("valorTotalJogoCaixa");
 
   if (btnFechar) {
     btnFechar.onclick = fecharModalSelecionarJogo;
@@ -4946,6 +4952,14 @@ function setupModalSelecionarJogo() {
   if (inputValorAvulso && inputValorAvulso.dataset.mascaraAplicada !== "true") {
     aplicarMascaraMoedaCaixa(inputValorAvulso);
     inputValorAvulso.dataset.mascaraAplicada = "true";
+  }
+
+  if (
+    inputValorTotalJogo &&
+    inputValorTotalJogo.dataset.mascaraAplicada !== "true"
+  ) {
+    aplicarMascaraMoedaCaixa(inputValorTotalJogo);
+    inputValorTotalJogo.dataset.mascaraAplicada = "true";
   }
 }
 
@@ -5497,6 +5511,72 @@ function obterPagamentoTemporarioJogadorCaixa(jogador) {
   return jogador.forma_pagamento || metodoPagamento || "dinheiro";
 }
 
+function montarRateioPendenteJogoCaixa() {
+  return [...document.querySelectorAll(".jogo-caixa-jogador-row")]
+    .filter(row => {
+      const check = row.querySelector(".jogo-caixa-check");
+      return check && !check.disabled;
+    })
+    .map(row => ({
+      id: row.dataset.jogadorId,
+      valor: normalizarNumero(
+        row.querySelector(".jogo-caixa-valor-input")?.value || 0
+      ),
+      forma_pagamento:
+        row.querySelector(".jogo-caixa-pagamento")?.value || "dinheiro"
+    }));
+}
+
+function validarRateioPendenteJogoCaixa(rateio) {
+  if (!Array.isArray(rateio) || !rateio.length) {
+    throw new Error("Nenhum jogador pendente foi localizado para o rateio.");
+  }
+
+  if (rateio.some(item => !item.id || Number(item.valor || 0) <= 0)) {
+    throw new Error(
+      "Defina um valor maior que zero para todos os jogadores pendentes."
+    );
+  }
+}
+
+function atualizarRateioLocalJogoCaixa(rateio) {
+  const jogoId = jogoSelecionadoCaixa?.id;
+  if (!jogoId) return;
+
+  const porId = new Map(
+    rateio.map(item => [String(item.id), item])
+  );
+
+  (jogadoresCaixaPorAgenda[jogoId] || []).forEach(jogador => {
+    const item = porId.get(String(jogador.id));
+    if (!item) return;
+
+    jogador.valor = Number(item.valor || 0);
+    jogador.forma_pagamento = item.forma_pagamento || "dinheiro";
+  });
+}
+
+async function salvarRateioPendenteJogoCaixa(rateio = null) {
+  if (!jogoSelecionadoCaixa?.id) {
+    throw new Error("Jogo não selecionado para salvar o rateio.");
+  }
+
+  const rateioAtual = rateio || montarRateioPendenteJogoCaixa();
+  validarRateioPendenteJogoCaixa(rateioAtual);
+
+  const { error } = await sb.rpc("salvar_rateio_avulsos_agenda", {
+    p_agenda_id: jogoSelecionadoCaixa.id,
+    p_rateio: rateioAtual
+  });
+
+  if (error) throw error;
+
+  atualizarRateioLocalJogoCaixa(rateioAtual);
+  capturarValoresJogoAtualCaixa();
+
+  return rateioAtual;
+}
+
 function montarDescricaoJogoComandaCaixa(jogo, jogador) {
   return [
     `Jogo vinculado`,
@@ -5518,6 +5598,37 @@ function normalizarFormaPagamentoAgendaRpcCaixa(formaPagamento) {
   }
 
   return "dinheiro";
+}
+
+function normalizarNomeJogadorCaixa(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function jogadorResponsavelCaixa(jogador, jogo) {
+  const nomeJogador = normalizarNomeJogadorCaixa(jogador?.nome);
+  const nomeResponsavel = normalizarNomeJogadorCaixa(jogo?.cliente_nome);
+
+  return Boolean(nomeJogador && nomeResponsavel && nomeJogador === nomeResponsavel);
+}
+
+function ordenarJogadoresCobrancaCaixa(jogadores, jogo) {
+  return [...jogadores].sort((a, b) => {
+    const aResponsavel = jogadorResponsavelCaixa(a, jogo);
+    const bResponsavel = jogadorResponsavelCaixa(b, jogo);
+
+    if (aResponsavel && !bResponsavel) return -1;
+    if (!aResponsavel && bResponsavel) return 1;
+
+    return String(a?.nome || "").localeCompare(
+      String(b?.nome || ""),
+      "pt-BR",
+      { numeric: true, sensitivity: "base" }
+    );
+  });
 }
 
 async function adicionarAvulsoJogoCaixa() {
@@ -5676,22 +5787,11 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
 
   jogoSelecionadoCaixa = jogo;
 
-  const todosJogadores = (jogadoresCaixaPorAgenda[jogo.id] || [])
-    .filter(jogador => jogador.removido !== true)
-    .sort((a, b) => {
-      const statusA = statusPagamentoJogadorCaixa(a);
-      const statusB = statusPagamentoJogadorCaixa(b);
-
-      const peso = {
-        pendente: 1,
-        em_cobranca: 1,
-        em_comanda: 2,
-        pago_direto: 3,
-        pago_em_comanda: 4
-      };
-
-      return (peso[statusA] || 9) - (peso[statusB] || 9);
-    });
+  const todosJogadores = ordenarJogadoresCobrancaCaixa(
+    (jogadoresCaixaPorAgenda[jogo.id] || [])
+      .filter(jogador => jogador.removido !== true),
+    jogo
+  );
 
   const jogadores = jogadoresCobraveisCaixa(todosJogadores);
   const mensalistasIncluidos =
@@ -5926,10 +6026,15 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
   }
 
   if (inputRateio) {
-    const totalPrevisto = ehMensal
-      ? jogadoresPendentes.reduce((acc, item) => {
-          return acc + Number(item.valor || 0);
-        }, 0)
+    const totalPendenteRateio = jogadoresPendentes.reduce((acc, item) => {
+      return acc + Number(item.valor || 0);
+    }, 0);
+
+    // Depois que o rateio foi salvo, o campo passa a refletir somente o
+    // saldo dos jogadores ainda pendentes. Isso impede redistribuir o valor
+    // integral do jogo novamente após um pagamento parcial ou uma comanda.
+    const totalPrevisto = totalPendenteRateio > 0
+      ? totalPendenteRateio
       : Number(jogo.valor_total || jogo.valor_previsto || 0);
 
     inputRateio.value = totalPrevisto > 0
@@ -5983,6 +6088,8 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
           textoStatus = ` · pago em comanda ${vinculoComanda?.codigo || "—"}`;
         }
 
+        const ehResponsavel = jogadorResponsavelCaixa(jogador, jogo);
+
         return `
           <div class="jogo-caixa-jogador-row ${bloqueado ? "pago" : ""}" data-jogador-id="${jogador.id}">
             <input
@@ -5993,8 +6100,10 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
             >
 
             <div class="jogo-caixa-jogador-nome">
-              ${jogador.nome || "Jogador"}
-              ${textoStatus}
+              <span class="jogo-caixa-jogador-texto">
+                ${jogador.nome || "Jogador"}${textoStatus}
+              </span>
+              ${ehResponsavel ? `<span class="jogo-caixa-responsavel-badge">Responsável</span>` : ""}
             </div>
 
             <input
@@ -6011,6 +6120,8 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
               <option value="debito" ${formaAtual === "debito" || formaAtual === "cartao" ? "selected" : ""}>Débito</option>
               <option value="credito" ${formaAtual === "credito" ? "selected" : ""}>Crédito</option>
               <option value="pix" ${formaAtual === "pix" ? "selected" : ""}>PIX</option>
+              ${formaAtual === "misto" ? `<option value="misto" selected>Misto</option>` : ""}
+              ${formaAtual === "comanda" ? `<option value="comanda" selected>Comanda</option>` : ""}
             </select>
 
             <button
@@ -6106,11 +6217,18 @@ function fecharModalFinalizarJogoCaixa() {
     painelMensalidade.innerHTML = "";
   }
 
+  if (painelMensalistas) {
+    painelMensalistas.style.display = "none";
+    painelMensalistas.innerHTML = "";
+  }
+
   jogoSelecionadoCaixa = null;
 }
 
-function aplicarRateioJogoCaixa() {
+async function aplicarRateioJogoCaixa() {
   const inputRateio = document.getElementById("valorTotalJogoCaixa");
+  const btnRateio = document.getElementById("btnAplicarRateioJogo");
+  const btnConfirmar = document.getElementById("btnConfirmarFinalizarJogo");
 
   const totalJogo = normalizarNumero(inputRateio?.value || 0);
 
@@ -6123,7 +6241,7 @@ function aplicarRateioJogoCaixa() {
     });
 
   if (totalJogo <= 0 || !linhasPendentes.length) {
-    alertaCaixa(
+    await alertaCaixa(
       "Rateio inválido",
       "Informe o valor total do jogo e mantenha pelo menos um jogador pendente."
     );
@@ -6131,7 +6249,7 @@ function aplicarRateioJogoCaixa() {
   }
 
   if (totalParaRatear <= 0) {
-    alertaCaixa(
+    await alertaCaixa(
       "Rateio concluído",
       "Todo o valor do jogo já foi enviado para comanda ou recebido."
     );
@@ -6171,6 +6289,29 @@ function aplicarRateioJogoCaixa() {
   });
 
   atualizarTotalSelecionadoJogoCaixa();
+
+  if (btnRateio) btnRateio.disabled = true;
+  if (btnConfirmar) btnConfirmar.disabled = true;
+
+  try {
+    await salvarRateioPendenteJogoCaixa();
+
+    crvToast({
+      titulo: "Rateio salvo",
+      mensagem: "Os valores individuais permanecerão no jogo até a quitação.",
+      tipo: "success",
+      tempo: 5000
+    });
+  } catch (err) {
+    console.error("[CAIXA][RATEIO JOGO]", err);
+    await alertaCaixa(
+      "Não foi possível salvar o rateio",
+      err.message || "Os valores individuais não foram alterados."
+    );
+  } finally {
+    if (btnRateio) btnRateio.disabled = false;
+    if (btnConfirmar) btnConfirmar.disabled = false;
+  }
 }
 
 function atualizarTotalSelecionadoJogoCaixa() {
@@ -6192,6 +6333,10 @@ function atualizarTotalSelecionadoJogoCaixa() {
 }
 
 async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
+  const painelMensalistas = document.getElementById(
+    "jogoCaixaMensalistasIncluidos"
+  );
+
   if (!sistemaOnline()) {
     await alertaCaixa(
       "Jogos disponíveis com conexão",
@@ -6278,6 +6423,18 @@ async function prepararEnvioJogadorParaComandaCaixa(jogadorId) {
     await alertaCaixa(
       "Valor inválido",
       "Informe um valor válido antes de enviar para comanda."
+    );
+    return;
+  }
+
+  try {
+    await salvarRateioPendenteJogoCaixa();
+  } catch (err) {
+    console.error("[CAIXA][RATEIO ANTES DA COMANDA]", err);
+    await alertaCaixa(
+      "Rateio não salvo",
+      err.message ||
+        "Os valores individuais precisam ser salvos antes de vincular a comanda."
     );
     return;
   }
@@ -6578,16 +6735,33 @@ async function confirmarPagamentoJogoCaixa() {
       row.querySelector(".jogo-caixa-valor-input")?.value || 0
     );
 
-    if (valorCobrado <= 0) {
-      throw new Error("Informe um valor válido para todos os jogadores selecionados.");
-    }
-
     return {
       jogadorId,
       formaPagamento,
       valorCobrado
     };
   });
+
+  if (pagamentos.some(pagamento => pagamento.valorCobrado <= 0)) {
+    await alertaCaixa(
+      "Valor inválido",
+      "Informe um valor maior que zero para todos os jogadores selecionados."
+    );
+    return;
+  }
+
+  let rateioPendente;
+
+  try {
+    rateioPendente = montarRateioPendenteJogoCaixa();
+    validarRateioPendenteJogoCaixa(rateioPendente);
+  } catch (err) {
+    await alertaCaixa(
+      "Rateio incompleto",
+      err.message || "Revise os valores individuais antes de confirmar."
+    );
+    return;
+  }
 
 const totalSelecionado = atualizarTotalSelecionadoJogoCaixa();
 
@@ -6642,44 +6816,17 @@ const confirmar = await abrirConfirmacaoCaixa({
   try {
     vendaEmProcessamento = true;
 
-    // O valor pode ser ajustado na conferência, mas a baixa financeira é
-    // única e atômica pela RPC. Assim não existe janela entre marcar o
-    // jogador como pago e gerar venda/itens/relatórios.
-    for (const pagamento of pagamentos) {
-      const { error } = await sb
-        .from("agenda_jogadores")
-        .update({
-          valor: pagamento.valorCobrado,
-          atualizado_em: new Date().toISOString()
-        })
-        .eq("id", pagamento.jogadorId)
-        .eq("agenda_id", jogoSelecionadoCaixa.id)
-        .eq("empresa_id", obterEmpresaId());
-
-      if (error) throw error;
-    }
-
-    const formasRpc = [
-      ...new Set(
-        pagamentos.map(pagamento => {
-          return normalizarFormaPagamentoAgendaRpcCaixa(
-            pagamento.formaPagamento
-          );
-        })
-      )
-    ];
-
-    const formaPagamentoRpc = formasRpc.length === 1
-      ? formasRpc[0]
-      : "misto";
-
+    // A RPC detalhada salva o rateio completo e recebe apenas os marcados
+    // na mesma transação. Pendentes mantêm o valor e cada pago mantém sua
+    // própria forma, enquanto a venda agregada continua alimentando caixa,
+    // atividades, vendas e relatórios como antes.
     const { data: recebimento, error: erroRecebimento } = await sb.rpc(
-      "receber_avulsos_agenda",
+      "receber_avulsos_agenda_detalhado",
       {
         p_agenda_id: jogoSelecionadoCaixa.id,
+        p_rateio: rateioPendente,
         p_jogadores_ids: pagamentos.map(pagamento => pagamento.jogadorId),
         p_caixa_id: caixa.id,
-        p_forma_pagamento: formaPagamentoRpc,
         p_operador_id: obterOperadorAtualId(),
         p_valor_recebido: totalSelecionado
       }
@@ -8849,7 +8996,7 @@ if (carrinho.length > 0) {
         .update({
           pago: true,
           status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA,
-          forma_pagamento: "comanda",
+          forma_pagamento: metodoPagamento || "dinheiro",
           comanda_id: null,
           venda_id: vendaData?.id || null,
           pago_em: new Date().toISOString(),

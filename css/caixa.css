@@ -1748,12 +1748,40 @@ body.light .jogo-caixa-status.cobranca {
 
 .jogo-caixa-jogador-nome {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: .84rem;
   font-weight: 700;
   color: var(--text-primary);
+  overflow: hidden;
+}
+
+.jogo-caixa-jogador-texto {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.jogo-caixa-responsavel-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid rgba(212, 168, 67, .42);
+  border-radius: 999px;
+  background: rgba(212, 168, 67, .12);
+  color: #9a6a00;
+  font-size: .56rem;
+  font-weight: 900;
+  letter-spacing: .05em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+[data-theme="dark"] .jogo-caixa-responsavel-badge {
+  border-color: rgba(212, 168, 67, .5);
+  background: rgba(212, 168, 67, .15);
+  color: #e6bf59;
 }
 
 .jogo-caixa-jogador-valor {
