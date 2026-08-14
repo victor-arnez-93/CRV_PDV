@@ -1712,7 +1712,7 @@ async function montarControleJogosRelatorio() {
     });
 }
 
-function abrirImpressaoRelatorio(titulo, conteudo) {
+function abrirImpressaoRelatorio(titulo, conteudo, tipoRelatorio = titulo) {
   const janela = window.open("", "_blank");
   if (!janela) {
     mostrarModalAviso("O navegador bloqueou a janela de impressão.");
@@ -1720,30 +1720,166 @@ function abrirImpressaoRelatorio(titulo, conteudo) {
   }
 
   janela.document.write(`
-    <html><head><meta charset="UTF-8"><title>${escaparHTMLRelatorio(titulo)}</title>
-    <style>
-      @page { size: A4; margin: 12mm; }
-      * { box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; color: #111; font-size: 11px; margin: 0; }
-      h1 { font-size: 19px; margin: 0 0 5px; text-transform: uppercase; }
-      h2 { font-size: 13px; margin: 18px 0 7px; border-bottom: 1px solid #aaa; padding-bottom: 4px; }
-      .meta { color: #555; margin-bottom: 18px; }
-      .resumo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .box { border: 1px solid #ccc; border-radius: 5px; padding: 9px; }
-      .box small { display: block; color: #666; text-transform: uppercase; }
-      .box strong { display: block; margin-top: 3px; font-size: 15px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 7px; }
-      th, td { border: 1px solid #d1d1d1; padding: 6px; text-align: left; vertical-align: top; }
-      th { background: #f1f1f1; text-transform: uppercase; font-size: 9px; }
-      tr { page-break-inside: avoid; }
-      .right { text-align: right; }
-      .footer { margin-top: 22px; border-top: 1px solid #ccc; padding-top: 8px; text-align: center; color: #666; }
-    </style></head><body>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${escaparHTMLRelatorio(titulo)}_${escaparHTMLRelatorio(nomeFantasiaRelatorio)}_crv_pdv</title>
+
+      <style>
+        @page {
+          size: A4;
+          margin: 14mm;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          color: #111;
+          margin: 0;
+          padding: 0;
+          background: #fff;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .logo {
+          text-align: center;
+          margin-bottom: 14px;
+        }
+
+        .logo img {
+          height: 64px;
+          max-width: 180px;
+          object-fit: contain;
+        }
+
+        h1 {
+          text-align: center;
+          font-size: 20px;
+          margin: 0;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .subtitulo {
+          text-align: center;
+          font-size: 12px;
+          color: #555;
+          margin-top: 4px;
+          margin-bottom: 22px;
+        }
+
+        .subtitulo span {
+          display: block;
+        }
+
+        h2 {
+          font-size: 14px;
+          margin: 22px 0 8px;
+          padding-bottom: 5px;
+          border-bottom: 1px solid #999;
+          text-transform: uppercase;
+        }
+
+        .resumo {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+
+        .box {
+          border: 1px solid #cfcfcf;
+          padding: 10px;
+          border-radius: 6px;
+        }
+
+        .label,
+        .box small {
+          display: block;
+          color: #555;
+          font-size: 11px;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+        }
+
+        .valor,
+        .box strong {
+          display: block;
+          margin-top: 0;
+          font-size: 17px;
+          font-weight: bold;
+        }
+
+        p {
+          text-align: justify;
+          margin: 8px 0;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          page-break-inside: auto;
+        }
+
+        th {
+          background: #f1f1f1;
+          border: 1px solid #cfcfcf;
+          padding: 7px;
+          text-align: left;
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+
+        td {
+          border: 1px solid #d8d8d8;
+          padding: 7px;
+          font-size: 11px;
+          vertical-align: top;
+        }
+
+        tr {
+          page-break-inside: avoid;
+        }
+
+        .right {
+          text-align: right;
+        }
+
+        .footer {
+          margin-top: 28px;
+          padding-top: 10px;
+          border-top: 1px solid #ccc;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="logo">
+        <img src="assets/logo1.png">
+      </div>
+
       <h1>${escaparHTMLRelatorio(titulo)}</h1>
-      <div class="meta">${escaparHTMLRelatorio(nomeFantasiaRelatorio)} · ${escaparHTMLRelatorio(getPeriodoLabel())} (${escaparHTMLRelatorio(getPeriodoDetalhado())}) · ${new Date().toLocaleString("pt-BR")}</div>
+
+      <div class="subtitulo">
+        <span><strong>Tipo de relatório:</strong> ${escaparHTMLRelatorio(tipoRelatorio)}</span>
+        <span><strong>Filtros aplicados:</strong> ${escaparHTMLRelatorio(getPeriodoLabel())} (${escaparHTMLRelatorio(getPeriodoDetalhado())}) • Gerado em ${new Date().toLocaleString("pt-BR")}</span>
+      </div>
+
       ${conteudo}
-      <div class="footer">CRV PDV · Relatório gerado automaticamente</div>
-    </body></html>
+
+      <div class="footer">
+        CRV PDV • Relatório gerado automaticamente pelo sistema
+      </div>
+    </body>
+    </html>
   `);
   janela.document.close();
   janela.onload = () => {
@@ -1757,12 +1893,19 @@ function exportarPDFFinanceiro() {
   if (!resumo.vendas.length) return mostrarModalAviso("Sem dados financeiros para exportar.");
 
   abrirImpressaoRelatorio("Relatório financeiro", `
+    <h2>Resumo do período</h2>
+
     <div class="resumo">
       <div class="box"><small>Faturamento</small><strong>${fmt(resumo.faturamento)}</strong></div>
       <div class="box"><small>Lucro bruto</small><strong>${fmt(resumo.lucro)}</strong></div>
       <div class="box"><small>Vendas</small><strong>${resumo.vendas.length}</strong></div>
       <div class="box"><small>Ticket médio</small><strong>${fmt(resumo.ticket)}</strong></div>
     </div>
+
+    <p>
+      O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos itens no momento da venda.
+    </p>
+
     <h2>Formas de pagamento</h2>
     <table><thead><tr><th>Forma</th><th class="right">Total</th></tr></thead><tbody>
       ${Object.entries(resumo.pagamentos).sort((a, b) => b[1] - a[1]).map(([forma, total]) => `
@@ -1803,6 +1946,8 @@ async function exportarPDFJogos() {
   if (!jogos.length) return mostrarModalAviso("Sem jogos no período selecionado.");
 
   abrirImpressaoRelatorio("Controle de jogos", `
+    <h2>Jogos do período</h2>
+
     <table><thead><tr>
       <th>Data / hora</th><th>Quadra</th><th>Responsável</th><th>Plano</th><th>Ciclo</th>
       <th>Mensalidade</th><th>5ª semana</th><th>Avulsos</th><th>Status</th>
