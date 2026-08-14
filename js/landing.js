@@ -18,12 +18,70 @@
   aplicarTema(temaAtual);
   themeToggle.addEventListener("click", () => aplicarTema(temaAtual === "dark" ? "light" : "dark"));
 
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) entry.target.classList.add("visible");
+  function iniciarAnimacoes() {
+    const reduzirMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const elementosReveal = [...document.querySelectorAll(".reveal")];
+
+    if (
+      reduzirMovimento ||
+      typeof window.gsap === "undefined" ||
+      typeof window.ScrollMagic === "undefined"
+    ) {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .12 });
+
+      elementosReveal.forEach(el => observer.observe(el));
+      return;
+    }
+
+    const controller = new ScrollMagic.Controller();
+
+    gsap.from(".hero-content > *", {
+      autoAlpha: 0,
+      y: 20,
+      duration: .72,
+      stagger: .09,
+      ease: "power2.out",
+      delay: .08,
+      clearProps: "opacity,visibility,transform"
     });
-  }, { threshold: .12 });
-  document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+
+    elementosReveal.forEach((elemento, index) => {
+      gsap.set(elemento, {
+        autoAlpha: 0,
+        y: 24
+      });
+
+      new ScrollMagic.Scene({
+        triggerElement: elemento,
+        triggerHook: .9,
+        reverse: false
+      })
+        .on("enter", () => {
+          gsap.to(elemento, {
+            autoAlpha: 1,
+            y: 0,
+            duration: .72,
+            delay: Math.min((index % 3) * .035, .07),
+            ease: "power2.out",
+            onComplete: () => {
+              elemento.classList.add("visible");
+              gsap.set(elemento, { clearProps: "opacity,visibility,transform" });
+            }
+          });
+        })
+        .addTo(controller);
+    });
+
+  }
+
+  iniciarAnimacoes();
 
   document.querySelectorAll("[data-whatsapp-message]").forEach(link => {
     const mensagem = link.dataset.whatsappMessage;
@@ -66,7 +124,9 @@
 
   fecharPrelogin.addEventListener("click", fecharModalPrelogin);
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !preloginModal.classList.contains("hidden")) fecharModalPrelogin();
+    if (event.key === "Escape" && !preloginModal.classList.contains("hidden")) {
+      fecharModalPrelogin();
+    }
   });
 
   async function validarPrelogin() {
