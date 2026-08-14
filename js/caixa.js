@@ -38,6 +38,7 @@ let jogosCaixa = [];
 let jogosCaixaFiltrados = [];
 let jogadoresCaixaPorAgenda = {};
 let mensalidadesCaixa = [];
+let cobrancasExtrasCaixa = [];
 let filtroStatusJogosCaixa = "todos";
 let jogoSelecionadoCaixa = null;
 let avisosJogosCaixaEmitidos = new Set();
@@ -395,6 +396,20 @@ function buscarMensalidadeCaixa(jogo) {
 
 function mensalidadePagaCaixa(mensalidade) {
   return String(mensalidade?.status || "").toLowerCase() === "pago";
+}
+
+function buscarCobrancaQuintaSemanaCaixa(jogo) {
+  if (!jogo) return null;
+
+  return cobrancasExtrasCaixa.find(cobranca => {
+    return String(cobranca.agenda_id || "") === String(jogo.id || "") &&
+      cobranca.tipo === "quinta_semana" &&
+      cobranca.status !== "cancelado";
+  }) || null;
+}
+
+function cobrancaQuintaSemanaPagaCaixa(cobranca) {
+  return String(cobranca?.status || "").toLowerCase() === "pago";
 }
 
 function jogoQuitadoCaixa(jogo) {
@@ -2957,7 +2972,7 @@ function obterRecebimentoAgendaStorage() {
 
     const tipo = String(dados?.tipo || "").trim();
 
-    if (!["agenda_mensalidade", "agenda_avulso"].includes(tipo)) {
+    if (!["agenda_mensalidade", "agenda_avulso", "agenda_quinta_semana"].includes(tipo)) {
       limparRecebimentoAgendaStorage();
       return null;
     }
@@ -2971,6 +2986,13 @@ function obterRecebimentoAgendaStorage() {
 
     if (tipo === "agenda_avulso") {
       if (!dados.agenda_id && !dados.origem_id) {
+        limparRecebimentoAgendaStorage();
+        return null;
+      }
+    }
+
+    if (tipo === "agenda_quinta_semana") {
+      if (!dados.cobranca_id || !dados.agenda_id || Number(dados.valor || 0) <= 0) {
         limparRecebimentoAgendaStorage();
         return null;
       }
@@ -3026,6 +3048,11 @@ async function processarRecebimentoAgendaAoAbrirCaixa() {
 
   if (recebimento.tipo === "agenda_mensalidade") {
     await prepararRecebimentoMensalidadeAgendaCaixa(recebimento);
+    return;
+  }
+
+  if (recebimento.tipo === "agenda_quinta_semana") {
+    await prepararRecebimentoQuintaSemanaAgendaCaixa(recebimento);
     return;
   }
 
@@ -3119,6 +3146,81 @@ async function prepararRecebimentoMensalidadeAgendaCaixa(recebimento) {
   });
 }
 
+async function prepararRecebimentoQuintaSemanaAgendaCaixa(recebimento) {
+  const { data: cobranca, error } = await sb
+    .from("agenda_cobrancas_extras")
+    .select("*")
+    .eq("empresa_id", obterEmpresaId())
+    .eq("id", recebimento.cobranca_id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!cobranca || cobranca.status === "cancelado") {
+    limparRecebimentoAgendaStorage();
+    crvToast({
+      titulo: "Cobrança não encontrada",
+      mensagem: "A cobrança da 5ª semana não está mais disponível.",
+      tipo: "warn"
+    });
+    return;
+  }
+
+  if (cobrancaQuintaSemanaPagaCaixa(cobranca)) {
+    limparRecebimentoAgendaStorage();
+    crvToast({
+      titulo: "5ª semana já paga",
+      mensagem: "Esta cobrança já foi recebida anteriormente.",
+      tipo: "info"
+    });
+    return;
+  }
+
+  recebimentoAgendaCaixa = {
+    ...recebimento,
+    valor: Number(cobranca.valor || 0)
+  };
+
+  modoPDV = "venda";
+  comandaAtiva = null;
+  comandaOculta = false;
+  jogoSelecionadoCaixa = null;
+
+  carrinho = [{
+    id: `agenda-quinta-semana-${cobranca.id}`,
+    nome: recebimento.descricao || cobranca.descricao || "5ª semana do plano mensal",
+    preco: Number(cobranca.valor || 0),
+    preco_custo: 0,
+    quantidade: 1,
+    produto_manual: true,
+    origem: "agenda_quinta_semana",
+    origem_id: cobranca.id,
+    agenda_id: cobranca.agenda_id,
+    cobranca_id: cobranca.id
+  }];
+
+  atualizarInterfaceModoPDV();
+  renderCarrinho();
+
+  await abrirConfirmacaoCaixa({
+    titulo: "Receber 5ª semana",
+    mensagem: `
+      <strong>${recebimento.cliente_nome || "Mensalista"}</strong><br>
+      ${recebimento.local_recurso || "Quadra/Campo"}<br><br>
+      Cobrança extra da 5ª semana:<br>
+      <strong>${fmt(cobranca.valor)}</strong><br><br>
+      Escolha a forma de pagamento e finalize separadamente.
+    `,
+    textoConfirmar: "Ir para pagamento",
+    mostrarCancelar: false
+  });
+
+  document.querySelector(".pay-btn")?.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+}
+
 async function receberMensalidadeJogoCaixa(jogoId, mensalidadeId) {
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
@@ -3184,6 +3286,59 @@ async function receberMensalidadeJogoCaixa(jogoId, mensalidadeId) {
     await alertaCaixa(
       "Erro ao preparar mensalidade",
       err?.message || "Não foi possível abrir o recebimento da mensalidade."
+    );
+  }
+}
+
+async function receberQuintaSemanaJogoCaixa(jogoId, cobrancaId) {
+  if (!caixa || caixa.status !== "aberto") {
+    await alertaCaixa(
+      "Caixa fechado",
+      "Abra o caixa antes de receber a 5ª semana."
+    );
+    return;
+  }
+
+  const jogo = jogosCaixa.find(item => String(item.id) === String(jogoId));
+  const cobranca = cobrancasExtrasCaixa.find(item => {
+    return String(item.id) === String(cobrancaId);
+  });
+
+  if (!jogo || !cobranca || cobranca.status === "cancelado") {
+    await alertaCaixa(
+      "Cobrança não encontrada",
+      "Atualize os jogos e tente novamente."
+    );
+    return;
+  }
+
+  if (cobrancaQuintaSemanaPagaCaixa(cobranca)) {
+    await alertaCaixa("5ª semana já paga", "Esta cobrança já foi recebida.");
+    return;
+  }
+
+  fecharModalFinalizarJogoCaixa();
+  fecharModalSelecionarJogo();
+
+  try {
+    await prepararRecebimentoQuintaSemanaAgendaCaixa({
+      tipo: "agenda_quinta_semana",
+      cobranca_id: cobranca.id,
+      agenda_id: jogo.id,
+      origem_id: cobranca.id,
+      cliente_nome: jogo.cliente_nome || "Mensalista",
+      local_recurso: jogo.local_recurso || "",
+      data_agendamento: jogo.data_agendamento || "",
+      hora_inicio: jogo.hora_inicio || "",
+      hora_fim: jogo.hora_fim || "",
+      valor: Number(cobranca.valor || 0),
+      descricao: cobranca.descricao || `5ª semana - ${jogo.cliente_nome || "Mensalista"}`
+    });
+  } catch (err) {
+    console.error("[CAIXA][RECEBER 5A SEMANA]", err);
+    await alertaCaixa(
+      "Erro ao preparar 5ª semana",
+      err?.message || "Não foi possível abrir esta cobrança."
     );
   }
 }
@@ -3544,13 +3699,16 @@ const empresaId = obterEmpresaId();
 const itemMensalidadeAgenda =
   carrinho.find(item => String(item.origem || "") === "agenda_mensalidade") || null;
 
+const itemQuintaSemanaAgenda =
+  carrinho.find(item => String(item.origem || "") === "agenda_quinta_semana") || null;
+
 const itensAgendaAvulso =
   carrinho.filter(item => String(item.origem || "") === "agenda_avulso");
 
 const itemAgendaAvulso =
   itensAgendaAvulso[0] || null;
 
-const itemAgenda = itemMensalidadeAgenda || itemAgendaAvulso;
+const itemAgenda = itemMensalidadeAgenda || itemQuintaSemanaAgenda || itemAgendaAvulso;
 
 if (
   itemAgenda &&
@@ -3558,7 +3716,9 @@ if (
     const origem = String(item.origem || "");
     return itemMensalidadeAgenda
       ? origem !== "agenda_mensalidade"
-      : origem !== "agenda_avulso";
+      : itemQuintaSemanaAgenda
+        ? origem !== "agenda_quinta_semana"
+        : origem !== "agenda_avulso";
   })
 ) {
   await alertaCaixa(
@@ -3571,7 +3731,7 @@ if (
 if (itemAgenda && desconto > 0) {
   await alertaCaixa(
     "Desconto indisponível",
-    "A mensalidade e os avulsos usam os valores definidos na Agenda. Ajuste o valor do avulso no jogo antes de receber."
+    "As cobranças da Agenda usam os valores definidos na própria Agenda e devem ser recebidas sem desconto no Caixa."
   );
   return;
 }
@@ -3586,6 +3746,19 @@ if (itemAgenda) {
   if (itemMensalidadeAgenda) {
     const { data, error } = await sb.rpc("receber_mensalidade_agenda", {
       p_mensalidade_id: itemMensalidadeAgenda.mensalidade_id,
+      p_caixa_id: caixa.id,
+      p_forma_pagamento: formaPagamentoRpc,
+      p_operador_id: obterOperadorAtualId(),
+      p_valor_recebido: metodoPagamento === "dinheiro"
+        ? (valorRecebido || total)
+        : total
+    });
+
+    if (error) throw error;
+    resultadoRecebimento = data;
+  } else if (itemQuintaSemanaAgenda) {
+    const { data, error } = await sb.rpc("receber_cobranca_extra_agenda", {
+      p_cobranca_id: itemQuintaSemanaAgenda.cobranca_id,
       p_caixa_id: caixa.id,
       p_forma_pagamento: formaPagamentoRpc,
       p_operador_id: obterOperadorAtualId(),
@@ -3650,7 +3823,9 @@ if (itemAgenda) {
   logVenda(
     itemMensalidadeAgenda
       ? "Mensalidade recebida pela transação protegida da Agenda."
-      : "Avulsos recebidos em uma única transação protegida da Agenda.",
+      : itemQuintaSemanaAgenda
+        ? "5ª semana recebida pela transação protegida da Agenda."
+        : "Avulsos recebidos em uma única transação protegida da Agenda.",
     "success"
   );
 
@@ -3954,7 +4129,8 @@ return Number(venda.total || 0) > 0;
     const origemEhAgenda =
       origem === "agenda" ||
       origem === "agenda_avulso" ||
-      origem === "agenda_mensalidade";
+      origem === "agenda_mensalidade" ||
+      origem === "agenda_quinta_semana";
 
     const icon =
       origem === "comanda"
@@ -4858,6 +5034,14 @@ async function gerarOcorrenciasMensaisCaixa(dataAlvo) {
       console.warn("[CAIXA][MATERIALIZAR CICLO]", error);
     }
   }
+
+  const { error: erroQuintas } = await sb.rpc(
+    "sincronizar_quintas_semanas_agenda"
+  );
+
+  if (erroQuintas) {
+    console.warn("[CAIXA][5A SEMANA] Sincronizacao indisponivel.", erroQuintas);
+  }
 }
 
 async function carregarJogosCaixa() {
@@ -4901,6 +5085,15 @@ async function carregarJogosCaixa() {
 
     if (erroMensalidades) throw erroMensalidades;
 
+    const { data: cobrancasExtras, error: erroCobrancasExtras } = await sb
+      .from("agenda_cobrancas_extras")
+      .select("*")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("tipo", "quinta_semana")
+      .neq("status", "cancelado");
+
+    if (erroCobrancasExtras) throw erroCobrancasExtras;
+
     const idsAgenda = (jogos || []).map(jogo => jogo.id);
 
     let jogadores = [];
@@ -4921,6 +5114,8 @@ async function carregarJogosCaixa() {
     jogosCaixa = Array.isArray(jogos) ? jogos : [];
     mensalidadesCaixa =
       Array.isArray(mensalidades) ? mensalidades : [];
+    cobrancasExtrasCaixa =
+      Array.isArray(cobrancasExtras) ? cobrancasExtras : [];
     jogadoresCaixaPorAgenda = agruparJogadoresCaixa(jogadores);
 
     vinculosComandaJogadorCaixa = {};
@@ -4930,6 +5125,10 @@ async function carregarJogosCaixa() {
     await salvarCacheCaixa(
       "caixa_mensalidades_agenda",
       mensalidadesCaixa
+    );
+    await salvarCacheCaixa(
+      "caixa_cobrancas_extras_agenda",
+      cobrancasExtrasCaixa
     );
 
     const idsJogadores = jogadores.map(jogador => jogador.id);
@@ -4984,11 +5183,15 @@ async function carregarJogosCaixa() {
     const cacheMensalidades =
       await obterCacheCaixa("caixa_mensalidades_agenda") || [];
 
+    const cacheCobrancasExtras =
+      await obterCacheCaixa("caixa_cobrancas_extras_agenda") || [];
+
     const cacheVinculos =
       await obterCacheCaixa("caixa_vinculos_comanda_jogador") || {};
 
     jogosCaixa = cacheJogos;
     mensalidadesCaixa = cacheMensalidades;
+    cobrancasExtrasCaixa = cacheCobrancasExtras;
     jogadoresCaixaPorAgenda = agruparJogadoresCaixa(cacheJogadores);
     vinculosComandaJogadorCaixa = cacheVinculos;
 
@@ -5495,9 +5698,12 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
     todosJogadores.filter(jogadorMensalistaIsentoCaixa);
   const qtdMensalistas = mensalistasIncluidos.length;
   const mensalidade = buscarMensalidadeCaixa(jogo);
+  const cobrancaQuinta = buscarCobrancaQuintaSemanaCaixa(jogo);
   const ehMensal = jogoMensalCaixa(jogo);
   const mensalidadePaga = mensalidadePagaCaixa(mensalidade);
+  const quintaPaga = cobrancaQuintaSemanaPagaCaixa(cobrancaQuinta);
   const valorMensalidade = Number(mensalidade?.valor || 0);
+  const valorQuinta = Number(cobrancaQuinta?.valor || 0);
   const jogadoresPendentes = jogadores.filter(jogadorPendenteCaixa);
   const temCobrancaIndividualPendente = jogadoresPendentes.length > 0;
 
@@ -5505,6 +5711,7 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
   const titulo = document.getElementById("finalizarJogoTitulo");
   const subtitulo = document.getElementById("finalizarJogoSubtitulo");
   const painelMensalidade = document.getElementById("jogoCaixaMensalidade");
+  const painelQuinta = document.getElementById("jogoCaixaQuintaSemana");
   const painelMensalistas = document.getElementById("jogoCaixaMensalistasIncluidos");
   const painelAdicionarAvulso = document.getElementById("jogoCaixaAdicionarAvulso");
   const resumo = document.getElementById("jogoCaixaResumo");
@@ -5520,12 +5727,14 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
   const recebido = jogadores
     .filter(jogadorPagoCaixa)
     .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0) +
-    (mensalidadePaga ? valorMensalidade : 0);
+    (mensalidadePaga ? valorMensalidade : 0) +
+    (quintaPaga ? valorQuinta : 0);
 
   const pendente = jogadores
     .filter(jogadorPendenteCaixa)
     .reduce((acc, jogador) => acc + Number(jogador.valor || 0), 0) +
-    (mensalidade && !mensalidadePaga ? valorMensalidade : 0);
+    (mensalidade && !mensalidadePaga ? valorMensalidade : 0) +
+    (cobrancaQuinta && !quintaPaga ? valorQuinta : 0);
 
   if (titulo) {
     titulo.textContent = `Jogo - ${jogo.local_recurso || "Quadra/Campo"}`;
@@ -5600,6 +5809,45 @@ function abrirFinalizacaoJogoCaixa(jogoId) {
         .getElementById("btnReceberMensalidadeJogo")
         ?.addEventListener("click", () => {
           receberMensalidadeJogoCaixa(jogo.id, mensalidade.id);
+        });
+    }
+  }
+
+  if (painelQuinta) {
+    if (!cobrancaQuinta) {
+      painelQuinta.style.display = "none";
+      painelQuinta.innerHTML = "";
+    } else {
+      painelQuinta.style.display = "flex";
+      painelQuinta.className =
+        `jogo-caixa-mensalidade jogo-caixa-quinta-semana ${quintaPaga ? "mensalidade-paga" : "mensalidade-pendente"}`;
+      painelQuinta.innerHTML = `
+        <div class="jogo-caixa-mensalidade-info">
+          <span class="jogo-caixa-mensalidade-rotulo">5ª semana · cobrança separada</span>
+          <strong>${fmt(valorQuinta)}</strong>
+          <small>Este valor não altera a mensalidade nem a cobrança dos avulsos.</small>
+        </div>
+        <div class="jogo-caixa-mensalidade-acao">
+          <span class="jogo-caixa-mensalidade-status">
+            ${quintaPaga ? "Pago" : "Pendente"}
+          </span>
+          ${
+            quintaPaga
+              ? ""
+              : `
+                <button class="btn-secondary" type="button" id="btnReceberQuintaSemanaJogo">
+                  <i data-lucide="wallet-cards" width="15" height="15"></i>
+                  <span>Receber 5ª semana</span>
+                </button>
+              `
+          }
+        </div>
+      `;
+
+      document
+        .getElementById("btnReceberQuintaSemanaJogo")
+        ?.addEventListener("click", () => {
+          receberQuintaSemanaJogoCaixa(jogo.id, cobrancaQuinta.id);
         });
     }
   }

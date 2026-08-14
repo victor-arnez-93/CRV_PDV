@@ -258,6 +258,20 @@ function buscarMensalidadeAgenda(jogo) {
   }) || null;
 }
 
+function buscarCobrancaQuintaSemanaAgenda(jogo) {
+  if (!jogo) return null;
+
+  return cobrancasExtrasAgenda.find(cobranca => {
+    return String(cobranca.agenda_id || "") === String(jogo.id || "") &&
+      cobranca.tipo === "quinta_semana" &&
+      cobranca.status !== "cancelado";
+  }) || null;
+}
+
+function cobrancaQuintaSemanaPagaAgenda(cobranca) {
+  return String(cobranca?.status || "").toLowerCase() === "pago";
+}
+
 function jogadorPagoAgenda(jogador) {
   return (
     jogador.pago === true ||
@@ -365,6 +379,7 @@ let agendaDados = [];
 let jogadoresPorAgenda = {};
 let mensalidadesAgenda = [];
 let excecoesAgenda = [];
+let cobrancasExtrasAgenda = [];
 
 let camposArena = [];
 let configuracaoAgenda = null;
@@ -788,6 +803,11 @@ function carregarConfigGradeAgenda() {
     Array.isArray(configuracaoAgenda?.duracoes_minutos)
       ? configuracaoAgenda.duracoes_minutos.join(",")
       : "60,90";
+
+  const cobrarQuinta = document.getElementById("configCobrarQuintaSemana");
+  if (cobrarQuinta) {
+    cobrarQuinta.checked = configuracaoAgenda?.cobrar_quinta_semana !== false;
+  }
 }
 
 async function salvarConfigGradeAgenda() {
@@ -803,6 +823,8 @@ const payload = {
   hora_fechamento: document.getElementById("configHoraFechamento")?.value || "23:45",
   intervalo_minutos: Number(document.getElementById("configIntervaloInicio")?.value || 30),
   duracoes_minutos: duracoes.length ? duracoes : [60, 90],
+  cobrar_quinta_semana:
+    document.getElementById("configCobrarQuintaSemana")?.checked !== false,
   atualizado_em: new Date().toISOString()
 };
 
@@ -1027,6 +1049,14 @@ async function gerarOcorrenciasMensaisParaData(dataAlvo) {
       console.warn("[AGENDA][MATERIALIZAR CICLO]", error);
     }
   }
+
+  const { error: erroQuintas } = await sb.rpc(
+    "sincronizar_quintas_semanas_agenda"
+  );
+
+  if (erroQuintas) {
+    console.warn("[AGENDA][5A SEMANA] Sincronizacao indisponivel.", erroQuintas);
+  }
 }
 
 // ======================================================
@@ -1104,6 +1134,15 @@ const {
   .order("ordem", { ascending: true })
   .order("duracao", { ascending: true });
 
+const {
+  data: cobrancasExtras,
+  error: cobrancasExtrasError
+} = await sb
+  .from("agenda_cobrancas_extras")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .eq("tipo", "quinta_semana");
+
 if (camposError) {
   throw camposError;
 }
@@ -1114,6 +1153,10 @@ if (configAgendaError) {
 
 if (valoresPadraoError) {
   throw valoresPadraoError;
+}
+
+if (cobrancasExtrasError) {
+  throw cobrancasExtrasError;
 }
 
 if (excecoesError) {
@@ -1134,6 +1177,7 @@ excecoesAgenda = excecoes || [];
 camposArena = campos || [];
 configuracaoAgenda = configAgenda || null;
 valoresPadraoAgenda = valoresPadrao || [];
+cobrancasExtrasAgenda = cobrancasExtras || [];
 
 jogadoresPorAgenda = agruparJogadores(
   jogadores || []
@@ -1178,11 +1222,18 @@ const { data: configAgendaAtualizada } = await sb
   .eq("empresa_id", APP_EMPRESA_ID)
   .maybeSingle();
 
+const { data: cobrancasExtrasAtualizadas } = await sb
+  .from("agenda_cobrancas_extras")
+  .select("*")
+  .eq("empresa_id", APP_EMPRESA_ID)
+  .eq("tipo", "quinta_semana");
+
 agendaDados = agendaAtualizada || [];
 jogadoresPorAgenda = agruparJogadores(jogadoresAtualizados || []);
 mensalidadesAgenda = mensalidadesAtualizadas || [];
 camposArena = camposAtualizados || [];
 configuracaoAgenda = configAgendaAtualizada || configuracaoAgenda;
+cobrancasExtrasAgenda = cobrancasExtrasAtualizadas || cobrancasExtrasAgenda;
 }
 
     aplicarFiltrosAgenda();
@@ -1613,6 +1664,15 @@ container
       renovarMensalidadeAgenda(btn.dataset.id);
     });
   });
+
+container
+  .querySelectorAll(".btn-receber-quinta-semana")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      receberQuintaSemanaAgenda(btn.dataset.id);
+    });
+  });
 }
 
 function criarCardJogo(jogo) {
@@ -1648,8 +1708,15 @@ const cicloMensal =
 
 const textoCicloMensal =
   cicloMensal
-    ? `Jogo ${cicloMensal.atual}/${cicloMensal.total}`
+    ? (
+        cicloMensal.ehExtra
+          ? "5ª semana · cobrança separada"
+          : `Jogo ${cicloMensal.atual}/${cicloMensal.total}`
+      )
     : "";
+
+const cobrancaQuinta = buscarCobrancaQuintaSemanaAgenda(jogo);
+const quintaPaga = cobrancaQuintaSemanaPagaAgenda(cobrancaQuinta);
 
   return `
     <div class="agenda-card" data-id="${jogo.id}">
@@ -1741,6 +1808,26 @@ const textoCicloMensal =
         )
   }
 
+  ${
+    cobrancaQuinta
+      ? `
+        <div class="agenda-card-cobranca-status ${quintaPaga ? "pago" : "pendente"}">
+          ${quintaPaga ? "✓ 5ª semana paga" : `⚠ 5ª semana pendente · ${fmtAgenda(cobrancaQuinta.valor)}`}
+        </div>
+      `
+      : ""
+  }
+
+  ${
+    cicloMensal?.ehExtra && !cobrancaQuinta
+      ? `
+        <div class="agenda-card-cobranca-status pendente">
+          ⚠ 5ª semana sem valor configurado
+        </div>
+      `
+      : ""
+  }
+
 </div>
 
       <div class="agenda-card-footer">
@@ -1762,6 +1849,21 @@ const textoCicloMensal =
       </div>
 
 <div class="agenda-card-actions">
+
+  ${
+    cobrancaQuinta && !quintaPaga && status !== "cancelado"
+      ? `
+        <button
+          class="btn-receber-quinta-semana"
+          data-id="${cobrancaQuinta.id}"
+          title="Receber 5ª semana no Caixa"
+          type="button"
+        >
+          <i data-lucide="wallet-cards"></i>
+        </button>
+      `
+      : ""
+  }
 
   ${
     status !== "cancelado" && status !== "fechado"
@@ -3719,6 +3821,45 @@ function receberMensalidadeAgenda(id) {
   window.location.href = "caixa.html";
 }
 
+function receberQuintaSemanaAgenda(id) {
+  const cobranca = cobrancasExtrasAgenda.find(item => {
+    return String(item.id) === String(id);
+  });
+
+  if (!cobranca || cobranca.status === "pago") return;
+
+  const jogo = agendaDados.find(item => {
+    return String(item.id) === String(cobranca.agenda_id);
+  });
+
+  if (!jogo) {
+    abrirModalAviso({
+      titulo: "Jogo não localizado",
+      texto: "Não foi possível localizar o jogo desta 5ª semana."
+    });
+    return;
+  }
+
+  sessionStorage.setItem(
+    "crv_recebimento_agenda_caixa",
+    JSON.stringify({
+      tipo: "agenda_quinta_semana",
+      cobranca_id: cobranca.id,
+      agenda_id: jogo.id,
+      origem_id: cobranca.id,
+      cliente_nome: jogo.cliente_nome || "Mensalista",
+      local_recurso: jogo.local_recurso || "",
+      data_agendamento: jogo.data_agendamento || "",
+      hora_inicio: jogo.hora_inicio || "",
+      hora_fim: jogo.hora_fim || "",
+      valor: Number(cobranca.valor || 0),
+      descricao: cobranca.descricao || `5ª semana - ${jogo.cliente_nome || "Mensalista"}`
+    })
+  );
+
+  window.location.href = "caixa.html";
+}
+
 function formatarDiaSemanaNomeAgenda(dataISO) {
   if (!dataISO) return "-";
 
@@ -3996,7 +4137,8 @@ function calcularIndiceJogoMensal(jogo, mensalidade) {
 
   return {
     atual,
-    total: datas.length
+    total: Number(mensalidade.quantidade_jogos_prevista || 4),
+    ehExtra: atual > Number(mensalidade.quantidade_jogos_prevista || 4)
   };
 }
 
@@ -4121,6 +4263,7 @@ function renderizarValoresPadraoAgendaInline() {
         duracao: "1h",
         valor_avulso: 0,
         valor_mensal: 0,
+        valor_quinta_semana: 0,
         ordem: 1,
         novo: true
       },
@@ -4128,6 +4271,7 @@ function renderizarValoresPadraoAgendaInline() {
         duracao: "1h30",
         valor_avulso: 0,
         valor_mensal: 0,
+        valor_quinta_semana: 0,
         ordem: 2,
         novo: true
       }
@@ -4158,6 +4302,13 @@ function renderizarValoresPadraoAgendaInline() {
         placeholder="Mensal"
       >
 
+      <input
+        class="input agenda-valor-quinta"
+        value="${valorBancoParaInputAgenda(item.valor_quinta_semana || 0)}"
+        placeholder="5ª semana"
+        title="Valor extra quando o mês tiver uma 5ª ocorrência"
+      >
+
       <button
         type="button"
         class="agenda-inline-action cancelar btn-remover-valor-agenda"
@@ -4168,7 +4319,7 @@ function renderizarValoresPadraoAgendaInline() {
     </div>
   `).join("");
 
-  lista.querySelectorAll(".agenda-valor-avulso, .agenda-valor-mensal")
+  lista.querySelectorAll(".agenda-valor-avulso, .agenda-valor-mensal, .agenda-valor-quinta")
     .forEach(input => aplicarMascaraMoedaAgenda(input));
 
   lista.querySelectorAll(".btn-remover-valor-agenda")
@@ -4211,6 +4362,13 @@ function adicionarValorPadraoAgendaInline() {
       placeholder="Mensal"
     >
 
+    <input
+      class="input agenda-valor-quinta"
+      value=""
+      placeholder="5ª semana"
+      title="Valor extra quando o mês tiver uma 5ª ocorrência"
+    >
+
     <button
       type="button"
       class="agenda-inline-action cancelar btn-remover-valor-agenda"
@@ -4224,6 +4382,7 @@ function adicionarValorPadraoAgendaInline() {
 
   aplicarMascaraMoedaAgenda(row.querySelector(".agenda-valor-avulso"));
   aplicarMascaraMoedaAgenda(row.querySelector(".agenda-valor-mensal"));
+  aplicarMascaraMoedaAgenda(row.querySelector(".agenda-valor-quinta"));
 
   row.querySelector(".btn-remover-valor-agenda")
     ?.addEventListener("click", () => row.remove());
@@ -4259,6 +4418,10 @@ async function salvarValoresPadraoAgendaInline() {
       linha.querySelector(".agenda-valor-mensal")?.value || 0
     );
 
+    const valorQuintaSemana = normalizarMoedaAgenda(
+      linha.querySelector(".agenda-valor-quinta")?.value || 0
+    );
+
     if (!duracao) {
       crvToast({
         titulo: "Duração obrigatória",
@@ -4266,6 +4429,18 @@ async function salvarValoresPadraoAgendaInline() {
         tipo: "warn"
       });
 
+      linha.querySelector(".agenda-valor-duracao")?.focus();
+      return false;
+    }
+
+    const duracaoMinutos = duracaoTextoParaMinutosAgenda(duracao);
+
+    if (duracaoMinutos <= 0) {
+      crvToast({
+        titulo: "Duração inválida",
+        mensagem: "Use formatos como 1h, 1h30 ou 90min.",
+        tipo: "warn"
+      });
       linha.querySelector(".agenda-valor-duracao")?.focus();
       return false;
     }
@@ -4288,8 +4463,10 @@ async function salvarValoresPadraoAgendaInline() {
     const payload = {
       empresa_id: APP_EMPRESA_ID,
       duracao,
+      duracao_minutos: duracaoMinutos,
       valor_avulso: valorAvulso,
       valor_mensal: valorMensal,
+      valor_quinta_semana: valorQuintaSemana,
       ordem: index + 1,
       ativo: true,
       updated_at: new Date().toISOString()
@@ -4359,6 +4536,14 @@ async function salvarValoresPadraoAgendaInline() {
     .order("duracao", { ascending: true });
 
   valoresPadraoAgenda = data || [];
+
+  const { error: erroQuintas } = await sb.rpc(
+    "sincronizar_quintas_semanas_agenda"
+  );
+
+  if (erroQuintas) {
+    console.warn("[AGENDA][5A SEMANA] Nao foi possivel sincronizar.", erroQuintas);
+  }
 
   renderizarValoresPadraoAgendaInline();
 
@@ -4940,6 +5125,12 @@ function abrirCobrancaAgendaInline(id) {
   if (!jogo) return;
 
   const mensalidade = buscarMensalidadeAgenda(jogo);
+  const cobrancaQuinta = buscarCobrancaQuintaSemanaAgenda(jogo);
+
+  if (cobrancaQuinta && !cobrancaQuintaSemanaPagaAgenda(cobrancaQuinta)) {
+    receberQuintaSemanaAgenda(cobrancaQuinta.id);
+    return;
+  }
 
   if (jogoEhMensalAgenda(jogo) && mensalidade) {
     receberMensalidadeAgenda(mensalidade.id);
@@ -5815,7 +6006,10 @@ const resumoPagamento =
 const pagamentoTexto =
   ehMensal
     ? (
-        mensalidade?.status === "pago"
+        buscarCobrancaQuintaSemanaAgenda(jogo) &&
+        !cobrancaQuintaSemanaPagaAgenda(buscarCobrancaQuintaSemanaAgenda(jogo))
+          ? "5ª semana pendente"
+          : mensalidade?.status === "pago"
           ? "Mensalidade paga"
           : "Mensalidade pendente"
       )
@@ -5824,7 +6018,10 @@ const pagamentoTexto =
 const pagamentoClasse =
   ehMensal
     ? (
-        mensalidade?.status === "pago"
+        buscarCobrancaQuintaSemanaAgenda(jogo) &&
+        !cobrancaQuintaSemanaPagaAgenda(buscarCobrancaQuintaSemanaAgenda(jogo))
+          ? "pendente"
+          : mensalidade?.status === "pago"
           ? "pago"
           : "pendente"
       )

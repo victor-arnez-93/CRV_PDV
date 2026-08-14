@@ -59,6 +59,36 @@ const PREVIEW_NEGOCIOS_FALLBACK = {
   arena_quadras: ["Agenda esportiva", "Quadras / Campos", "Mensalistas", "Jogadores", "Relatórios"]
 };
 
+// Segmentos mantidos no catálogo e no banco, porém temporariamente ocultos
+// para novas escolhas até que os fluxos específicos estejam completos.
+const TIPOS_NEGOCIO_LIBERADOS_COMERCIALMENTE = new Set([
+  "comercio_geral",
+  "mercado_conveniencia",
+  "padaria_confeitaria",
+  "lanchonete_cafeteria",
+  "bar_adega",
+  "servicos_gerais",
+  "arena_quadras"
+]);
+
+const PREVIEW_FUTURO_NEGOCIOS_FALLBACK = {
+  comercio_geral: ["Variações de produto", "Grade de produtos"],
+  mercado_conveniencia: ["Balança", "Fiado", "Caixa cego"],
+  padaria_confeitaria: ["Balança", "Fiado"],
+  lanchonete_cafeteria: ["Mesas", "Delivery", "Retirada no balcão"],
+  restaurante: ["Mesas", "Garçom", "Delivery", "Retirada no balcão"],
+  bar_adega: ["Mesas", "Garçom"],
+  servicos_gerais: ["Ordem de serviço"],
+  servicos_agendados: ["Agendamento de serviço"],
+  assistencia_tecnica: ["Ordem de serviço"],
+  arena_quadras: []
+};
+
+const RECURSOS_GERAIS_EM_EVOLUCAO = [
+  "TEF integrado",
+  "Emissão fiscal integrada"
+];
+
 const ALIASES_TIPOS_NEGOCIO = {
   mercado: "mercado_conveniencia",
   mercado_mercearia: "mercado_conveniencia",
@@ -90,8 +120,10 @@ const ALIASES_TIPOS_NEGOCIO = {
   quadras_esportivas: "arena_quadras"
 };
 
+let catalogoNegociosCompleto = CATALOGO_NEGOCIOS_FALLBACK;
 let catalogoNegocios = CATALOGO_NEGOCIOS_FALLBACK;
 let previewNegocios = { ...PREVIEW_NEGOCIOS_FALLBACK };
+let previewFuturoNegocios = { ...PREVIEW_FUTURO_NEGOCIOS_FALLBACK };
 
 // ======================================================
 // HELPERS
@@ -179,6 +211,20 @@ function normalizarTipoNegocio(tipo) {
   return ALIASES_TIPOS_NEGOCIO[codigo] || codigo;
 }
 
+function aplicarFiltroComercialCatalogo(tipoAtual = "") {
+  const atual = normalizarTipoNegocio(tipoAtual);
+
+  catalogoNegocios = catalogoNegociosCompleto
+    .map(categoria => ({
+      ...categoria,
+      tipos: (categoria.tipos || []).filter(tipo => {
+        return TIPOS_NEGOCIO_LIBERADOS_COMERCIALMENTE.has(tipo.codigo) ||
+          tipo.codigo === atual;
+      })
+    }))
+    .filter(categoria => categoria.tipos.length > 0);
+}
+
 function categoriaPorTipoNegocio(tipo) {
   const tipoNormalizado = normalizarTipoNegocio(tipo);
 
@@ -263,7 +309,7 @@ async function carregarCatalogoNegocios() {
         sb.from("tipos_negocio").select("codigo, nome, categoria_codigo, ordem, ativo, selecionavel").eq("ativo", true).eq("selecionavel", true).order("ordem"),
         sb.from("modulos_sistema").select("codigo, nome, ordem, ativo").eq("ativo", true).order("ordem"),
         sb.from("tipos_negocio_modulos").select("tipo_negocio, modulo_codigo, ativo").eq("ativo", true),
-        sb.from("features_sistema").select("codigo, nome, categoria, ativo, implementada").eq("ativo", true).eq("implementada", true),
+        sb.from("features_sistema").select("codigo, nome, categoria, ativo, implementada").eq("ativo", true),
         sb.from("tipos_negocio_features").select("tipo_negocio, feature_codigo, ativo").eq("ativo", true)
       ]);
 
@@ -282,23 +328,29 @@ async function carregarCatalogoNegocios() {
     const categorias = categoriasResp.data || [];
     const tipos = tiposResp.data || [];
 
-    catalogoNegocios = categorias.map(categoria => ({
+    catalogoNegociosCompleto = categorias.map(categoria => ({
       ...categoria,
       tipos: tipos.filter(tipo => tipo.categoria_codigo === categoria.codigo)
     })).filter(categoria => categoria.tipos.length > 0);
+
+    aplicarFiltroComercialCatalogo(
+      window.CRV_CONFIG?.empresa?.tipo_negocio || ""
+    );
 
     const nomesModulos = new Map(
       (modulosResp.data || []).map(modulo => [modulo.codigo, modulo.nome])
     );
 
-    const nomesFeatures = new Map(
-      (featuresResp.data || []).map(feature => [feature.codigo, feature.nome])
+    const featuresPorCodigo = new Map(
+      (featuresResp.data || []).map(feature => [feature.codigo, feature])
     );
 
     const novoPreview = {};
+    const novoPreviewFuturo = {};
 
     tipos.forEach(tipo => {
       const itens = new Set();
+      const itensFuturos = new Set();
 
       (vinculosModulosResp.data || [])
         .filter(vinculo => vinculo.tipo_negocio === tipo.codigo)
@@ -310,18 +362,30 @@ async function carregarCatalogoNegocios() {
       (vinculosFeaturesResp.data || [])
         .filter(vinculo => vinculo.tipo_negocio === tipo.codigo)
         .forEach(vinculo => {
-          const nome = nomesFeatures.get(vinculo.feature_codigo);
-          if (nome) itens.add(nome);
+          const feature = featuresPorCodigo.get(vinculo.feature_codigo);
+          if (!feature?.nome) return;
+
+          if (feature.implementada === true) {
+            itens.add(feature.nome);
+          } else {
+            itensFuturos.add(feature.nome);
+          }
         });
 
       novoPreview[tipo.codigo] = [...itens];
+      novoPreviewFuturo[tipo.codigo] = [...itensFuturos];
     });
 
     previewNegocios = novoPreview;
+    previewFuturoNegocios = novoPreviewFuturo;
   } catch (err) {
     console.warn("[CRV CATALOGO NEGOCIOS] Usando catalogo compativel local.", err);
-    catalogoNegocios = CATALOGO_NEGOCIOS_FALLBACK;
+    catalogoNegociosCompleto = CATALOGO_NEGOCIOS_FALLBACK;
+    aplicarFiltroComercialCatalogo(
+      window.CRV_CONFIG?.empresa?.tipo_negocio || ""
+    );
     previewNegocios = { ...PREVIEW_NEGOCIOS_FALLBACK };
+    previewFuturoNegocios = { ...PREVIEW_FUTURO_NEGOCIOS_FALLBACK };
   }
 
   renderizarCategoriasNegocio();
@@ -456,6 +520,8 @@ function preencherFormulario(data) {
     data.uf || "";
 
 const tipoNegocio = normalizarTipoNegocio(data.tipo_negocio || "");
+aplicarFiltroComercialCatalogo(tipoNegocio);
+renderizarCategoriasNegocio();
 const categoriaNegocio = categoriaPorTipoNegocio(tipoNegocio);
 
 document.getElementById("cfgCategoriaNegocio").value = categoriaNegocio;
@@ -497,6 +563,10 @@ function atualizarPreviewSegmento() {
   );
   const tipoInfo = grupo?.tipos.find(item => item.codigo === tipo);
   const itens = previewNegocios[tipo] || [];
+  const itensFuturos = [
+    ...(previewFuturoNegocios[tipo] || []),
+    ...RECURSOS_GERAIS_EM_EVOLUCAO
+  ];
 
   if (!tipoInfo) {
 
@@ -520,7 +590,7 @@ function atualizarPreviewSegmento() {
   title.textContent = tipoInfo.nome;
   content.replaceChildren();
 
-  if (!itens.length) {
+  if (!itens.length && !itensFuturos.length) {
     if (count) {
       count.hidden = true;
       count.textContent = "";
@@ -648,6 +718,42 @@ function atualizarPreviewSegmento() {
       grupoEl.append(cabecalho, lista);
       content.appendChild(grupoEl);
     });
+
+  const futuros = [...new Set(
+    itensFuturos
+      .map(item => typeof item === "string" ? item : item?.nome)
+      .map(item => String(item || "").trim())
+      .filter(Boolean)
+  )];
+
+  if (futuros.length) {
+    const grupoEl = document.createElement("section");
+    grupoEl.className = "segment-resource-group segment-resource-group-future";
+
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "segment-resource-group-header";
+    cabecalho.innerHTML = `
+      <i class="fa-solid fa-clock" aria-hidden="true"></i>
+      <h3>Em evolução</h3>
+      <span>${futuros.length}</span>
+    `;
+
+    const lista = document.createElement("ul");
+    lista.className = "segment-resource-list";
+
+    futuros.forEach(nome => {
+      const itemEl = document.createElement("li");
+      itemEl.innerHTML = `
+        <i class="fa-solid fa-minus" aria-hidden="true"></i>
+        <span></span>
+      `;
+      itemEl.querySelector("span").textContent = nome;
+      lista.appendChild(itemEl);
+    });
+
+    grupoEl.append(cabecalho, lista);
+    content.appendChild(grupoEl);
+  }
 }
 
 function atualizarPreviewFundo() {

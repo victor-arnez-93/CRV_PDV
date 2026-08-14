@@ -1450,6 +1450,11 @@ body.light .jogo-caixa-status.cobranca {
   background: rgba(255, 111, 32, .08);
 }
 
+.jogo-caixa-quinta-semana {
+  border-color: rgba(212, 168, 67, .45);
+  background: linear-gradient(135deg, rgba(212,168,67,.12), rgba(212,168,67,.045));
+}
+
 .jogo-caixa-mensalidade-info {
   min-width: 0;
 }

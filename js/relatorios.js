@@ -17,6 +17,9 @@ let itensData = [];
 let produtosData = [];
 let caixasHistorico = [];
 let agendaFechadaData = [];
+let agendaControleData = [];
+let mensalidadesAgendaRelatorio = [];
+let cobrancasExtrasAgendaRelatorio = [];
 let configuracaoAgendaRelatorio = null;
 let tipoNegocioRelatorio = "";
 let nomeFantasiaRelatorio = "empresa";
@@ -374,7 +377,7 @@ vendas = Array.isArray(vendasSupabase)
 
         sb
           .from("agenda_configuracao")
-          .select("hora_abertura,hora_fechamento")
+          .select("hora_abertura,hora_fechamento,cobrar_quinta_semana")
           .eq("empresa_id", empresaId)
           .maybeSingle()
       ]);
@@ -396,6 +399,9 @@ vendas = Array.isArray(vendasSupabase)
       }
     } else {
       agendaFechadaData = [];
+      agendaControleData = [];
+      mensalidadesAgendaRelatorio = [];
+      cobrancasExtrasAgendaRelatorio = [];
       configuracaoAgendaRelatorio = null;
     }
 
@@ -425,6 +431,9 @@ vendas = Array.isArray(vendasSupabase)
     produtosData = [];
     caixasHistorico = [];
     agendaFechadaData = [];
+    agendaControleData = [];
+    mensalidadesAgendaRelatorio = [];
+    cobrancasExtrasAgendaRelatorio = [];
   }
 }
 
@@ -925,6 +934,7 @@ function itemEhPagamentoJogo(item) {
     origem === "agenda" ||
     origem === "agenda_avulso" ||
     origem === "agenda_mensalidade" ||
+    origem === "agenda_quinta_semana" ||
     Boolean(item.agenda_id) ||
     Boolean(item.agenda_jogador_id) ||
     nome.startsWith("pagamento de jogo") ||
@@ -1272,6 +1282,11 @@ function montarRecebimentosJogosAgrupados(vendas) {
         return String(item.origem || "").toLowerCase() ===
           "agenda_mensalidade";
       });
+    const vendaQuintaSemana =
+      origemVenda === "agenda_quinta_semana" ||
+      (venda.itens || []).some(item => {
+        return String(item.origem || "").toLowerCase() === "agenda_quinta_semana";
+      });
 
     const itensJogo =
       (venda.itens || []).filter(item => itemEhPagamentoJogo(item));
@@ -1279,7 +1294,8 @@ function montarRecebimentosJogosAgrupados(vendas) {
 const vendaDiretaJogo =
   origemVenda === "agenda" ||
   origemVenda === "agenda_avulso" ||
-  origemVenda === "agenda_mensalidade";
+  origemVenda === "agenda_mensalidade" ||
+  origemVenda === "agenda_quinta_semana";
 
     const vendaComandaComJogo =
       origemVenda === "comanda" &&
@@ -1295,7 +1311,9 @@ const agendaReferenciaId = vendaDiretaJogo
 
 const chave = vendaMensalidade && vendaDiretaJogo
   ? `mensalidade:${venda.origem_id || venda.id}`
-  : `jogo:${agendaReferenciaId}`;
+  : vendaQuintaSemana && vendaDiretaJogo
+    ? `quinta:${venda.origem_id || venda.id}`
+    : `jogo:${agendaReferenciaId}`;
 
     const descricaoLimpa =
       vendaDiretaJogo
@@ -1322,12 +1340,19 @@ const chave = vendaMensalidade && vendaDiretaJogo
         qtdDireto: 0,
         qtdComanda: 0,
         qtdMensalistas: 0,
-        ehMensalidade: false
+        ehMensalidade: false,
+        ehQuintaSemana: false
       };
     }
 
     mapa[chave].ehMensalidade =
       mapa[chave].ehMensalidade || vendaMensalidade;
+    mapa[chave].ehQuintaSemana =
+      mapa[chave].ehQuintaSemana || vendaQuintaSemana;
+
+    if (vendaQuintaSemana) {
+      mapa[chave].tipo = "5ª semana";
+    }
 
     if (new Date(venda.data) > new Date(mapa[chave].data)) {
       mapa[chave].data = venda.data;
@@ -1344,7 +1369,7 @@ if (vendaDiretaJogo) {
     extrairResumoJogoDescricaoRelatorio(venda.descricao);
 
   const qtdDireto =
-    vendaMensalidade
+    (vendaMensalidade || vendaQuintaSemana)
       ? 0
       : resumoDescricao.qtdDireto !== null
       ? resumoDescricao.qtdDireto
@@ -1412,9 +1437,478 @@ if (vendaDiretaJogo) {
 }
 
 // ======================================================
-// EXPORTAR EXCEL COMPATÍVEL
+// TIPOS DE EXPORTACAO - CAMADA INCREMENTAL
+// O tipo "completo" chama os exportadores originais abaixo.
 // ======================================================
 function exportarExcel() {
+  abrirSeletorTipoRelatorio("excel");
+}
+
+function exportarPDF() {
+  abrirSeletorTipoRelatorio("pdf");
+}
+
+function escaparHTMLRelatorio(valor) {
+  const div = document.createElement("div");
+  div.textContent = String(valor ?? "");
+  return div.innerHTML;
+}
+
+function abrirSeletorTipoRelatorio(formato) {
+  document.getElementById("modalTipoRelatorio")?.remove();
+
+  const tipos = [
+    {
+      codigo: "completo",
+      titulo: "Completo",
+      descricao: "Exatamente o relatório atual, com todos os blocos e indicadores."
+    },
+    {
+      codigo: "financeiro",
+      titulo: "Financeiro",
+      descricao: "Resumo, faturamento, lucro e formas de pagamento."
+    },
+    {
+      codigo: "vendas_produtos",
+      titulo: "Vendas e produtos",
+      descricao: "Transações e desempenho dos itens no período."
+    }
+  ];
+
+  if (empresaUsaAgendaEsportiva()) {
+    tipos.push({
+      codigo: "jogos",
+      titulo: "Controle de jogos",
+      descricao: "Jogos, mensalidade, 5ª semana, avulsos e status."
+    });
+  }
+
+  const modal = document.createElement("div");
+  modal.id = "modalTipoRelatorio";
+  modal.className = "relatorio-tipo-overlay";
+  modal.innerHTML = `
+    <div class="relatorio-tipo-card" role="dialog" aria-modal="true" aria-labelledby="tituloTipoRelatorio">
+      <div class="relatorio-tipo-header">
+        <div>
+          <span>Exportar ${formato === "pdf" ? "PDF" : "Excel"}</span>
+          <h3 id="tituloTipoRelatorio">Escolha o tipo de relatório</h3>
+          <p>O período selecionado na tela será mantido.</p>
+        </div>
+        <button type="button" class="relatorio-tipo-fechar" aria-label="Fechar">×</button>
+      </div>
+      <div class="relatorio-tipo-opcoes">
+        ${tipos.map((tipo, index) => `
+          <label class="relatorio-tipo-opcao ${index === 0 ? "selecionada" : ""}">
+            <input type="radio" name="tipoRelatorioExportacao" value="${tipo.codigo}" ${index === 0 ? "checked" : ""}>
+            <span>
+              <strong>${tipo.titulo}</strong>
+              <small>${tipo.descricao}</small>
+            </span>
+            ${tipo.codigo === "completo" ? "<em>Padrão atual</em>" : ""}
+          </label>
+        `).join("")}
+      </div>
+      <div class="relatorio-tipo-acoes">
+        <button type="button" class="btn-secondary relatorio-tipo-cancelar">Cancelar</button>
+        <button type="button" class="btn-primary relatorio-tipo-confirmar">Gerar relatório</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const fechar = () => modal.remove();
+  modal.querySelector(".relatorio-tipo-fechar")?.addEventListener("click", fechar);
+  modal.querySelector(".relatorio-tipo-cancelar")?.addEventListener("click", fechar);
+  modal.addEventListener("click", event => {
+    if (event.target === modal) fechar();
+  });
+  modal.querySelectorAll("input[type='radio']").forEach(input => {
+    input.addEventListener("change", () => {
+      modal.querySelectorAll(".relatorio-tipo-opcao").forEach(opcao => {
+        opcao.classList.toggle(
+          "selecionada",
+          opcao.querySelector("input")?.checked === true
+        );
+      });
+    });
+  });
+  modal.querySelector(".relatorio-tipo-confirmar")?.addEventListener("click", () => {
+    const tipo = modal.querySelector("input[name='tipoRelatorioExportacao']:checked")?.value || "completo";
+    fechar();
+    executarExportacaoRelatorio(formato, tipo);
+  });
+}
+
+function executarExportacaoRelatorio(formato, tipo) {
+  const rotas = {
+    pdf: {
+      completo: exportarPDFCompleto,
+      financeiro: exportarPDFFinanceiro,
+      vendas_produtos: exportarPDFVendasProdutos,
+      jogos: exportarPDFJogos
+    },
+    excel: {
+      completo: exportarExcelCompleto,
+      financeiro: exportarExcelFinanceiro,
+      vendas_produtos: exportarExcelVendasProdutos,
+      jogos: exportarExcelJogos
+    }
+  };
+
+  const exportador = rotas[formato]?.[tipo];
+  if (typeof exportador === "function") exportador();
+}
+
+function obterResumoFinanceiroRelatorio() {
+  const vendas = getVendasFiltradas();
+  const faturamento = vendas.reduce((acc, venda) => acc + Number(venda.total || 0), 0);
+  const lucro = vendas.reduce((acc, venda) => acc + Number(venda.lucro_total || 0), 0);
+  const ticket = vendas.length ? faturamento / vendas.length : 0;
+  const pagamentos = vendas.reduce((acc, venda) => {
+    const forma = labelFormaPagamentoRelatorio(venda.forma_pagamento);
+    acc[forma] = (acc[forma] || 0) + Number(venda.total || 0);
+    return acc;
+  }, {});
+
+  return { vendas, faturamento, lucro, ticket, pagamentos };
+}
+
+function dataAgendaRelatorio(dataISO) {
+  const data = new Date(`${String(dataISO || "").slice(0, 10)}T12:00:00`);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function dataLocalParaISO(date) {
+  const ano = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const dia = String(date.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+async function carregarControleJogosRelatorio() {
+  if (!empresaUsaAgendaEsportiva()) {
+    agendaControleData = [];
+    return;
+  }
+
+  if (!window.APP_STATUS?.online || !window.sb) {
+    throw new Error("O controle de jogos precisa de conexão para consultar o período completo.");
+  }
+
+  const empresaId = obterEmpresaId();
+  const { inicio, fim } = getIntervaloPeriodo();
+  const inicioMes = dataLocalParaISO(new Date(inicio.getFullYear(), inicio.getMonth(), 1));
+  const fimMes = dataLocalParaISO(new Date(fim.getFullYear(), fim.getMonth() + 1, 0));
+
+  const [jogos, mensalidades, extras] = await Promise.all([
+    carregarPaginasSupabaseRelatorio(() => sb
+      .from("agenda")
+      .select("id, recorrencia_origem_id, horario_original_data, tipo_jogo, recorrencia, local_recurso, hora_inicio, hora_fim, data_agendamento, cliente_nome, total_pago_jogadores, total_pendente_jogadores, total_jogadores, quantidade_pendente_jogadores, quantidade_paga_jogadores, status_jogo")
+      .eq("empresa_id", empresaId)
+      .gte("data_agendamento", inicioMes)
+      .lte("data_agendamento", fimMes)
+      .order("data_agendamento", { ascending: true })
+      .order("hora_inicio", { ascending: true })),
+
+    carregarPaginasSupabaseRelatorio(() => sb
+      .from("agenda_mensalidades")
+      .select("*")
+      .eq("empresa_id", empresaId)
+      .lte("data_inicio", fimMes)
+      .gte("data_fim", inicioMes)
+      .order("competencia", { ascending: true })),
+
+    carregarPaginasSupabaseRelatorio(() => sb
+      .from("agenda_cobrancas_extras")
+      .select("*")
+      .eq("empresa_id", empresaId)
+      .eq("tipo", "quinta_semana")
+      .neq("status", "cancelado")
+      .order("criado_em", { ascending: true }))
+  ]);
+
+  agendaControleData = Array.isArray(jogos) ? jogos : [];
+  mensalidadesAgendaRelatorio = Array.isArray(mensalidades) ? mensalidades : [];
+
+  const idsJogos = new Set(agendaControleData.map(jogo => String(jogo.id)));
+  cobrancasExtrasAgendaRelatorio = (Array.isArray(extras) ? extras : [])
+    .filter(extra => idsJogos.has(String(extra.agenda_id)));
+}
+
+function buscarMensalidadeJogoRelatorio(jogo) {
+  const origemId = jogo.recorrencia_origem_id || jogo.id;
+  const dataJogo = String(jogo.horario_original_data || jogo.data_agendamento || "").slice(0, 10);
+
+  return mensalidadesAgendaRelatorio.find(mensalidade => {
+    const inicio = String(mensalidade.data_inicio || "").slice(0, 10);
+    const fim = String(mensalidade.data_fim || "").slice(0, 10);
+    return String(mensalidade.agenda_origem_id || "") === String(origemId) &&
+      inicio && fim && dataJogo >= inicio && dataJogo <= fim;
+  }) || null;
+}
+
+function obterIndiceJogoMensalRelatorio(jogo, mensalidade) {
+  if (!mensalidade) return null;
+  const origemId = jogo.recorrencia_origem_id || jogo.id;
+  const ocorrencias = agendaControleData
+    .filter(item => {
+      const origemItem = item.recorrencia_origem_id || item.id;
+      const dataItem = String(item.horario_original_data || item.data_agendamento || "").slice(0, 10);
+      return String(origemItem) === String(origemId) &&
+        dataItem >= String(mensalidade.data_inicio || "").slice(0, 10) &&
+        dataItem <= String(mensalidade.data_fim || "").slice(0, 10);
+    })
+    .sort((a, b) => {
+      const dataA = `${a.horario_original_data || a.data_agendamento} ${a.hora_inicio || ""}`;
+      const dataB = `${b.horario_original_data || b.data_agendamento} ${b.hora_inicio || ""}`;
+      return dataA.localeCompare(dataB);
+    });
+  const indice = ocorrencias.findIndex(item => String(item.id) === String(jogo.id));
+  const total = Number(mensalidade.quantidade_jogos_prevista || 4);
+  return indice >= 0 ? { atual: indice + 1, total, ehExtra: indice + 1 > total } : null;
+}
+
+async function montarControleJogosRelatorio() {
+  await carregarControleJogosRelatorio();
+  const { inicio, fim } = getIntervaloPeriodo();
+
+  return agendaControleData
+    .filter(jogo => {
+      const data = dataAgendaRelatorio(jogo.data_agendamento);
+      return data && data >= inicio && data <= fim;
+    })
+    .sort((a, b) => {
+      return `${a.data_agendamento} ${a.hora_inicio || ""}`
+        .localeCompare(`${b.data_agendamento} ${b.hora_inicio || ""}`);
+    })
+    .map(jogo => {
+      const mensalidade = buscarMensalidadeJogoRelatorio(jogo);
+      const ciclo = obterIndiceJogoMensalRelatorio(jogo, mensalidade);
+      const extra = cobrancasExtrasAgendaRelatorio.find(item => {
+        return String(item.agenda_id || "") === String(jogo.id) &&
+          item.tipo === "quinta_semana" &&
+          item.status !== "cancelado";
+      }) || null;
+      const ehMensal = Boolean(mensalidade) || String(jogo.tipo_jogo || "") === "mensalista";
+
+      return {
+        data: jogo.data_agendamento,
+        horario: `${String(jogo.hora_inicio || "").slice(0, 5)} - ${String(jogo.hora_fim || "").slice(0, 5)}`,
+        local: jogo.local_recurso || "—",
+        responsavel: jogo.cliente_nome || "—",
+        tipo: ehMensal ? "Mensal" : "Avulso",
+        ciclo: ciclo ? (ciclo.ehExtra ? "5ª semana" : `Jogo ${ciclo.atual}/${ciclo.total}`) : "—",
+        mensalidade: mensalidade
+          ? (mensalidade.status === "pago" ? "Paga" : mensalidade.status === "cancelado" ? "Cancelada" : "Pendente")
+          : "—",
+        quintaSemana: extra
+          ? `${extra.status === "pago" ? "Paga" : "Pendente"} · ${fmt(extra.valor)}`
+          : ciclo?.ehExtra ? "Sem valor configurado" : "—",
+        avulsosRecebidos: Number(jogo.total_pago_jogadores || 0),
+        avulsosPendentes: Number(jogo.total_pendente_jogadores || 0),
+        status: String(jogo.status_jogo || "agendado").replaceAll("_", " ")
+      };
+    });
+}
+
+function abrirImpressaoRelatorio(titulo, conteudo) {
+  const janela = window.open("", "_blank");
+  if (!janela) {
+    mostrarModalAviso("O navegador bloqueou a janela de impressão.");
+    return;
+  }
+
+  janela.document.write(`
+    <html><head><meta charset="UTF-8"><title>${escaparHTMLRelatorio(titulo)}</title>
+    <style>
+      @page { size: A4; margin: 12mm; }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; color: #111; font-size: 11px; margin: 0; }
+      h1 { font-size: 19px; margin: 0 0 5px; text-transform: uppercase; }
+      h2 { font-size: 13px; margin: 18px 0 7px; border-bottom: 1px solid #aaa; padding-bottom: 4px; }
+      .meta { color: #555; margin-bottom: 18px; }
+      .resumo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .box { border: 1px solid #ccc; border-radius: 5px; padding: 9px; }
+      .box small { display: block; color: #666; text-transform: uppercase; }
+      .box strong { display: block; margin-top: 3px; font-size: 15px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 7px; }
+      th, td { border: 1px solid #d1d1d1; padding: 6px; text-align: left; vertical-align: top; }
+      th { background: #f1f1f1; text-transform: uppercase; font-size: 9px; }
+      tr { page-break-inside: avoid; }
+      .right { text-align: right; }
+      .footer { margin-top: 22px; border-top: 1px solid #ccc; padding-top: 8px; text-align: center; color: #666; }
+    </style></head><body>
+      <h1>${escaparHTMLRelatorio(titulo)}</h1>
+      <div class="meta">${escaparHTMLRelatorio(nomeFantasiaRelatorio)} · ${escaparHTMLRelatorio(getPeriodoLabel())} (${escaparHTMLRelatorio(getPeriodoDetalhado())}) · ${new Date().toLocaleString("pt-BR")}</div>
+      ${conteudo}
+      <div class="footer">CRV PDV · Relatório gerado automaticamente</div>
+    </body></html>
+  `);
+  janela.document.close();
+  janela.onload = () => {
+    janela.focus();
+    janela.print();
+  };
+}
+
+function exportarPDFFinanceiro() {
+  const resumo = obterResumoFinanceiroRelatorio();
+  if (!resumo.vendas.length) return mostrarModalAviso("Sem dados financeiros para exportar.");
+
+  abrirImpressaoRelatorio("Relatório financeiro", `
+    <div class="resumo">
+      <div class="box"><small>Faturamento</small><strong>${fmt(resumo.faturamento)}</strong></div>
+      <div class="box"><small>Lucro bruto</small><strong>${fmt(resumo.lucro)}</strong></div>
+      <div class="box"><small>Vendas</small><strong>${resumo.vendas.length}</strong></div>
+      <div class="box"><small>Ticket médio</small><strong>${fmt(resumo.ticket)}</strong></div>
+    </div>
+    <h2>Formas de pagamento</h2>
+    <table><thead><tr><th>Forma</th><th class="right">Total</th></tr></thead><tbody>
+      ${Object.entries(resumo.pagamentos).sort((a, b) => b[1] - a[1]).map(([forma, total]) => `
+        <tr><td>${escaparHTMLRelatorio(forma)}</td><td class="right">${fmt(total)}</td></tr>
+      `).join("")}
+    </tbody></table>
+  `);
+}
+
+function exportarPDFVendasProdutos() {
+  const vendas = getVendasFiltradas();
+  if (!vendas.length) return mostrarModalAviso("Sem vendas para exportar.");
+  const ranking = montarRankingProdutos(vendas).sort((a, b) => b.total - a.total).slice(0, 20);
+
+  abrirImpressaoRelatorio("Vendas e produtos", `
+    <h2>Vendas</h2>
+    <table><thead><tr><th>Data</th><th>Hora</th><th>Pagamento</th><th>Descrição</th><th class="right">Total</th></tr></thead><tbody>
+      ${vendas.map(venda => `<tr>
+        <td>${formatarDataVendaRelatorio(venda.data)}</td><td>${formatarHoraVendaRelatorio(venda.data)}</td>
+        <td>${escaparHTMLRelatorio(labelFormaPagamentoRelatorio(venda.forma_pagamento))}</td>
+        <td>${escaparHTMLRelatorio(venda.descricao || venda.origem || "Venda")}</td><td class="right">${fmt(venda.total)}</td>
+      </tr>`).join("")}
+    </tbody></table>
+    <h2>Produtos e itens</h2>
+    <table><thead><tr><th>Item</th><th class="right">Qtd.</th><th class="right">Faturamento</th><th class="right">Lucro</th></tr></thead><tbody>
+      ${ranking.map(item => `<tr><td>${escaparHTMLRelatorio(item.nome)}</td><td class="right">${item.qtd}</td><td class="right">${fmt(item.total)}</td><td class="right">${fmt(item.lucro)}</td></tr>`).join("")}
+    </tbody></table>
+  `);
+}
+
+async function exportarPDFJogos() {
+  let jogos = [];
+  try {
+    jogos = await montarControleJogosRelatorio();
+  } catch (err) {
+    return mostrarModalAviso(err.message || "Não foi possível carregar os jogos.");
+  }
+  if (!jogos.length) return mostrarModalAviso("Sem jogos no período selecionado.");
+
+  abrirImpressaoRelatorio("Controle de jogos", `
+    <table><thead><tr>
+      <th>Data / hora</th><th>Quadra</th><th>Responsável</th><th>Plano</th><th>Ciclo</th>
+      <th>Mensalidade</th><th>5ª semana</th><th>Avulsos</th><th>Status</th>
+    </tr></thead><tbody>
+      ${jogos.map(jogo => `<tr>
+        <td>${formatarDataVendaRelatorio(`${jogo.data}T12:00:00Z`)}<br>${escaparHTMLRelatorio(jogo.horario)}</td>
+        <td>${escaparHTMLRelatorio(jogo.local)}</td><td>${escaparHTMLRelatorio(jogo.responsavel)}</td>
+        <td>${jogo.tipo}</td><td>${jogo.ciclo}</td><td>${jogo.mensalidade}</td><td>${escaparHTMLRelatorio(jogo.quintaSemana)}</td>
+        <td>Recebido: ${fmt(jogo.avulsosRecebidos)}<br>Pendente: ${fmt(jogo.avulsosPendentes)}</td>
+        <td>${escaparHTMLRelatorio(jogo.status)}</td>
+      </tr>`).join("")}
+    </tbody></table>
+  `);
+}
+
+function exportarExcelFinanceiro() {
+  const resumo = obterResumoFinanceiroRelatorio();
+  if (!resumo.vendas.length) return mostrarModalAviso("Sem dados financeiros para exportar.");
+  if (typeof XLSX === "undefined") return mostrarModalAviso("Biblioteca de Excel não carregada.");
+
+  const wb = XLSX.utils.book_new();
+  const linhas = [
+    ["RELATÓRIO FINANCEIRO - CRV PDV"],
+    [`Empresa: ${nomeFantasiaRelatorio}`],
+    [`Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
+    [], ["Indicador", "Valor"],
+    ["Faturamento", resumo.faturamento], ["Lucro bruto", resumo.lucro],
+    ["Vendas", resumo.vendas.length], ["Ticket médio", resumo.ticket]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  ws["!cols"] = [{ wch: 24 }, { wch: 18 }];
+  aplicarEstilosBasicosExcel(ws);
+  ["B6", "B7", "B9"].forEach(endereco => {
+    if (ws[endereco]) ws[endereco].z = '"R$" #,##0.00';
+  });
+  XLSX.utils.book_append_sheet(wb, ws, "Resumo financeiro");
+
+  const pagamentos = [["Forma", "Total"], ...Object.entries(resumo.pagamentos)];
+  const wsPagamentos = XLSX.utils.aoa_to_sheet(pagamentos);
+  wsPagamentos["!cols"] = [{ wch: 20 }, { wch: 18 }];
+  aplicarEstilosBasicosExcel(wsPagamentos, { headerRow: 1, moedaColunasPorIndice: [1] });
+  XLSX.utils.book_append_sheet(wb, wsPagamentos, "Pagamentos");
+  XLSX.writeFile(wb, `relatorio_financeiro_${nomeFantasiaRelatorio}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function exportarExcelVendasProdutos() {
+  const vendas = getVendasFiltradas();
+  if (!vendas.length) return mostrarModalAviso("Sem vendas para exportar.");
+  if (typeof XLSX === "undefined") return mostrarModalAviso("Biblioteca de Excel não carregada.");
+
+  const wb = XLSX.utils.book_new();
+  const linhasVendas = [["Data", "Hora", "Pagamento", "Descrição", "Subtotal", "Desconto", "Total", "Lucro"]];
+  vendas.forEach(venda => linhasVendas.push([
+    formatarDataVendaRelatorio(venda.data), formatarHoraVendaRelatorio(venda.data),
+    labelFormaPagamentoRelatorio(venda.forma_pagamento), venda.descricao || venda.origem || "Venda",
+    Number(venda.subtotal || 0), Number(venda.desconto || 0), Number(venda.total || 0), Number(venda.lucro_total || 0)
+  ]));
+  const wsVendas = XLSX.utils.aoa_to_sheet(linhasVendas);
+  wsVendas["!cols"] = [{ wch: 12 }, { wch: 9 }, { wch: 15 }, { wch: 48 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+  wsVendas["!autofilter"] = { ref: `A1:H${linhasVendas.length}` };
+  aplicarEstilosBasicosExcel(wsVendas, { headerRow: 1, moedaColunasPorIndice: [4, 5, 6, 7] });
+  XLSX.utils.book_append_sheet(wb, wsVendas, "Vendas");
+
+  const ranking = montarRankingProdutos(vendas).sort((a, b) => b.total - a.total);
+  const linhasItens = [["Item", "Quantidade", "Faturamento", "Lucro"], ...ranking.map(item => [item.nome, item.qtd, item.total, item.lucro])];
+  const wsItens = XLSX.utils.aoa_to_sheet(linhasItens);
+  wsItens["!cols"] = [{ wch: 38 }, { wch: 14 }, { wch: 18 }, { wch: 18 }];
+  aplicarEstilosBasicosExcel(wsItens, { headerRow: 1, moedaColunasPorIndice: [2, 3] });
+  XLSX.utils.book_append_sheet(wb, wsItens, "Produtos e itens");
+  XLSX.writeFile(wb, `relatorio_vendas_produtos_${nomeFantasiaRelatorio}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+async function exportarExcelJogos() {
+  let jogos = [];
+  try {
+    jogos = await montarControleJogosRelatorio();
+  } catch (err) {
+    return mostrarModalAviso(err.message || "Não foi possível carregar os jogos.");
+  }
+  if (!jogos.length) return mostrarModalAviso("Sem jogos no período selecionado.");
+  if (typeof XLSX === "undefined") return mostrarModalAviso("Biblioteca de Excel não carregada.");
+
+  const linhas = [[
+    "Data", "Horário", "Quadra/Campo", "Responsável", "Tipo", "Ciclo",
+    "Mensalidade", "5ª semana", "Avulsos recebidos", "Avulsos pendentes", "Status do jogo"
+  ]];
+  jogos.forEach(jogo => linhas.push([
+    jogo.data, jogo.horario, jogo.local, jogo.responsavel, jogo.tipo, jogo.ciclo,
+    jogo.mensalidade, jogo.quintaSemana, jogo.avulsosRecebidos, jogo.avulsosPendentes, jogo.status
+  ]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  ws["!cols"] = [
+    { wch: 12 }, { wch: 15 }, { wch: 22 }, { wch: 28 }, { wch: 11 }, { wch: 14 },
+    { wch: 14 }, { wch: 24 }, { wch: 18 }, { wch: 18 }, { wch: 16 }
+  ];
+  ws["!autofilter"] = { ref: `A1:K${linhas.length}` };
+  aplicarEstilosBasicosExcel(ws, { headerRow: 1, moedaColunasPorIndice: [8, 9] });
+  XLSX.utils.book_append_sheet(wb, ws, "Controle de jogos");
+  XLSX.writeFile(wb, `controle_jogos_${nomeFantasiaRelatorio}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// ======================================================
+// EXPORTAR EXCEL COMPATÍVEL
+// ======================================================
+function exportarExcelCompleto() {
   const vendas = getVendasFiltradas();
 
   if (!vendas.length) {
@@ -1579,7 +2073,9 @@ function exportarExcel() {
         jogo.tipo,
         jogo.nome,
         jogo.forma,
-        jogo.ehMensalidade
+        jogo.ehQuintaSemana
+          ? `5ª semana - ${fmt(jogo.totalDireto)}`
+          : jogo.ehMensalidade
           ? `Mensalidade do horário - ${fmt(jogo.totalDireto)}`
           : `${jogo.qtdDireto} jogador${jogo.qtdDireto !== 1 ? "es" : ""} - ${fmt(jogo.totalDireto)}`,
         `${jogo.qtdComanda} jogador${jogo.qtdComanda !== 1 ? "es" : ""} - ${fmt(jogo.totalComanda)}`,
@@ -1681,7 +2177,7 @@ function aplicarEstilosBasicosExcel(ws, config = {}) {
 // ======================================================
 // EXPORTAR PDF / IMPRESSÃO PROFISSIONAL
 // ======================================================
-function exportarPDF() {
+function exportarPDFCompleto() {
   const vendas = getVendasFiltradas();
 
   if (!vendas.length) {

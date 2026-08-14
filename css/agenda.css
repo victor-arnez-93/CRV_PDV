@@ -2350,13 +2350,51 @@ body.light .agenda-alteracao-info {
 
 .agenda-valor-inline-item {
   display: grid !important;
-  grid-template-columns: minmax(180px, 280px) minmax(160px, 1fr) minmax(160px, 1fr) 54px !important;
+  grid-template-columns: minmax(150px, 230px) repeat(3, minmax(135px, 1fr)) 54px !important;
   gap: 12px !important;
   align-items: center !important;
   padding: 10px 14px !important;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-elevated);
+}
+
+.agenda-config-quinta-toggle {
+  grid-column: 1 / -1;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  cursor: pointer;
+}
+
+.agenda-config-quinta-toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: #d4a843;
+}
+
+.agenda-config-quinta-toggle span,
+.agenda-config-quinta-toggle small,
+.agenda-valores-inline-header small {
+  display: block;
+}
+
+.agenda-config-quinta-toggle small,
+.agenda-valores-inline-header small {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: .72rem;
+}
+
+.btn-receber-quinta-semana {
+  color: #d4a843;
+  border-color: rgba(212,168,67,.48);
+  background: rgba(212,168,67,.10);
 }
 
 .agenda-valor-inline-item .input {

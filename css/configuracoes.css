@@ -1068,6 +1068,21 @@
   font-size: .54rem;
 }
 
+.segment-resource-group-future {
+  border-style: dashed;
+  background: rgba(255,255,255,.018);
+}
+
+.segment-resource-group-future .segment-resource-group-header > i,
+.segment-resource-group-future .segment-resource-list li,
+.segment-resource-group-future .segment-resource-list li i {
+  color: var(--text-muted);
+}
+
+.segment-resource-group-future .segment-resource-list li i {
+  background: rgba(255,255,255,.06);
+}
+
 .config-segment-mode .segment-empty {
   grid-column: 1 / -1;
   padding: 16px;
