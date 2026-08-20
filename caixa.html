@@ -205,6 +205,17 @@
               <span>Modo balcão</span>
             </button>
 
+            <button
+              class="caixa-view-toggle"
+              id="btnMovimentacoesCaixa"
+              type="button"
+              onclick="abrirModalMovimentacoesCaixa()"
+              style="display:none;"
+            >
+              <i data-lucide="arrow-up-down" width="16" height="16"></i>
+              <span>Sangria / Suprimento</span>
+            </button>
+
             <button class="btn-danger" id="btnFecharCaixa" onclick="confirmarFechamento()">
               <i data-lucide="lock" width="15" height="15"></i>
               <span>Fechar Caixa</span>
@@ -891,6 +902,82 @@
   </div>
 </div>
 
+<!-- MODAL: Sangria e suprimento -->
+<div class="modal-overlay" id="modalMovimentacoesCaixa" style="display:none;">
+  <div class="modal card modal-movimentacoes-caixa">
+    <div class="modal-header">
+      <div>
+        <h3>Movimentações do Caixa</h3>
+        <small>Sangrias e suprimentos vinculados ao caixa aberto.</small>
+      </div>
+      <button class="btn-ghost" type="button" onclick="fecharModalMovimentacoesCaixa()" aria-label="Fechar">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="mov-caixa-resumo">
+        <div>
+          <span>Suprimentos</span>
+          <strong class="entrada" id="movCaixaTotalSuprimentos">R$ 0,00</strong>
+        </div>
+        <div>
+          <span>Sangrias</span>
+          <strong class="saida" id="movCaixaTotalSangrias">R$ 0,00</strong>
+        </div>
+        <div>
+          <span>Impacto no saldo</span>
+          <strong id="movCaixaImpactoSaldo">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <div class="mov-caixa-form card">
+        <div class="form-row">
+          <div class="input-group">
+            <label class="input-label" for="movCaixaTipo">Tipo *</label>
+            <select class="input" id="movCaixaTipo">
+              <option value="sangria">Sangria — retirada</option>
+              <option value="suprimento">Suprimento — entrada</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label" for="movCaixaValor">Valor *</label>
+            <input class="input input-money" type="text" id="movCaixaValor" placeholder="R$ 0,00" inputmode="decimal" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="movCaixaMotivo">Motivo *</label>
+          <input class="input" type="text" id="movCaixaMotivo" maxlength="160" placeholder="Ex: retirada para pagamento de fornecedor" autocomplete="off" />
+        </div>
+
+        <button class="btn-secondary mov-caixa-registrar" id="btnRegistrarMovimentacaoCaixa" type="button" onclick="registrarMovimentacaoCaixa()">
+          <i data-lucide="save" width="15" height="15"></i>
+          <span>Registrar movimentação</span>
+        </button>
+      </div>
+
+      <div class="mov-caixa-historico">
+        <div class="mov-caixa-historico-header">
+          <div>
+            <strong>Histórico deste caixa</strong>
+            <small>Registros ativos e cancelados permanecem auditáveis.</small>
+          </div>
+          <button class="btn-ghost" type="button" onclick="carregarMovimentacoesCaixa()" title="Atualizar histórico">
+            <i data-lucide="refresh-cw" width="14" height="14"></i>
+          </button>
+        </div>
+        <div class="mov-caixa-lista" id="movCaixaLista"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" type="button" onclick="fecharModalMovimentacoesCaixa()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Confirmar fechamento -->
 <div class="modal-overlay" id="modalFechamento" style="display:none;">
   <div class="modal card">
@@ -924,6 +1011,16 @@
   <div class="fechamento-row">
     <span>Nº de vendas</span>
     <strong id="fechQtdVendas">0</strong>
+  </div>
+
+  <div class="fechamento-row" id="fechLinhaSuprimentos" style="display:none;">
+    <span>Suprimentos</span>
+    <strong id="fechTotalSuprimentos" class="green">R$ 0,00</strong>
+  </div>
+
+  <div class="fechamento-row" id="fechLinhaSangrias" style="display:none;">
+    <span>Sangrias</span>
+    <strong id="fechTotalSangrias" class="mov-caixa-saida">- R$ 0,00</strong>
   </div>
       <div class="divider"></div>
       <div class="fechamento-row total">

@@ -129,10 +129,17 @@
           <h2>Produtos e serviços</h2>
           <p id="subtitleProdutos">Carregando catálogo...</p>
         </div>
-        <button class="btn-primary" id="btnNovoItemCatalogo" onclick="abrirModalNovo()">
-          <i data-lucide="plus" width="16" height="16"></i>
-          <span id="btnNovoItemCatalogoTexto">Novo produto</span>
-        </button>
+        <div class="produtos-header-actions">
+          <button class="btn-ghost" id="btnGerenciarCategoriasProduto" type="button" onclick="abrirModalCategoriasProduto()" style="display:none;">
+            <i data-lucide="tags" width="15" height="15"></i>
+            <span>Categorias</span>
+          </button>
+
+          <button class="btn-primary" id="btnNovoItemCatalogo" onclick="abrirModalNovo()">
+            <i data-lucide="plus" width="16" height="16"></i>
+            <span id="btnNovoItemCatalogoTexto">Novo produto</span>
+          </button>
+        </div>
       </div>
 
       <!-- TIPOS DO CATÁLOGO -->
@@ -298,6 +305,42 @@
         </div>
       </div>
 
+      <div class="form-row produto-controle-estoque-detalhes" id="produtoControleEstoqueDetalhes">
+        <div class="input-group">
+          <label class="input-label" for="produtoEstoqueMinimo">Estoque mínimo</label>
+          <input class="input" type="number" id="produtoEstoqueMinimo" placeholder="5" min="0" step="1" />
+          <small>O alerta passa a considerar este limite.</small>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="produtoUnidadeVenda">Unidade de venda</label>
+          <select class="input" id="produtoUnidadeVenda">
+            <option value="un">Unidade</option>
+            <option value="garrafa">Garrafa</option>
+            <option value="lata">Lata</option>
+            <option value="pacote">Pacote</option>
+            <option value="caixa">Caixa</option>
+            <option value="fardo">Fardo</option>
+            <option value="kit">Kit</option>
+            <option value="porcao">Porção</option>
+          </select>
+          <small>Venda por quantidade inteira, sem balança.</small>
+        </div>
+      </div>
+
+      <div class="input-group produto-motivo-ajuste" id="produtoMotivoAjusteGrupo" style="display:none;">
+        <label class="input-label" for="produtoMotivoAjuste">Motivo da alteração do estoque *</label>
+        <input
+          class="input"
+          type="text"
+          id="produtoMotivoAjuste"
+          placeholder="Ex: conferência de inventário"
+          maxlength="160"
+          autocomplete="off"
+        />
+        <small>Obrigatório somente quando o estoque de um item existente for alterado.</small>
+      </div>
+
       <div class="input-group">
         <label class="input-label" for="produtoCodigo">
           <i data-lucide="scan-line" width="11" height="11"></i>
@@ -375,6 +418,124 @@
         <i data-lucide="save" width="15" height="15"></i>
         <span>Salvar</span>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Categorias personalizadas -->
+<div class="modal-overlay" id="modalCategoriasProduto" style="display:none;">
+  <div class="modal card modal-categorias-produto">
+    <div class="modal-header">
+      <div>
+        <h3>Categorias personalizadas</h3>
+        <small>Categorias criadas pela própria empresa ao escolher “Outros”.</small>
+      </div>
+      <button class="btn-ghost" type="button" onclick="fecharModalCategoriasProduto()" aria-label="Fechar">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="categorias-produto-filtros">
+        <label class="input-group">
+          <span class="input-label">Tipo de item</span>
+          <select class="input" id="filtroTipoCategoriaProduto" onchange="renderCategoriasPersonalizadasProduto()">
+            <option value="todos">Todos</option>
+            <option value="produto">Produtos</option>
+            <option value="servico">Serviços</option>
+            <option value="taxa">Taxas</option>
+            <option value="outro">Outros itens</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="categorias-produto-lista" id="listaCategoriasPersonalizadasProduto"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" type="button" onclick="fecharModalCategoriasProduto()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Movimentação e histórico de estoque -->
+<div class="modal-overlay" id="modalMovimentacaoEstoque" style="display:none;">
+  <div class="modal card modal-movimentacao-estoque">
+    <div class="modal-header">
+      <div>
+        <h3>Movimentar estoque</h3>
+        <small id="movEstoqueProdutoNome">Produto</small>
+      </div>
+      <button class="btn-ghost" type="button" onclick="fecharModalMovimentacaoEstoque()" aria-label="Fechar">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <input type="hidden" id="movEstoqueProdutoId" />
+
+      <div class="mov-estoque-resumo">
+        <span>Estoque atual</span>
+        <strong id="movEstoqueAtual">0 un</strong>
+      </div>
+
+      <div class="form-row">
+        <div class="input-group">
+          <label class="input-label" for="movEstoqueTipo">Movimentação *</label>
+          <select class="input" id="movEstoqueTipo" onchange="atualizarFormularioMovimentacaoEstoque()">
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída manual</option>
+            <option value="perda">Perda</option>
+            <option value="vencimento">Vencimento</option>
+            <option value="devolucao">Devolução</option>
+            <option value="ajuste">Ajustar inventário</option>
+          </select>
+        </div>
+
+        <div class="input-group" id="movEstoqueQuantidadeGrupo">
+          <label class="input-label" for="movEstoqueQuantidade">Quantidade *</label>
+          <input class="input" type="number" id="movEstoqueQuantidade" min="1" step="1" placeholder="1" />
+        </div>
+
+        <div class="input-group" id="movEstoqueNovoTotalGrupo" style="display:none;">
+          <label class="input-label" for="movEstoqueNovoTotal">Novo estoque *</label>
+          <input class="input" type="number" id="movEstoqueNovoTotal" min="0" step="1" placeholder="0" />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="movEstoqueMotivo">Motivo *</label>
+        <input
+          class="input"
+          type="text"
+          id="movEstoqueMotivo"
+          maxlength="160"
+          placeholder="Descreva o motivo da movimentação"
+          autocomplete="off"
+        />
+      </div>
+
+      <button class="btn-secondary mov-estoque-confirmar" id="btnConfirmarMovimentacaoEstoque" type="button" onclick="salvarMovimentacaoEstoqueProduto()">
+        <i data-lucide="save" width="15" height="15"></i>
+        <span>Registrar movimentação</span>
+      </button>
+
+      <div class="mov-estoque-historico">
+        <div class="mov-estoque-historico-header">
+          <div>
+            <strong>Histórico recente</strong>
+            <small>Últimas movimentações deste produto</small>
+          </div>
+          <button class="btn-ghost" type="button" onclick="carregarHistoricoEstoqueProduto()" title="Atualizar histórico">
+            <i data-lucide="refresh-cw" width="14" height="14"></i>
+          </button>
+        </div>
+        <div class="mov-estoque-historico-lista" id="movEstoqueHistoricoLista"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" type="button" onclick="fecharModalMovimentacaoEstoque()">Fechar</button>
     </div>
   </div>
 </div>

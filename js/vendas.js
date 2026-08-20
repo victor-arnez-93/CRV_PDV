@@ -5,6 +5,9 @@ let vendasData = [];
 let filtroAtivo = 'todos';
 let filtroOrigem = 'todos';
 let empresaAtualVendas = null;
+let caixaAbertoIdVendas = null;
+let vendaSelecionadaIdVendas = null;
+let cancelamentoVendaEmProcessamento = false;
 
 let dataSelecionada = new Date();
 const CATEGORIAS_INTELIGENTES = {
@@ -100,6 +103,29 @@ function normalizarPagamento(valor) {
   return "outros";
 }
 
+function escaparHTMLVendas(valor) {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function vendaCanceladaVendas(venda) {
+  return String(venda?.status_operacional || "concluida").toLowerCase() === "cancelada";
+}
+
+function operadorPodeCancelarVenda() {
+  return typeof window.crvOperadorPodeEspecial !== "function" ||
+    window.crvOperadorPodeEspecial("cancelar_venda") === true;
+}
+
+function featureCancelamentoVendaAtiva() {
+  return typeof window.crvFeatureAtiva === "function" &&
+    window.crvFeatureAtiva("cancelamento_venda") === true;
+}
+
 function itemEhJogoVendas(item) {
   const origem = String(item.origem || "").toLowerCase();
   const nome = String(item.nome || "").toLowerCase();
@@ -146,6 +172,23 @@ function vendaEhComandaVendas(venda) {
     descricao.includes("comanda") ||
     Boolean(venda.origem_id && origem === "comanda")
   );
+}
+
+function podeCancelarVendaDiretaVendas(venda) {
+  if (!venda || vendaCanceladaVendas(venda)) return false;
+  if (!featureCancelamentoVendaAtiva() || !operadorPodeCancelarVenda()) return false;
+  if (!window.APP_STATUS?.online || !window.APP_STATUS?.supabase_ok || !window.sb) return false;
+
+  const origem = String(venda.origem || "pdv").toLowerCase();
+
+  return origem === "pdv" &&
+    !vendaEhComandaVendas(venda) &&
+    !vendaTemJogoVendas(venda) &&
+    !venda.comanda_id &&
+    !venda.agenda_id &&
+    !venda.agenda_jogador_id &&
+    Boolean(venda.caixa_id) &&
+    String(venda.caixa_id) === String(caixaAbertoIdVendas || "");
 }
 
 function obterOrigemVisualVenda(venda) {
@@ -443,6 +486,17 @@ const { data: vendasSupabase, error: erroVendas } = await sb
 
       if (erroVendas) throw erroVendas;
 
+const { data: caixasAbertos, error: erroCaixaAberto } = await sb
+  .from("caixa")
+  .select("id")
+  .eq("empresa_id", empresaId)
+  .eq("status", "aberto")
+  .order("data_abertura", { ascending: false })
+  .limit(1);
+
+if (erroCaixaAberto) throw erroCaixaAberto;
+caixaAbertoIdVendas = caixasAbertos?.[0]?.id || null;
+
 const idsVendas = (vendasSupabase || []).map(v => v.id);
 
 let itensSupabase = [];
@@ -469,6 +523,7 @@ if (idsVendas.length) {
 
     } else {
       logSistema("VENDAS", "Modo offline - usando IndexedDB", "warn");
+      caixaAbertoIdVendas = null;
 
       const dadosOffline =
         await obterDadosOfflineVendas();
@@ -492,6 +547,13 @@ if (idsVendas.length) {
         formaPagamento: normalizarPagamento(v.forma_pagamento || v.pagamento),
         origem: v.origem || "pdv",
         origem_id: v.origem_id || null,
+        caixa_id: v.caixa_id || null,
+        comanda_id: v.comanda_id || null,
+        agenda_id: v.agenda_id || null,
+        agenda_jogador_id: v.agenda_jogador_id || null,
+        status_operacional: v.status_operacional || "concluida",
+        cancelada_em: v.cancelada_em || null,
+        motivo_cancelamento: v.motivo_cancelamento || null,
         descricao:
           v.descricao ||
           (v.origem === "agenda"
@@ -517,6 +579,7 @@ atualizarTextoDataSelecionada();
 
   } catch (err) {
     logSistema("VENDAS", "Erro: " + err.message, "error");
+    caixaAbertoIdVendas = null;
 
     const dadosOffline =
       await obterDadosOfflineVendas();
@@ -537,6 +600,13 @@ vendasData = vendas.map(v => {
     formaPagamento: normalizarPagamento(v.forma_pagamento || v.pagamento),
     origem: v.origem || "pdv",
     origem_id: v.origem_id || null,
+    caixa_id: v.caixa_id || null,
+    comanda_id: v.comanda_id || null,
+    agenda_id: v.agenda_id || null,
+    agenda_jogador_id: v.agenda_jogador_id || null,
+    status_operacional: v.status_operacional || "concluida",
+    cancelada_em: v.cancelada_em || null,
+    motivo_cancelamento: v.motivo_cancelamento || null,
     descricao: v.descricao || (v.origem === "agenda" ? "Pagamento de jogo" : null),
     offline: v.offline === true,
 itens: itensVenda.map(i => ({
@@ -556,7 +626,7 @@ itens: itensVenda.map(i => ({
 // ===== RESUMO =====
 function renderResumo() {
 
-  const base = getVendasFiltradas();
+  const base = getVendasFiltradas({ incluirCanceladas: false });
 
   const total = base.reduce((a, v) => a + v.total, 0);
   const qtd = base.length;
@@ -673,10 +743,12 @@ function setFiltro(btn, filtro) {
 
 function filtrarVendas() { renderTabela(); }
 
-function getVendasFiltradas() {
+function getVendasFiltradas({ incluirCanceladas = true } = {}) {
   const texto = document.getElementById('filtroTexto')?.value.toLowerCase().trim() || '';
 
   return vendasData.filter(v => {
+    if (!incluirCanceladas && vendaCanceladaVendas(v)) return false;
+
     const passaFiltro =
       filtroAtivo === "todos" ||
       v.formaPagamento === filtroAtivo ||
@@ -751,6 +823,7 @@ function renderTabela() {
   tbody.innerHTML = reversed.map((v, idx) => {
 
     const num = reversed.length - idx;
+    const cancelada = vendaCanceladaVendas(v);
     const primeiro = {
       nome:
         vendaTemJogoVendas(v)
@@ -766,13 +839,14 @@ const maisItens =
   (v.itens.length > 1 ? `+${v.itens.length - 1} item(ns)` : '');
 
     return `
-      <tr onclick="verDetalhe('${v.id}')">
+      <tr class="${cancelada ? "venda-cancelada" : ""}" onclick="verDetalhe('${v.id}')">
         <td><span class="venda-num">#${String(num).padStart(3,'0')}</span></td>
         <td><span class="venda-hora">${v.hora}</span></td>
         <td>
           <div class="venda-itens">
-            <span class="venda-item-nome">${primeiro?.nome || '—'}</span>
+            <span class="venda-item-nome">${escaparHTMLVendas(primeiro?.nome || '—')}</span>
             ${maisItens ? `<span class="venda-item-more">${maisItens}</span>` : ''}
+            ${cancelada ? '<span class="venda-status-cancelada">Cancelada</span>' : ''}
           </div>
         </td>
         <td>
@@ -801,9 +875,17 @@ function verDetalhe(id) {
   const venda = vendasData.find(v => v.id === id);
   if (!venda) return;
 
+  vendaSelecionadaIdVendas = venda.id;
+
   const body = document.getElementById('modalDetalheBody');
 
   body.innerHTML = `
+    ${vendaCanceladaVendas(venda) ? `
+      <div class="detalhe-cancelamento">
+        <strong>Venda cancelada</strong>
+        <span>${escaparHTMLVendas(venda.motivo_cancelamento || "Motivo não informado")}</span>
+      </div>
+    ` : ""}
     <div class="detalhe-row">
       <span>Horário</span>
       <span style="font-family:'Courier New',monospace;">${venda.hora}</span>
@@ -829,7 +911,7 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
     ${
       vendaTemJogoVendas(venda)
         ? limparDescricaoJogoVendas(venda.descricao || venda.itens.find(itemEhJogoVendas)?.nome)
-        : venda.descricao || "Venda em comanda"
+        : escaparHTMLVendas(venda.descricao || "Venda em comanda")
     }
 
     ${
@@ -853,7 +935,7 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
       ${(venda.itens.length ? venda.itens : [{ nome: venda.descricao || "Venda", quantidade: 1, preco: venda.total }]).map(i => `
         <div class="detalhe-item">
           <div>
-            <div class="detalhe-item-nome">${i.nome}</div>
+            <div class="detalhe-item-nome">${escaparHTMLVendas(i.nome)}</div>
             <div class="detalhe-item-qty">x${i.quantidade} · ${fmt(i.preco)} un.</div>
           </div>
           <span class="detalhe-item-val">${fmt(i.preco * i.quantidade)}</span>
@@ -880,9 +962,100 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
     </div>
   `;
 
+  const btnCancelar = document.getElementById("btnCancelarVendaDetalhe");
+  if (btnCancelar) {
+    btnCancelar.style.display = podeCancelarVendaDiretaVendas(venda) ? "inline-flex" : "none";
+  }
+
   document.getElementById('modalDetalhe').style.display = 'flex';
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function abrirModalCancelamentoVenda() {
+  const venda = vendasData.find(item => String(item.id) === String(vendaSelecionadaIdVendas));
+
+  if (!podeCancelarVendaDiretaVendas(venda)) {
+    if (typeof crvToast === "function") {
+      crvToast({
+        titulo: "Cancelamento indisponível",
+        mensagem: "Somente uma venda direta do caixa ainda aberto pode ser cancelada aqui.",
+        tipo: "warn"
+      });
+    }
+    return;
+  }
+
+  const motivo = document.getElementById("motivoCancelamentoVenda");
+  if (motivo) motivo.value = "";
+
+  const modal = document.getElementById("modalCancelarVenda");
+  if (modal) modal.style.display = "flex";
+
+  setTimeout(() => motivo?.focus(), 50);
+  if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function fecharModalCancelamentoVenda() {
+  const modal = document.getElementById("modalCancelarVenda");
+  if (modal) modal.style.display = "none";
+}
+
+async function confirmarCancelamentoVenda() {
+  if (cancelamentoVendaEmProcessamento) return;
+
+  const venda = vendasData.find(item => String(item.id) === String(vendaSelecionadaIdVendas));
+  const motivo = String(document.getElementById("motivoCancelamentoVenda")?.value || "").trim();
+
+  if (!podeCancelarVendaDiretaVendas(venda)) {
+    if (typeof crvToast === "function") {
+      crvToast({ titulo: "Cancelamento bloqueado", mensagem: "A venda não atende mais às condições de cancelamento.", tipo: "warn" });
+    }
+    return;
+  }
+
+  if (motivo.length < 3) {
+    if (typeof crvToast === "function") {
+      crvToast({ titulo: "Motivo obrigatório", mensagem: "Informe um motivo com pelo menos 3 caracteres.", tipo: "warn" });
+    }
+    return;
+  }
+
+  const botao = document.getElementById("btnConfirmarCancelamentoVenda");
+
+  try {
+    cancelamentoVendaEmProcessamento = true;
+    if (botao) botao.disabled = true;
+
+    const { error } = await sb.rpc("cancelar_venda_direta", {
+      p_venda_id: venda.id,
+      p_motivo: motivo,
+      p_operador_id: sessionStorage.getItem("CRV_OPERADOR_ID") || null
+    });
+
+    if (error) throw error;
+
+    fecharModalCancelamentoVenda();
+    fecharModalDetalheVendas();
+    await carregarVendas();
+    renderResumo();
+    renderTabela();
+
+    if (typeof crvToast === "function") {
+      crvToast({
+        titulo: "Venda cancelada",
+        mensagem: "Totais recalculados e estoque devolvido com rastreabilidade.",
+        tipo: "success"
+      });
+    }
+  } catch (err) {
+    if (typeof crvToast === "function") {
+      crvToast({ titulo: "Não foi possível cancelar", mensagem: err.message, tipo: "error", tempo: 7000 });
+    }
+  } finally {
+    cancelamentoVendaEmProcessamento = false;
+    if (botao) botao.disabled = false;
+  }
 }
 
 
@@ -909,6 +1082,11 @@ function fecharModalDetalheVendas() {
   if (modal) {
     modal.style.display = "none";
   }
+
+  vendaSelecionadaIdVendas = null;
+
+  const btnCancelar = document.getElementById("btnCancelarVendaDetalhe");
+  if (btnCancelar) btnCancelar.style.display = "none";
 }
 
 function prepararScrollTabelaVendas() {
@@ -929,6 +1107,17 @@ function prepararScrollTabelaVendas() {
 }
 
 document.addEventListener("click", event => {
+  const modalCancelar = document.getElementById("modalCancelarVenda");
+
+  if (
+    modalCancelar &&
+    modalCancelar.style.display === "flex" &&
+    event.target === modalCancelar
+  ) {
+    fecharModalCancelamentoVenda();
+    return;
+  }
+
   const fechar =
     event.target.closest("#closeModalDetalhe") ||
     event.target.closest("#btnFecharModalDetalhe") ||
@@ -954,6 +1143,13 @@ document.addEventListener("click", event => {
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
+    const modalCancelar = document.getElementById("modalCancelarVenda");
+
+    if (modalCancelar?.style.display === "flex") {
+      fecharModalCancelamentoVenda();
+      return;
+    }
+
     fecharModalDetalheVendas();
   }
 });

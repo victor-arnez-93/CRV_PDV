@@ -3741,6 +3741,160 @@ body.light .jogo-caixa-status.cobranca {
 
 }
 
+/* =====================================================
+   CONVENIÊNCIA / ADEGA — MOVIMENTAÇÕES OPERACIONAIS
+   ===================================================== */
+.modal-movimentacoes-caixa {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(820px, calc(100vh - 32px));
+  overflow: hidden;
+}
+
+.modal-movimentacoes-caixa .modal-body {
+  overflow-y: auto;
+}
+
+.mov-caixa-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mov-caixa-resumo > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+
+.mov-caixa-resumo span,
+.mov-caixa-item-info > span,
+.mov-caixa-item-info small,
+.mov-caixa-historico-header small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.mov-caixa-resumo strong.entrada,
+.mov-caixa-item-lateral strong.entrada {
+  color: var(--crv-green, #22c55e);
+}
+
+.mov-caixa-resumo strong.saida,
+.mov-caixa-item-lateral strong.saida {
+  color: var(--crv-red, #ef4444);
+}
+
+.mov-caixa-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.mov-caixa-registrar {
+  justify-self: end;
+}
+
+.mov-caixa-historico,
+.mov-caixa-lista {
+  display: grid;
+  gap: 10px;
+}
+
+.mov-caixa-historico-header,
+.mov-caixa-item,
+.mov-caixa-item-info > div,
+.mov-caixa-item-lateral {
+  display: flex;
+  align-items: center;
+}
+
+.mov-caixa-historico-header,
+.mov-caixa-item {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.mov-caixa-historico-header > div,
+.mov-caixa-item-info {
+  display: grid;
+  gap: 3px;
+}
+
+.mov-caixa-item {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+
+.mov-caixa-item.cancelada,
+.historico-item-cancelado {
+  opacity: .62;
+}
+
+.historico-item-cancelado .historico-valor {
+  text-decoration: line-through;
+}
+
+.mov-caixa-item-info > div {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mov-caixa-status {
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--crv-red, #ef4444);
+  background: color-mix(in srgb, var(--crv-red, #ef4444) 12%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mov-caixa-item-lateral {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .modal-movimentacoes-caixa {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .mov-caixa-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .mov-caixa-item {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 440px) {
+  .mov-caixa-item {
+    flex-direction: column;
+  }
+
+  .mov-caixa-item-lateral {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .mov-caixa-registrar {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ======================================================
    CATÁLOGO UNIFICADO NO CAIXA
 ====================================================== */

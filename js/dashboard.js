@@ -30,6 +30,10 @@ function obterDataVenda(venda) {
   return venda.data || venda.created_at || venda.createdAt || venda.criado_em || null;
 }
 
+function vendaCanceladaDashboard(venda) {
+  return String(venda?.status_operacional || "concluida").toLowerCase() === "cancelada";
+}
+
 function criarDataVendaBrasil(valor) {
   if (!valor) return null;
 
@@ -234,15 +238,16 @@ async function initDashboard() {
 
 const { data: produtosBaixoData, error: produtosBaixoError } = await sb
   .from("produtos")
-  .select("id,nome,estoque,controla_estoque")
+  .select("id,nome,estoque,estoque_minimo,controla_estoque")
   .eq("empresa_id", APP_EMPRESA_ID)
   .eq("ativo", true)
-  .eq("controla_estoque", true)
-  .lte("estoque", 5);
+  .eq("controla_estoque", true);
 
 if (produtosBaixoError) throw produtosBaixoError;
 
-produtosBaixo = produtosBaixoData || [];
+produtosBaixo = (produtosBaixoData || []).filter(produto => {
+  return Number(produto.estoque || 0) <= Number(produto.estoque_minimo ?? 5);
+});
 
 if (empresaUsaAgendaEsportivaDashboard()) {
   const hojeLocal = obterHojeLocalDashboard();
@@ -302,7 +307,9 @@ if (empresaUsaAgendaEsportivaDashboard()) {
 
     const hoje = new Date().toISOString().slice(0, 10);
 
-    const vendasHoje = vendas.filter(dataVendaEhHoje);
+    const vendasHoje = vendas.filter(venda => {
+      return !vendaCanceladaDashboard(venda) && dataVendaEhHoje(venda);
+    });
 
     const idsVendasHoje = vendasHoje.map(v => v.id);
 
@@ -533,6 +540,8 @@ function initChart(vendas) {
 
 const totalDia = vendas
   .filter(v => {
+    if (vendaCanceladaDashboard(v)) return false;
+
     const dataVenda = obterDataVenda(v);
     if (!dataVenda) return false;
 

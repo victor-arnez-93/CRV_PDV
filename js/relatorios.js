@@ -259,13 +259,15 @@ async function carregarDados() {
   .select("*")
   .eq("empresa_id", empresaId)
   .eq("ativo", true)
-  .lte("estoque", 5)
   .order("estoque", { ascending: true });
 
 if (erroProdutos) throw erroProdutos;
 
 produtos = Array.isArray(produtosSupabase)
-  ? produtosSupabase.filter(produto => produto.controla_estoque !== false)
+  ? produtosSupabase.filter(produto => {
+      return produto.controla_estoque !== false &&
+        Number(produto.estoque || 0) <= Number(produto.estoque_minimo ?? 5);
+    })
   : [];
 
 const { data: empresaSupabase, error: erroEmpresa } = await sb
@@ -567,11 +569,17 @@ function formatarHoraVendaRelatorio(data) {
   });
 }
 
+function vendaCanceladaRelatorio(venda) {
+  return String(venda?.status_operacional || "concluida").toLowerCase() === "cancelada";
+}
+
 function getVendasFiltradas() {
   const { inicio, fim } = getIntervaloPeriodo();
 
   return vendasData
     .filter(venda => {
+      if (vendaCanceladaRelatorio(venda)) return false;
+
       const dataVenda = dataVendaRelatorio(venda.data);
       if (!dataVenda || Number.isNaN(dataVenda.getTime())) return false;
 
@@ -629,6 +637,8 @@ function renderComparativoPeriodo(faturamentoAtual) {
   const fimAnterior = new Date(inicio.getTime() - 1);
 
 const vendasAnterior = vendasData.filter(venda => {
+  if (vendaCanceladaRelatorio(venda)) return false;
+
   const dataVenda = dataVendaRelatorio(venda.data);
   if (!dataVenda || Number.isNaN(dataVenda.getTime())) return false;
 
@@ -682,7 +692,7 @@ function renderProdutosEstoqueBaixo() {
   const produtos = produtosData.filter(produto => {
     return (
       produto.controla_estoque !== false &&
-      Number(produto.estoque || 0) <= 5
+      Number(produto.estoque || 0) <= Number(produto.estoque_minimo ?? 5)
     );
   })
     .sort((a, b) => Number(a.estoque || 0) - Number(b.estoque || 0))
@@ -706,7 +716,7 @@ function renderProdutosEstoqueBaixo() {
         <small>${produto.categoria || "Sem categoria"}</small>
       </div>
 
-      <span>${Number(produto.estoque || 0)} un.</span>
+      <span>${Number(produto.estoque || 0)} ${produto.unidade_venda || "un"} · mín. ${Number(produto.estoque_minimo ?? 5)}</span>
     </div>
   `).join("");
 }

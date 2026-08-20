@@ -42,6 +42,9 @@ window.crvPermissoes = (() => {
       remover_jogador: "Remover jogador",
       enviar_jogador_comanda: "Enviar jogador para comanda",
       alterar_preco_manual: "Alterar preço manual",
+      movimentar_estoque: "Movimentar estoque",
+      sangria: "Registrar sangria",
+      suprimento: "Registrar suprimento",
       ver_relatorios: "Ver relatórios",
       configurar_empresa: "Configurar empresa"
     };
@@ -120,6 +123,7 @@ window.crvPermissoes = (() => {
 
   function permissoesEspeciaisPorPerfil(perfil) {
     const perfilNormalizado = String(perfil || "operador").toLowerCase();
+    const podeGerenciarOperacao = ["admin", "gerente"].includes(perfilNormalizado);
 
     return {
       venda_manual: perfilNormalizado === "admin",
@@ -131,6 +135,9 @@ window.crvPermissoes = (() => {
       remover_jogador: true,
       enviar_jogador_comanda: true,
       alterar_preco_manual: true,
+      movimentar_estoque: podeGerenciarOperacao,
+      sangria: podeGerenciarOperacao,
+      suprimento: podeGerenciarOperacao,
       ver_relatorios: true,
       configurar_empresa: true
     };
@@ -719,7 +726,7 @@ if (modalPermissoes) {
     }
   }
 
-function renderPermissoes(permissoes) {
+function renderPermissoes(permissoes, especiais = []) {
   const box = document.getElementById("boxPermissoesOperador");
 
   if (!box) return;
@@ -754,13 +761,35 @@ function renderPermissoes(permissoes) {
       `).join("")}
     </div>
 
+    ${especiais.length ? `
+      <div class="permissoes-grupo permissoes-grupo-simples permissoes-especiais-grupo">
+        <h3>Ações operacionais</h3>
+
+        ${especiais.map(p => `
+          <label class="permissao-tela-card">
+            <div>
+              <strong>${labelPermissaoEspecial(p.permissao)}</strong>
+              <span>Permissão específica deste operador</span>
+            </div>
+
+            <input
+              type="checkbox"
+              data-permissao-especial-id="${p.id}"
+              data-especial="${p.permissao}"
+              ${p.permitido ? "checked" : ""}
+            >
+          </label>
+        `).join("")}
+      </div>
+    ` : ""}
+
     <button
       class="btn-secondary btn-salvar-permissoes"
       type="button"
       onclick="crvPermissoes.salvarPermissoes()"
     >
       <i class="fa-solid fa-floppy-disk"></i>
-      <span>Salvar telas liberadas</span>
+      <span>Salvar permissões</span>
     </button>
   `;
 }
@@ -786,13 +815,26 @@ function renderPermissoes(permissoes) {
         if (error) throw error;
       }
 
+      const checksEspeciais = document.querySelectorAll("[data-permissao-especial-id]");
+
+      for (const input of checksEspeciais) {
+        const { error } = await sb
+          .from("operador_permissoes_especiais")
+          .update({ permitido: input.checked === true })
+          .eq("id", input.dataset.permissaoEspecialId)
+          .eq("empresa_id", window.APP_EMPRESA_ID)
+          .eq("operador_id", operadorSelecionado);
+
+        if (error) throw error;
+      }
+
       const modalPermissoes = document.getElementById("modalPermissoesOperador");
 
       if (modalPermissoes) {
         modalPermissoes.style.display = "none";
       }
 
-      cfgFeedback("Telas liberadas salvas com sucesso.", "sucesso");
+      cfgFeedback("Permissões salvas com sucesso.", "sucesso");
 
       const operadorAtualId = sessionStorage.getItem("CRV_OPERADOR_ID");
 
@@ -811,7 +853,7 @@ function renderPermissoes(permissoes) {
 
     } catch (err) {
       console.error("[PERMISSÕES]", err);
-      cfgFeedback("Erro ao salvar telas liberadas.", "erro");
+      cfgFeedback("Erro ao salvar permissões.", "erro");
     }
   }
 

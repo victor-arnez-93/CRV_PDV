@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "crv-pdv-caixa";
-const CACHE_NAME = `${CACHE_PREFIX}-v4-20260813`;
+const CACHE_NAME = `${CACHE_PREFIX}-v5-20260819`;
 
 const APP_SHELL = [
   "./caixa.html",

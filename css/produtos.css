@@ -1430,6 +1430,315 @@
   grid-template-columns: 1fr;
 }
 
+/* ======================================================
+   CONVENIÊNCIA / ADEGA — CATEGORIAS E ESTOQUE OPERACIONAL
+   ====================================================== */
+.produtos-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.produto-controle-estoque-detalhes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.produto-controle-estoque-detalhes small,
+.produto-motivo-ajuste small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.produto-estoque {
+  flex-wrap: wrap;
+}
+
+.produto-estoque small {
+  width: 100%;
+  padding-left: 19px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.produto-btn.estoque {
+  color: var(--crv-green);
+}
+
+.produto-btn.estoque:hover {
+  border-color: color-mix(in srgb, var(--crv-green) 55%, transparent);
+  background: color-mix(in srgb, var(--crv-green) 10%, transparent);
+}
+
+.modal-categorias-produto,
+.modal-movimentacao-estoque {
+  width: min(94vw, 720px);
+  max-height: min(90vh, 820px);
+  overflow: hidden;
+}
+
+.modal-categorias-produto .modal-header > div,
+.modal-movimentacao-estoque .modal-header > div {
+  min-width: 0;
+}
+
+.modal-categorias-produto .modal-header small,
+.modal-movimentacao-estoque .modal-header small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+}
+
+.modal-categorias-produto .modal-body,
+.modal-movimentacao-estoque .modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.categorias-produto-filtros {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.categorias-produto-filtros .input-group {
+  width: min(100%, 260px);
+}
+
+.categorias-produto-lista {
+  display: grid;
+  gap: 8px;
+}
+
+.categoria-produto-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+}
+
+.categoria-produto-item > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.categoria-produto-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.categoria-produto-item span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  text-transform: capitalize;
+}
+
+.categorias-produto-vazio,
+.mov-estoque-vazio,
+.mov-estoque-carregando {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 26px 18px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.categorias-produto-vazio p {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.categorias-produto-vazio small {
+  max-width: 440px;
+  line-height: 1.45;
+}
+
+.mov-estoque-resumo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--crv-green) 28%, var(--border-color));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--crv-green) 7%, transparent);
+}
+
+.mov-estoque-resumo span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.mov-estoque-resumo strong {
+  color: var(--crv-green);
+  font-size: 1rem;
+}
+
+.mov-estoque-confirmar {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.mov-estoque-historico {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.mov-estoque-historico-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mov-estoque-historico-header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.mov-estoque-historico-header strong {
+  font-size: 0.85rem;
+}
+
+.mov-estoque-historico-header small {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.mov-estoque-historico-lista {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.mov-estoque-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid #ff7a7a;
+  border-radius: 10px;
+}
+
+.mov-estoque-item.entrada {
+  border-left-color: var(--crv-green);
+}
+
+.mov-estoque-item-main,
+.mov-estoque-item-valores {
+  display: grid;
+  gap: 2px;
+}
+
+.mov-estoque-item-main {
+  min-width: 0;
+}
+
+.mov-estoque-item-main strong {
+  font-size: 0.8rem;
+}
+
+.mov-estoque-item-main span,
+.mov-estoque-item-main small,
+.mov-estoque-item-valores span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.mov-estoque-item-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mov-estoque-item-valores {
+  flex: 0 0 auto;
+  justify-items: end;
+}
+
+.mov-estoque-item-valores strong {
+  color: #ff7a7a;
+  font-family: "Courier New", monospace;
+}
+
+.mov-estoque-item.entrada .mov-estoque-item-valores strong {
+  color: var(--crv-green);
+}
+
+.mov-estoque-vazio.erro {
+  color: #ff7a7a;
+}
+
+@media (max-width: 720px) {
+  .produtos-header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .produtos-header-actions > button {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .produto-controle-estoque-detalhes {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-categorias-produto,
+  .modal-movimentacao-estoque {
+    width: min(96vw, 720px);
+    max-height: 92vh;
+  }
+
+  .categorias-produto-filtros .input-group {
+    width: 100%;
+  }
+
+  .mov-estoque-item {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 460px) {
+  .produtos-header-actions {
+    flex-direction: column;
+  }
+
+  .produtos-header-actions > button {
+    width: 100%;
+  }
+
+  .mov-estoque-item {
+    display: grid;
+  }
+
+  .mov-estoque-item-valores {
+    justify-items: start;
+  }
+}
+
 @media (max-width: 720px) {
   .catalogo-tabs {
     grid-template-columns: 1fr;

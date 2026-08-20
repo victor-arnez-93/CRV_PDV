@@ -11,6 +11,8 @@ let ultimoFechamentoCaixa = null;
 let carrinho = [];
 let vendas = [];
 let produtos = [];
+let caixaMovimentacoes = [];
+let movimentacaoCaixaEmProcessamento = false;
 let catalogoItensCaixa = [];
 let produtosRapidos = [];
 let filtroTipoItensCaixa = "produto";
@@ -256,6 +258,8 @@ function reaplicarAcessoOperadorCaixa() {
 
 document.addEventListener("crv:operador-alterado", reaplicarAcessoOperadorCaixa);
 
+document.addEventListener("crv:operador-alterado", aplicarVisibilidadeMovimentacoesCaixa);
+
 function aplicarEstadoRapidosBalcaoCaixa() {
   const body = document.body;
   const botao = document.getElementById("btnToggleRapidosBalcao");
@@ -293,6 +297,7 @@ function setupRapidosBalcaoCaixa() {
 
 document.addEventListener("crv:config-pronta", () => {
   aplicarVisibilidadeAtalhosContextuaisCaixa();
+  aplicarVisibilidadeMovimentacoesCaixa();
 
   if (caixaInicializado) {
     atualizarBadgesModosCaixa();
@@ -570,6 +575,15 @@ function obterUsuarioId() {
 
 function obterOperadorAtualId() {
   return sessionStorage.getItem("CRV_OPERADOR_ID") || null;
+}
+
+function escaparHTMLCaixa(valor) {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function obterEscopoOfflineCaixa() {
@@ -857,6 +871,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     vendas =
       await obterCacheCaixa("caixa_vendas") || [];
 
+    caixaMovimentacoes =
+      await obterCacheCaixa("caixa_movimentacoes") || [];
+
     if (caixa && caixa.status === "aberto") {
       crvToast({
         titulo: "Caixa mantido aberto",
@@ -922,6 +939,259 @@ await processarRecebimentoAgendaAoAbrirCaixa();
 
 logCaixa("Tela pronta para operação.", "success");
 });
+
+function operadorPodeEspecialCaixa(permissao) {
+  return typeof window.crvOperadorPodeEspecial !== "function" ||
+    window.crvOperadorPodeEspecial(permissao) === true;
+}
+
+function aplicarVisibilidadeMovimentacoesCaixa() {
+  const botao = document.getElementById("btnMovimentacoesCaixa");
+  if (!botao) return;
+
+  const featureAtiva = typeof window.crvFeatureAtiva === "function" &&
+    window.crvFeatureAtiva("movimentacoes_caixa") === true;
+  const temPermissao = operadorPodeEspecialCaixa("sangria") ||
+    operadorPodeEspecialCaixa("suprimento");
+
+  botao.style.display = featureAtiva && temPermissao ? "inline-flex" : "none";
+}
+
+function atualizarPermissoesFormularioMovimentacoesCaixa() {
+  const select = document.getElementById("movCaixaTipo");
+  if (!select) return;
+
+  const podeSangria = operadorPodeEspecialCaixa("sangria");
+  const podeSuprimento = operadorPodeEspecialCaixa("suprimento");
+  const opcaoSangria = select.querySelector('option[value="sangria"]');
+  const opcaoSuprimento = select.querySelector('option[value="suprimento"]');
+
+  if (opcaoSangria) opcaoSangria.disabled = !podeSangria;
+  if (opcaoSuprimento) opcaoSuprimento.disabled = !podeSuprimento;
+
+  if (!operadorPodeEspecialCaixa(select.value)) {
+    select.value = podeSangria ? "sangria" : "suprimento";
+  }
+}
+
+async function abrirModalMovimentacoesCaixa() {
+  if (!caixa?.id || caixa.status !== "aberto") {
+    await alertaCaixa("Caixa fechado", "Abra o caixa antes de registrar uma movimentação.");
+    return;
+  }
+
+  if (!sistemaOnline()) {
+    await alertaCaixa(
+      "Conexão necessária",
+      "Sangrias e suprimentos exigem conexão para manter o saldo e a auditoria consistentes."
+    );
+    return;
+  }
+
+  if (
+    typeof window.crvFeatureAtiva !== "function" ||
+    window.crvFeatureAtiva("movimentacoes_caixa") !== true
+  ) {
+    await alertaCaixa("Recurso indisponível", "As movimentações de caixa ainda não estão ativadas para esta empresa.");
+    return;
+  }
+
+  atualizarPermissoesFormularioMovimentacoesCaixa();
+
+  const modal = document.getElementById("modalMovimentacoesCaixa");
+  if (modal) modal.style.display = "flex";
+
+  await carregarMovimentacoesCaixa();
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function fecharModalMovimentacoesCaixa() {
+  const modal = document.getElementById("modalMovimentacoesCaixa");
+  if (modal) modal.style.display = "none";
+}
+
+async function carregarMovimentacoesCaixa() {
+  if (!caixa?.id) {
+    caixaMovimentacoes = [];
+    renderMovimentacoesCaixa();
+    return;
+  }
+
+  if (sistemaOnline()) {
+    const { data, error } = await sb
+      .from("caixa_movimentacoes")
+      .select("*")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("caixa_id", caixa.id)
+      .order("criado_em", { ascending: false });
+
+    if (error) {
+      await alertaCaixa("Erro ao carregar movimentações", error.message);
+      return;
+    }
+
+    caixaMovimentacoes = data || [];
+    await salvarCacheCaixa("caixa_movimentacoes", caixaMovimentacoes);
+  }
+
+  renderMovimentacoesCaixa();
+  atualizarInfobar();
+}
+
+function renderMovimentacoesCaixa() {
+  const lista = document.getElementById("movCaixaLista");
+  const totalSuprimentos = calcularTotalMovimentacoesCaixa("suprimento");
+  const totalSangrias = calcularTotalMovimentacoesCaixa("sangria");
+  const totalSuprimentosEl = document.getElementById("movCaixaTotalSuprimentos");
+  const totalSangriasEl = document.getElementById("movCaixaTotalSangrias");
+  const impactoEl = document.getElementById("movCaixaImpactoSaldo");
+
+  if (totalSuprimentosEl) totalSuprimentosEl.textContent = fmt(totalSuprimentos);
+  if (totalSangriasEl) totalSangriasEl.textContent = fmt(totalSangrias);
+  if (impactoEl) impactoEl.textContent = fmt(totalSuprimentos - totalSangrias);
+
+  if (!lista) return;
+
+  if (!caixaMovimentacoes.length) {
+    lista.innerHTML = '<div class="empty-state"><p>Nenhuma sangria ou suprimento neste caixa.</p></div>';
+    return;
+  }
+
+  lista.innerHTML = caixaMovimentacoes.map(movimentacao => {
+    const tipo = String(movimentacao.tipo || "").toLowerCase();
+    const cancelada = String(movimentacao.status || "ativa").toLowerCase() === "cancelada";
+    const podeCancelar = !cancelada && operadorPodeEspecialCaixa(tipo);
+    const rotulo = tipo === "suprimento" ? "Suprimento" : "Sangria";
+    const sinal = tipo === "suprimento" ? "+" : "−";
+    const motivoCancelamento = cancelada && movimentacao.motivo_cancelamento
+      ? `<small>Cancelamento: ${escaparHTMLCaixa(movimentacao.motivo_cancelamento)}</small>`
+      : "";
+
+    return `
+      <div class="mov-caixa-item ${cancelada ? "cancelada" : ""}">
+        <div class="mov-caixa-item-info">
+          <div>
+            <strong>${rotulo}</strong>
+            ${cancelada ? '<span class="mov-caixa-status">Cancelada</span>' : ""}
+          </div>
+          <span>${escaparHTMLCaixa(movimentacao.motivo || "Sem motivo")}</span>
+          <small>${formatarDataHoraBrasil(movimentacao.criado_em)}</small>
+          ${motivoCancelamento}
+        </div>
+        <div class="mov-caixa-item-lateral">
+          <strong class="${tipo === "suprimento" ? "entrada" : "saida"}">${sinal} ${fmt(movimentacao.valor)}</strong>
+          ${podeCancelar ? `
+            <button class="btn-ghost" type="button" onclick="cancelarMovimentacaoCaixa('${movimentacao.id}')">
+              Cancelar
+            </button>
+          ` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if (window.lucide) lucide.createIcons();
+}
+
+async function registrarMovimentacaoCaixa() {
+  if (movimentacaoCaixaEmProcessamento) return;
+
+  const tipo = String(document.getElementById("movCaixaTipo")?.value || "").toLowerCase();
+  const valor = normalizarNumero(document.getElementById("movCaixaValor")?.value || 0);
+  const motivo = String(document.getElementById("movCaixaMotivo")?.value || "").trim();
+
+  if (!caixa?.id || caixa.status !== "aberto" || !sistemaOnline()) {
+    await alertaCaixa("Movimentação não registrada", "É necessário estar online e com o caixa aberto.");
+    return;
+  }
+
+  if (!operadorPodeEspecialCaixa(tipo)) {
+    await alertaCaixa("Sem permissão", `Este operador não possui permissão para ${tipo}.`);
+    return;
+  }
+
+  if (valor <= 0 || motivo.length < 3) {
+    await alertaCaixa("Revise os dados", "Informe um valor maior que zero e um motivo com pelo menos 3 caracteres.");
+    return;
+  }
+
+  const botao = document.getElementById("btnRegistrarMovimentacaoCaixa");
+
+  try {
+    movimentacaoCaixaEmProcessamento = true;
+    if (botao) botao.disabled = true;
+
+    const { error } = await sb.rpc("registrar_movimentacao_caixa", {
+      p_caixa_id: caixa.id,
+      p_tipo: tipo,
+      p_valor: valor,
+      p_motivo: motivo,
+      p_operador_id: obterOperadorAtualId()
+    });
+
+    if (error) throw error;
+
+    const valorInput = document.getElementById("movCaixaValor");
+    const motivoInput = document.getElementById("movCaixaMotivo");
+    if (valorInput) valorInput.value = "";
+    if (motivoInput) motivoInput.value = "";
+
+    await carregarMovimentacoesCaixa();
+    crvToast({
+      titulo: tipo === "suprimento" ? "Suprimento registrado" : "Sangria registrada",
+      mensagem: `${fmt(valor)} incorporado ao saldo esperado do caixa.`,
+      tipo: "success"
+    });
+  } catch (err) {
+    await alertaCaixa("Erro ao registrar movimentação", err.message);
+  } finally {
+    movimentacaoCaixaEmProcessamento = false;
+    if (botao) botao.disabled = false;
+  }
+}
+
+async function cancelarMovimentacaoCaixa(movimentacaoId) {
+  const movimentacao = caixaMovimentacoes.find(item => String(item.id) === String(movimentacaoId));
+  if (!movimentacao || String(movimentacao.status || "ativa") === "cancelada") return;
+
+  if (!operadorPodeEspecialCaixa(movimentacao.tipo)) {
+    await alertaCaixa("Sem permissão", "Este operador não pode cancelar esta movimentação.");
+    return;
+  }
+
+  const confirmado = await abrirConfirmacaoCaixa({
+    titulo: "Cancelar movimentação",
+    mensagem: `
+      <p>O registro continuará no histórico, sem impacto no saldo.</p>
+      <label class="input-label" for="movCaixaMotivoCancelamento">Motivo do cancelamento *</label>
+      <input class="input" id="movCaixaMotivoCancelamento" maxlength="160" autocomplete="off" />
+    `,
+    textoConfirmar: "Cancelar movimentação"
+  });
+
+  const motivo = String(document.getElementById("movCaixaMotivoCancelamento")?.value || "").trim();
+  if (!confirmado) return;
+
+  if (motivo.length < 3) {
+    await alertaCaixa("Motivo obrigatório", "Informe um motivo com pelo menos 3 caracteres.");
+    return;
+  }
+
+  const { error } = await sb.rpc("cancelar_movimentacao_caixa", {
+    p_movimentacao_id: movimentacao.id,
+    p_motivo: motivo,
+    p_operador_id: obterOperadorAtualId()
+  });
+
+  if (error) {
+    await alertaCaixa("Erro ao cancelar movimentação", error.message);
+    return;
+  }
+
+  await carregarMovimentacoesCaixa();
+  crvToast({ titulo: "Movimentação cancelada", mensagem: "O saldo esperado foi recalculado.", tipo: "success" });
+}
 
 document.addEventListener("crv:sync-concluido", async event => {
   if (!caixaInicializado || !sistemaOnline()) {
@@ -1016,7 +1286,18 @@ async function carregarDadosSupabase() {
 
       if (vendasError) throw vendasError;
 
-            vendas = vendasData || [];
+      vendas = vendasData || [];
+
+      const { data: movimentacoesData, error: movimentacoesError } = await sb
+        .from("caixa_movimentacoes")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .eq("caixa_id", caixa.id)
+        .order("criado_em", { ascending: false });
+
+      if (movimentacoesError) throw movimentacoesError;
+
+      caixaMovimentacoes = movimentacoesData || [];
 
       const idsAgendaVendas = vendas
         .filter(venda => String(venda.origem || "").toLowerCase() === "agenda")
@@ -1049,6 +1330,7 @@ async function carregarDadosSupabase() {
       }
     } else {
       vendas = [];
+      caixaMovimentacoes = [];
     }
 
     await salvarCacheCaixa(
@@ -1061,6 +1343,11 @@ await salvarCacheCaixa(
   vendas
 );
 
+await salvarCacheCaixa(
+  "caixa_movimentacoes",
+  caixaMovimentacoes
+);
+
     logCaixa("Dados carregados do Supabase.", "success");
 
   } catch (err) {
@@ -1071,9 +1358,13 @@ await salvarCacheCaixa(
     const cacheVendas =
       await obterCacheCaixa("caixa_vendas") || [];
 
+    const cacheMovimentacoes =
+      await obterCacheCaixa("caixa_movimentacoes") || [];
+
     if (cacheCaixa && cacheCaixa.status === "aberto") {
       caixa = cacheCaixa;
       vendas = cacheVendas;
+      caixaMovimentacoes = cacheMovimentacoes;
 
       logCaixa(
         "Falha temporária no Supabase/Auth. Caixa aberto recuperado do cache local.",
@@ -1093,6 +1384,7 @@ await salvarCacheCaixa(
 
     caixa = null;
     vendas = [];
+    caixaMovimentacoes = [];
 
     logCaixa("Erro ao carregar dados: " + err.message, "error");
 
@@ -1473,10 +1765,12 @@ async function abrirCaixa() {
       };
 
       vendas = [];
+      caixaMovimentacoes = [];
       carrinho = [];
 
       await salvarCacheCaixa("caixa_status", caixa);
       await salvarCacheCaixa("caixa_vendas", vendas);
+      await salvarCacheCaixa("caixa_movimentacoes", caixaMovimentacoes);
 
       if (inputValor) inputValor.value = "";
 
@@ -1544,10 +1838,12 @@ async function abrirCaixa() {
   dadosDepois: data
 });
     vendas = [];
+    caixaMovimentacoes = [];
     carrinho = [];
 
     await salvarCacheCaixa("caixa_status", caixa);
     await salvarCacheCaixa("caixa_vendas", vendas);
+    await salvarCacheCaixa("caixa_movimentacoes", caixaMovimentacoes);
 
     if (inputValor) inputValor.value = "";
 
@@ -1594,9 +1890,11 @@ async function confirmarFechamento() {
 function preencherModalFechamento() {
   const totalVendido = calcularTotalVendido();
   const totalDinheiro = calcularTotalVendidoDinheiro();
-  const qtdVendas = vendas.length;
+  const qtdVendas = vendasAtivasCaixa().length;
   const valorInicial = Number(caixa?.valor_inicial || 0);
-  const saldoEsperado = valorInicial + totalDinheiro;
+  const totalSuprimentos = calcularTotalMovimentacoesCaixa("suprimento");
+  const totalSangrias = calcularTotalMovimentacoesCaixa("sangria");
+  const saldoEsperado = calcularSaldoEsperadoCaixa();
 
   const fechDataAbertura = document.getElementById("fechDataAbertura");
   const fechValorInicial = document.getElementById("fechValorInicial");
@@ -1604,6 +1902,10 @@ function preencherModalFechamento() {
   const fechTotalDinheiro = document.getElementById("fechTotalDinheiro");
   const fechQtdVendas = document.getElementById("fechQtdVendas");
   const fechSaldoEsperado = document.getElementById("fechSaldoEsperado");
+  const fechLinhaSuprimentos = document.getElementById("fechLinhaSuprimentos");
+  const fechTotalSuprimentos = document.getElementById("fechTotalSuprimentos");
+  const fechLinhaSangrias = document.getElementById("fechLinhaSangrias");
+  const fechTotalSangrias = document.getElementById("fechTotalSangrias");
   const valorFechamento = document.getElementById("valorFechamento");
   const fechDiferenca = document.getElementById("fechDiferenca");
 
@@ -1612,6 +1914,10 @@ function preencherModalFechamento() {
   if (fechTotalVendido) fechTotalVendido.textContent = fmt(totalVendido);
   if (fechTotalDinheiro) fechTotalDinheiro.textContent = fmt(totalDinheiro);
   if (fechQtdVendas) fechQtdVendas.textContent = qtdVendas;
+  if (fechLinhaSuprimentos) fechLinhaSuprimentos.style.display = totalSuprimentos > 0 ? "flex" : "none";
+  if (fechTotalSuprimentos) fechTotalSuprimentos.textContent = fmt(totalSuprimentos);
+  if (fechLinhaSangrias) fechLinhaSangrias.style.display = totalSangrias > 0 ? "flex" : "none";
+  if (fechTotalSangrias) fechTotalSangrias.textContent = fmt(totalSangrias);
   if (fechSaldoEsperado) fechSaldoEsperado.textContent = fmt(saldoEsperado);
   if (valorFechamento) valorFechamento.value = saldoEsperado.toFixed(2);
   if (fechDiferenca) fechDiferenca.innerHTML = "";
@@ -1624,9 +1930,7 @@ function calcularDiferenca() {
     document.getElementById("valorFechamento")?.value || 0
   );
 
-  const saldoEsperado =
-    Number(caixa?.valor_inicial || 0) +
-    calcularTotalVendidoDinheiro();
+  const saldoEsperado = calcularSaldoEsperadoCaixa();
 
   const diferenca = valorFisico - saldoEsperado;
 
@@ -1692,10 +1996,12 @@ async function fecharCaixa() {
       ultimoFechamentoCaixa = caixaFechado;
       caixa = null;
       vendas = [];
+      caixaMovimentacoes = [];
       carrinho = [];
 
       await salvarCacheCaixa("caixa_status", null);
       await salvarCacheCaixa("caixa_vendas", []);
+      await salvarCacheCaixa("caixa_movimentacoes", []);
 
       fecharModal();
       renderEstado();
@@ -1762,10 +2068,12 @@ async function fecharCaixa() {
 
     caixa = null;
     vendas = [];
+    caixaMovimentacoes = [];
     carrinho = [];
 
     await salvarCacheCaixa("caixa_status", null);
     await salvarCacheCaixa("caixa_vendas", []);
+    await salvarCacheCaixa("caixa_movimentacoes", []);
 
     fecharModal();
     renderEstado();
@@ -2732,14 +3040,47 @@ function calcularTotalCarrinho() {
   return Math.max(0, subtotal - desconto);
 }
 
+function vendaCanceladaCaixa(venda) {
+  return String(venda?.status_operacional || "concluida").toLowerCase() === "cancelada";
+}
+
+function vendasAtivasCaixa() {
+  return vendas.filter(venda => !vendaCanceladaCaixa(venda));
+}
+
+function movimentacoesAtivasCaixa() {
+  return caixaMovimentacoes.filter(movimentacao => {
+    return String(movimentacao?.status || "ativa").toLowerCase() !== "cancelada";
+  });
+}
+
+function calcularTotalMovimentacoesCaixa(tipo) {
+  const tipoNormalizado = String(tipo || "").toLowerCase();
+
+  return movimentacoesAtivasCaixa().reduce((total, movimentacao) => {
+    if (String(movimentacao.tipo || "").toLowerCase() !== tipoNormalizado) {
+      return total;
+    }
+
+    return total + Number(movimentacao.valor || 0);
+  }, 0);
+}
+
+function calcularSaldoEsperadoCaixa() {
+  return Number(caixa?.valor_inicial || 0) +
+    calcularTotalVendidoDinheiro() +
+    calcularTotalMovimentacoesCaixa("suprimento") -
+    calcularTotalMovimentacoesCaixa("sangria");
+}
+
 function calcularTotalVendido() {
-  return vendas.reduce((acc, venda) => {
+  return vendasAtivasCaixa().reduce((acc, venda) => {
     return acc + Number(venda.total || 0);
   }, 0);
 }
 
 function calcularTotalVendidoDinheiro() {
-  return vendas.reduce((acc, venda) => {
+  return vendasAtivasCaixa().reduce((acc, venda) => {
     const forma = String(venda.forma_pagamento || "").toLowerCase();
 
     if (forma !== "dinheiro") {
@@ -2770,13 +3111,11 @@ function atualizarInfobar() {
   const infoQtdVendas = document.getElementById("infoQtdVendas");
   const infoSaldo = document.getElementById("infoSaldo");
 
-  const totalDinheiro = calcularTotalVendidoDinheiro();
-
   if (infoQtdVendas) {
-    infoQtdVendas.textContent = vendas.length;
+    infoQtdVendas.textContent = vendasAtivasCaixa().length;
   }
 
-  const saldo = Number(caixa?.valor_inicial || 0) + totalDinheiro;
+  const saldo = calcularSaldoEsperadoCaixa();
 
   if (infoSaldo) {
     infoSaldo.textContent = fmt(saldo);
@@ -3898,7 +4237,7 @@ return {
 
     if (itensError) throw itensError;
 
-    await baixarEstoqueProdutos();
+    await baixarEstoqueProdutos(vendaData.id);
 
     vendas.unshift(vendaData);
 
@@ -3954,7 +4293,7 @@ return {
   }
 }
 
-async function baixarEstoqueProdutos() {
+async function baixarEstoqueProdutos(vendaId = null) {
   const itensComProduto = carrinho.filter(item => {
     return (
       !item.produto_manual &&
@@ -3977,36 +4316,64 @@ async function baixarEstoqueProdutos() {
     quantidadesPorProduto[item.id].quantidade += Number(item.quantidade || 0);
   });
 
-  for (const item of Object.values(quantidadesPorProduto)) {
-    const produtoOriginal = obterItemCatalogoCaixa(item.id);
+  const movimentacoesConcluidas = [];
 
-    if (!produtoOriginal) {
-      throw new Error(`Item não encontrado para baixar estoque: ${item.nome}`);
+  try {
+    for (const item of Object.values(quantidadesPorProduto)) {
+      const produtoOriginal = obterItemCatalogoCaixa(item.id);
+
+      if (!produtoOriginal) {
+        throw new Error(`Item não encontrado para baixar estoque: ${item.nome}`);
+      }
+
+      const estoqueAtual = Number(produtoOriginal.estoque || 0);
+      const quantidadeVendida = Number(item.quantidade || 0);
+
+      if (estoqueAtual < quantidadeVendida) {
+        throw new Error(`Estoque insuficiente para ${item.nome}. Disponível: ${estoqueAtual}`);
+      }
+
+      const { data, error } = await sb.rpc("movimentar_estoque_produto", {
+        p_produto_id: item.id,
+        p_tipo: "venda",
+        p_quantidade: quantidadeVendida,
+        p_motivo: "Baixa automática por venda",
+        p_operador_id: obterOperadorAtualId(),
+        p_referencia_tipo: "venda",
+        p_referencia_id: vendaId,
+        p_venda_id: vendaId,
+        p_caixa_id: caixa?.id || null
+      });
+
+      if (error) {
+        throw new Error("Não foi possível atualizar estoque de " + item.nome + ": " + error.message);
+      }
+
+      produtoOriginal.estoque = Number(data?.estoque_posterior ?? estoqueAtual - quantidadeVendida);
+      movimentacoesConcluidas.push({ ...item, quantidade: quantidadeVendida });
+    }
+  } catch (erroBaixa) {
+    for (const item of movimentacoesConcluidas.reverse()) {
+      try {
+        const { error: erroEstornoRpc } = await sb.rpc("movimentar_estoque_produto", {
+          p_produto_id: item.id,
+          p_tipo: "cancelamento_venda",
+          p_quantidade: item.quantidade,
+          p_motivo: "Estorno automático de venda não concluída",
+          p_operador_id: obterOperadorAtualId(),
+          p_referencia_tipo: "venda",
+          p_referencia_id: vendaId,
+          p_venda_id: vendaId,
+          p_caixa_id: caixa?.id || null
+        });
+
+        if (erroEstornoRpc) throw erroEstornoRpc;
+      } catch (erroEstorno) {
+        logVenda(`Falha ao estornar estoque de ${item.nome}: ${erroEstorno.message}`, "error");
+      }
     }
 
-    const estoqueAtual = Number(produtoOriginal.estoque || 0);
-    const quantidadeVendida = Number(item.quantidade || 0);
-
-    if (estoqueAtual < quantidadeVendida) {
-      throw new Error(`Estoque insuficiente para ${item.nome}. Disponível: ${estoqueAtual}`);
-    }
-
-    const novoEstoque = estoqueAtual - quantidadeVendida;
-
-    const { error } = await sb
-      .from("produtos")
-      .update({
-        estoque: novoEstoque,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", item.id)
-      .eq("empresa_id", obterEmpresaId());
-
-    if (error) {
-      throw new Error("Não foi possível atualizar estoque de " + item.nome + ": " + error.message);
-    }
-
-    produtoOriginal.estoque = novoEstoque;
+    throw erroBaixa;
   }
 }
 
@@ -4099,7 +4466,7 @@ function renderHistorico() {
   if (!box) return;
 
   if (badge) {
-    badge.textContent = `${vendas.length} registros`;
+    badge.textContent = `${vendasAtivasCaixa().length} vendas ativas`;
   }
 
   if (!vendas.length) {
@@ -4125,6 +4492,7 @@ return Number(venda.total || 0) > 0;
     })
     .forEach(venda => {
     const origem = String(venda.origem || "pdv").toLowerCase();
+    const cancelada = vendaCanceladaCaixa(venda);
 
     const origemEhAgenda =
       origem === "agenda" ||
@@ -4154,11 +4522,11 @@ return Number(venda.total || 0) > 0;
           : (venda.descricao || "Venda finalizada");
 
     const detalhe =
-      `${String(venda.forma_pagamento || "—").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`;
+      `${cancelada ? "CANCELADA · " : ""}${String(venda.forma_pagamento || "—").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`;
 
     const item = document.createElement("div");
 
-    item.className = "historico-item";
+    item.className = `historico-item${cancelada ? " historico-item-cancelado" : ""}`;
 
     item.innerHTML = `
       <div class="historico-item-icon ${classe}">
@@ -4234,6 +4602,15 @@ function setupInputs() {
   aplicarMascaraMoedaCaixa(
     document.getElementById("valorFechamento"),
     calcularDiferenca
+  );
+
+  aplicarMascaraMoedaCaixa(
+    document.getElementById("movCaixaValor")
+  );
+
+  document.getElementById("movCaixaTipo")?.addEventListener(
+    "change",
+    atualizarPermissoesFormularioMovimentacoesCaixa
   );
   const chkUltimoFechamento = document.getElementById("chkUsarUltimoFechamento");
 const inputValorInicial = document.getElementById("valorInicial");
@@ -9022,7 +9399,7 @@ if (carrinho.length > 0) {
         }
     }
 
-    await baixarEstoqueProdutos();
+    await baixarEstoqueProdutos(vendaData?.id || null);
 
 const { error: erroRemoverItensComanda } = await sb
   .from("comanda_itens")

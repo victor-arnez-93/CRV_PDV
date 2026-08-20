@@ -1184,3 +1184,79 @@
     font-size: .79rem;
   }
 }
+
+/* =====================================================
+   CONVENIÊNCIA / ADEGA — CANCELAMENTO AUDITÁVEL
+   ===================================================== */
+.vendas-table tbody tr.venda-cancelada {
+  opacity: .62;
+}
+
+.venda-cancelada .venda-total {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.venda-status-cancelada {
+  width: fit-content;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--crv-red, #ef4444) 28%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--crv-red, #ef4444) 10%, transparent);
+  color: var(--crv-red, #ef4444);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.detalhe-cancelamento {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--crv-red, #ef4444) 28%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--crv-red, #ef4444) 8%, transparent);
+  color: var(--crv-red, #ef4444);
+}
+
+.detalhe-cancelamento span,
+.modal-cancelar-venda .modal-header small,
+.cancelamento-venda-aviso {
+  color: var(--text-muted);
+  font-size: .78rem;
+  line-height: 1.4;
+}
+
+.modal-cancelar-venda {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.modal-cancelar-venda textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.cancelamento-venda-aviso {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .modal-cancelar-venda {
+    width: calc(100vw - 16px);
+  }
+
+  #modalDetalhe .modal-footer,
+  #modalCancelarVenda .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  #modalDetalhe .modal-footer button,
+  #modalCancelarVenda .modal-footer button {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+}

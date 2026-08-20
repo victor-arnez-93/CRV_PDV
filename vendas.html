@@ -231,7 +231,55 @@
     </div>
     <div class="modal-body" id="modalDetalheBody"></div>
     <div class="modal-footer">
-      <button class="btn-ghost" onclick="fecharModal()">Fechar</button>
+      <button
+        class="btn-danger"
+        id="btnCancelarVendaDetalhe"
+        type="button"
+        data-crv-especial="cancelar_venda"
+        onclick="abrirModalCancelamentoVenda()"
+        style="display:none;"
+      >
+        <i data-lucide="ban" width="15" height="15"></i>
+        Cancelar venda
+      </button>
+      <button class="btn-ghost" type="button" onclick="fecharModalDetalheVendas()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Cancelar venda direta -->
+<div class="modal-overlay" id="modalCancelarVenda" style="display:none;">
+  <div class="modal card modal-cancelar-venda">
+    <div class="modal-header">
+      <div>
+        <h3>Cancelar venda direta</h3>
+        <small>A venda permanece auditável e o estoque é devolvido automaticamente.</small>
+      </div>
+      <button class="btn-ghost" type="button" onclick="fecharModalCancelamentoVenda()" aria-label="Fechar">
+        <i data-lucide="x" width="16" height="16"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="input-group">
+        <label class="input-label" for="motivoCancelamentoVenda">Motivo do cancelamento *</label>
+        <textarea
+          class="input"
+          id="motivoCancelamentoVenda"
+          rows="3"
+          maxlength="240"
+          placeholder="Ex: lançamento duplicado"
+        ></textarea>
+      </div>
+      <p class="cancelamento-venda-aviso">
+        Disponível somente para venda direta vinculada ao caixa que continua aberto.
+        Agenda e Comandas mantêm seus próprios fluxos.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" type="button" onclick="fecharModalCancelamentoVenda()">Voltar</button>
+      <button class="btn-danger" id="btnConfirmarCancelamentoVenda" type="button" onclick="confirmarCancelamentoVenda()">
+        Confirmar cancelamento
+      </button>
     </div>
   </div>
 </div>
@@ -310,9 +358,6 @@
 
 <!-- JS DA PÁGINA -->
 <script src="js/vendas.js"></script>
-
-</body>
-</html>
 
 </body>
 </html>

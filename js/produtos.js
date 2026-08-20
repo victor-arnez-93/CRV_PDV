@@ -19,6 +19,10 @@ let tipoAbaAtivo = "produto";
 let idExcluir = null;
 let comboItensTemporarios = [];
 let tipoNegocioProdutos = "";
+let categoriasPersonalizadasProdutos = [];
+let produtoEstoqueOriginal = null;
+let produtoMovimentacaoSelecionado = null;
+let movimentacaoEstoqueEmProcessamento = false;
 const LIMITE_DIGITOS_MOEDA = 9;
 const LIMITE_DIGITOS_ESTOQUE = 6;
 const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
@@ -110,7 +114,7 @@ const categoriasPorSegmento = {
 
   mercado_mercearia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "combos", "outros"],
 
-  mercado_conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "higiene", "limpeza", "congelados", "frios", "mercearia", "salgados", "doces", "utilidades", "combos", "outros"],
+  mercado_conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "higiene", "limpeza", "congelados", "laticinios", "mercearia", "salgados", "doces", "utilidades", "combos", "outros"],
 
   loja_conveniencia: ["bebidas", "bebidas_alcoolicas", "refrigerantes", "alimentos", "salgados", "doces", "tabacaria", "utilidades", "combos", "outros"],
 
@@ -423,6 +427,50 @@ function itemControlaEstoque(produto) {
   return obterTipoItemProduto(produto) === "produto";
 }
 
+function escaparHTMLProduto(valor) {
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function obterOperadorAtualIdProdutos() {
+  return sessionStorage.getItem("CRV_OPERADOR_ID") || null;
+}
+
+function estoqueMinimoProduto(produto) {
+  const valor = Number(produto?.estoque_minimo);
+  return Number.isFinite(valor) && valor >= 0 ? valor : 5;
+}
+
+function unidadeVendaProduto(produto) {
+  return String(produto?.unidade_venda || "un").trim() || "un";
+}
+
+function labelUnidadeVendaProduto(unidade, quantidade = 1) {
+  const codigo = String(unidade || "un").trim().toLowerCase();
+  const plural = Number(quantidade) !== 1;
+  const labels = {
+    un: plural ? "unidades" : "unidade",
+    garrafa: plural ? "garrafas" : "garrafa",
+    lata: plural ? "latas" : "lata",
+    pacote: plural ? "pacotes" : "pacote",
+    caixa: plural ? "caixas" : "caixa",
+    fardo: plural ? "fardos" : "fardo",
+    kit: plural ? "kits" : "kit",
+    porcao: plural ? "porções" : "porção"
+  };
+
+  return labels[codigo] || codigo;
+}
+
+function featureProdutosAtiva(codigo) {
+  return typeof window.crvFeatureAtiva === "function" &&
+    window.crvFeatureAtiva(codigo) === true;
+}
+
 function itemVisivelNoCaixa(produto) {
   return produto?.ativo !== false;
 }
@@ -441,12 +489,21 @@ function itemPertenceAbaCatalogo(produto, aba = tipoAbaAtivo) {
 
 function obterCategoriasDoTipoItem(tipo) {
   const tipoNormalizado = normalizarTipoItemCatalogo(tipo);
+  const categoriasBase = tipoNormalizado === "produto"
+    ? obterCategoriasDoSegmento()
+    : categoriasPorTipoItem[tipoNormalizado] || ["outros"];
+  const personalizadas = categoriasPersonalizadasProdutos
+    .filter(categoria => {
+      return categoria.ativo !== false && categoria.tipo_item === tipoNormalizado;
+    })
+    .map(categoria => String(categoria.nome || "").trim())
+    .filter(Boolean);
 
-  if (tipoNormalizado === "produto") {
-    return obterCategoriasDoSegmento();
-  }
-
-  return categoriasPorTipoItem[tipoNormalizado] || ["outros"];
+  return [...new Set([
+    ...categoriasBase.filter(categoria => categoria !== "outros"),
+    ...personalizadas,
+    "outros"
+  ])];
 }
 
 function atualizarContadoresTiposCatalogo() {
@@ -535,8 +592,8 @@ function preencherCategoriasModalProduto(tipo, valorAtual = "") {
   selectCategoria.innerHTML = `
     <option value="">Sem categoria</option>
     ${categorias.map(categoria => `
-      <option value="${categoria}">
-        ${categoriaLabel[categoria] || categoria}
+      <option value="${escaparHTMLProduto(categoria)}">
+        ${escaparHTMLProduto(categoriaLabel[categoria] || categoria)}
       </option>
     `).join("")}
   `;
@@ -564,6 +621,7 @@ function atualizarFormularioPorTipoItem({
   const controlaEstoqueInput = document.getElementById("produtoControlaEstoque");
   const estoqueGrupo = document.getElementById("produtoEstoqueGrupo");
   const formRow = document.querySelector(".form-row-estoque-margem");
+  const detalhesEstoque = document.getElementById("produtoControleEstoqueDetalhes");
 
   if (aplicarPadraoEstoque && controlaEstoqueInput) {
     controlaEstoqueInput.checked = tipo === "produto";
@@ -585,12 +643,37 @@ function atualizarFormularioPorTipoItem({
     formRow.classList.toggle("sem-controle-estoque", !controlaEstoque);
   }
 
+  if (detalhesEstoque) {
+    detalhesEstoque.style.display = controlaEstoque ? "grid" : "none";
+  }
+
   const categoriaAnterior = categoriaAtual === null
     ? document.getElementById("produtoCategoria")?.value || ""
     : categoriaAtual;
 
   preencherCategoriasModalProduto(tipo, categoriaAnterior);
   toggleComboProdutos();
+  atualizarMotivoAjusteProduto();
+}
+
+function atualizarMotivoAjusteProduto() {
+  const grupo = document.getElementById("produtoMotivoAjusteGrupo");
+  const id = String(document.getElementById("produtoId")?.value || "").trim();
+  const controlaEstoque = document.getElementById("produtoControlaEstoque")?.checked === true;
+  const estoqueInformado = normalizarEstoque(
+    document.getElementById("produtoEstoque")?.value
+  );
+  const alterouEstoque = id && controlaEstoque && produtoEstoqueOriginal !== null &&
+    estoqueInformado !== Number(produtoEstoqueOriginal);
+
+  if (grupo) {
+    grupo.style.display = alterouEstoque ? "flex" : "none";
+  }
+
+  if (!alterouEstoque) {
+    const motivo = document.getElementById("produtoMotivoAjuste");
+    if (motivo) motivo.value = "";
+  }
 }
 
 function sincronizarTogglesCatalogo() {
@@ -676,16 +759,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 }
 
   await carregarTipoNegocioProdutos();
+  await carregarCategoriasPersonalizadasProdutos();
   await carregarProdutos();
 
   preencherFiltrosCategoriaProduto();
   renderProdutos();
   verificarEstoqueBaixo();
   atualizarStatusCaixa();
+  aplicarFeaturesProdutosInterface();
 
   if (window.lucide) {
     lucide.createIcons();
   }
+});
+
+document.addEventListener("crv:config-pronta", () => {
+  aplicarFeaturesProdutosInterface();
+  renderProdutos();
+});
+
+document.addEventListener("crv:operador-alterado", () => {
+  renderProdutos();
 });
 
 // ======================================================
@@ -755,6 +849,164 @@ function preencherFiltrosCategoriaProduto() {
   }
 }
 
+function aplicarFeaturesProdutosInterface() {
+  const botaoCategorias = document.getElementById("btnGerenciarCategoriasProduto");
+
+  if (botaoCategorias) {
+    botaoCategorias.style.display = featureProdutosAtiva("categorias_personalizadas")
+      ? "inline-flex"
+      : "none";
+  }
+}
+
+async function carregarCategoriasPersonalizadasProdutos() {
+  if (!sistemaOnline()) return;
+
+  try {
+    const { data, error } = await sb
+      .from("categorias_catalogo_personalizadas")
+      .select("id, empresa_id, tipo_item, nome, ativo, criado_em, atualizado_em")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("ativo", true)
+      .order("nome", { ascending: true });
+
+    if (error) throw error;
+
+    categoriasPersonalizadasProdutos = Array.isArray(data) ? data : [];
+  } catch (err) {
+    categoriasPersonalizadasProdutos = [];
+    logProdutos("Categorias personalizadas indisponíveis: " + err.message, "warn");
+  }
+}
+
+async function salvarCategoriaPersonalizadaProduto(nome, tipoItem) {
+  const nomeLimpo = String(nome || "").trim();
+
+  if (!nomeLimpo || !sistemaOnline()) return nomeLimpo;
+
+  const { data, error } = await sb.rpc("salvar_categoria_catalogo", {
+    p_nome: nomeLimpo,
+    p_tipo_item: normalizarTipoItemCatalogo(tipoItem),
+    p_operador_id: obterOperadorAtualIdProdutos()
+  });
+
+  if (error) throw error;
+
+  const categoriaSalva = data || null;
+
+  if (categoriaSalva?.id) {
+    const indice = categoriasPersonalizadasProdutos.findIndex(item => {
+      return String(item.id) === String(categoriaSalva.id);
+    });
+
+    if (indice >= 0) {
+      categoriasPersonalizadasProdutos[indice] = categoriaSalva;
+    } else {
+      categoriasPersonalizadasProdutos.push(categoriaSalva);
+    }
+  }
+
+  return String(categoriaSalva?.nome || nomeLimpo).trim();
+}
+
+function abrirModalCategoriasProduto() {
+  const modal = document.getElementById("modalCategoriasProduto");
+  if (!modal) return;
+
+  renderCategoriasPersonalizadasProduto();
+  modal.style.display = "flex";
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function fecharModalCategoriasProduto() {
+  const modal = document.getElementById("modalCategoriasProduto");
+  if (modal) modal.style.display = "none";
+}
+
+function renderCategoriasPersonalizadasProduto() {
+  const lista = document.getElementById("listaCategoriasPersonalizadasProduto");
+  const filtro = String(
+    document.getElementById("filtroTipoCategoriaProduto")?.value || "todos"
+  );
+
+  if (!lista) return;
+
+  const categorias = categoriasPersonalizadasProdutos.filter(categoria => {
+    return categoria.ativo !== false &&
+      (filtro === "todos" || categoria.tipo_item === filtro);
+  });
+
+  if (!categorias.length) {
+    lista.innerHTML = `
+      <div class="categorias-produto-vazio">
+        <i data-lucide="tags" width="28" height="28"></i>
+        <p>Nenhuma categoria personalizada cadastrada.</p>
+        <small>Ela será criada automaticamente quando “Outros” for preenchido no cadastro de um item.</small>
+      </div>
+    `;
+  } else {
+    lista.innerHTML = categorias.map(categoria => `
+      <div class="categoria-produto-item">
+        <div>
+          <strong>${escaparHTMLProduto(categoria.nome)}</strong>
+          <span>${escaparHTMLProduto(tiposItemCatalogo[categoria.tipo_item]?.singular || categoria.tipo_item)}</span>
+        </div>
+        <button
+          class="produto-btn danger"
+          type="button"
+          title="Desativar categoria"
+          onclick="desativarCategoriaPersonalizadaProduto('${categoria.id}')"
+        >
+          <i data-lucide="trash-2" width="13" height="13"></i>
+        </button>
+      </div>
+    `).join("");
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+async function desativarCategoriaPersonalizadaProduto(id) {
+  const categoria = categoriasPersonalizadasProdutos.find(item => {
+    return String(item.id) === String(id);
+  });
+
+  if (!categoria) return;
+
+  const confirmar = await abrirAlertaProduto({
+    titulo: "Desativar categoria",
+    mensagem: `Desativar a categoria <strong>${escaparHTMLProduto(categoria.nome)}</strong>? Os itens já cadastrados manterão essa identificação.`,
+    textoConfirmar: "Desativar",
+    mostrarCancelar: true
+  });
+
+  if (!confirmar) return;
+
+  try {
+    const { error } = await sb.rpc("desativar_categoria_catalogo", {
+      p_categoria_id: categoria.id,
+      p_operador_id: obterOperadorAtualIdProdutos()
+    });
+
+    if (error) throw error;
+
+    categoria.ativo = false;
+    preencherCategoriasModalProduto(
+      document.getElementById("produtoTipoItem")?.value || "produto",
+      document.getElementById("produtoCategoria")?.value || ""
+    );
+    preencherFiltrosCategoriaProduto();
+    renderCategoriasPersonalizadasProduto();
+    logProdutos("Categoria personalizada desativada.", "success");
+  } catch (err) {
+    await abrirAlertaProduto({
+      titulo: "Categoria não alterada",
+      mensagem: escaparHTMLProduto(err.message)
+    });
+  }
+}
+
 // ======================================================
 // CARREGAR PRODUTOS
 // ======================================================
@@ -784,6 +1036,8 @@ async function carregarProdutos() {
           preco: Number(produto.preco || 0),
           preco_custo: Number(produto.preco_custo || 0),
           estoque: Number(produto.estoque || 0),
+          estoque_minimo: Number(produto.estoque_minimo ?? 5),
+          unidade_venda: produto.unidade_venda || "un",
           codigo: produto.codigo || "",
           codigo_barras: produto.codigo_barras || produto.codigo || "",
           categoria: produto.categoria || "",
@@ -900,7 +1154,7 @@ function getProdutosFiltrados() {
         produto.ativo &&
         itemControlaEstoque(produto) &&
         Number(produto.estoque || 0) > 0 &&
-        Number(produto.estoque || 0) <= 5
+        Number(produto.estoque || 0) <= estoqueMinimoProduto(produto)
       ) ||
       (
         filtroAtivo === "sem_estoque" &&
@@ -1037,18 +1291,20 @@ function renderProdutos() {
     const tipoItem = obterTipoItemProduto(produto);
     const configuracaoTipo = tiposItemCatalogo[tipoItem];
     const controlaEstoque = itemControlaEstoque(produto);
+    const estoqueMinimo = estoqueMinimoProduto(produto);
+    const unidadeVenda = unidadeVendaProduto(produto);
 
     const estoqueClass =
       estoque === 0
         ? "estoque-zero"
-        : estoque <= 5
+        : estoque <= estoqueMinimo
           ? "estoque-low"
           : "estoque-ok";
 
     const estoqueIcon =
       estoque === 0
         ? "alert-circle"
-        : estoque <= 5
+        : estoque <= estoqueMinimo
           ? "alert-triangle"
           : "check-circle";
 
@@ -1065,7 +1321,7 @@ function renderProdutos() {
 
             ${
               categoria
-                ? `<span class="produto-categoria">${categoriaLabel[categoria] || categoria}</span>`
+                ? `<span class="produto-categoria">${escaparHTMLProduto(categoriaLabel[categoria] || categoria)}</span>`
                 : `<span></span>`
             }
 
@@ -1103,7 +1359,8 @@ function renderProdutos() {
             controlaEstoque
               ? `<div class="produto-estoque ${estoqueClass}">
                    <i data-lucide="${estoqueIcon}" width="13" height="13"></i>
-                   ${estoque} em estoque
+                   <span>${estoque} ${escaparHTMLProduto(labelUnidadeVendaProduto(unidadeVenda, estoque))}</span>
+                   <small>Mín. ${estoqueMinimo}</small>
                  </div>`
               : `<div class="produto-sem-estoque">
                    <i data-lucide="infinity" width="13" height="13"></i>
@@ -1112,6 +1369,16 @@ function renderProdutos() {
           }
 
 <div class="produto-actions">
+
+  ${controlaEstoque && featureProdutosAtiva("estoque_operacional") && operadorPodeMovimentarEstoqueProduto() ? `
+  <button
+    class="produto-btn estoque"
+    onclick="abrirModalMovimentacaoEstoque('${produto.id}')"
+    title="Movimentar estoque"
+  >
+    <i data-lucide="package-open" width="13" height="13"></i>
+  </button>
+  ` : ""}
 
   <button
     class="produto-btn"
@@ -1167,6 +1434,10 @@ function abrirModalNovo() {
   document.getElementById("produtoPreco").value = "";
   document.getElementById("produtoPrecoCusto").value = "";
   document.getElementById("produtoEstoque").value = "";
+  document.getElementById("produtoEstoqueMinimo").value = "5";
+  document.getElementById("produtoUnidadeVenda").value = "un";
+  document.getElementById("produtoMotivoAjuste").value = "";
+  produtoEstoqueOriginal = null;
   document.getElementById("produtoControlaEstoque").checked = tipoInicial === "produto";
   atualizarPreviewMargemProduto();
   document.getElementById("produtoCodigo").value = "";
@@ -1229,6 +1500,10 @@ async function abrirModalEditar(id) {
   document.getElementById("produtoEstoque").value = itemControlaEstoque(produto)
     ? produto.estoque
     : 0;
+  document.getElementById("produtoEstoqueMinimo").value = estoqueMinimoProduto(produto);
+  document.getElementById("produtoUnidadeVenda").value = unidadeVendaProduto(produto);
+  document.getElementById("produtoMotivoAjuste").value = "";
+  produtoEstoqueOriginal = Number(produto.estoque || 0);
   document.getElementById("produtoControlaEstoque").checked =
     itemControlaEstoque(produto);
   atualizarPreviewMargemProduto();
@@ -1280,6 +1555,11 @@ async function duplicarProduto(id) {
 
   document.getElementById("produtoEstoque").value =
     itemControlaEstoque(produto) ? produto.estoque || 0 : 0;
+
+  document.getElementById("produtoEstoqueMinimo").value = estoqueMinimoProduto(produto);
+  document.getElementById("produtoUnidadeVenda").value = unidadeVendaProduto(produto);
+  document.getElementById("produtoMotivoAjuste").value = "";
+  produtoEstoqueOriginal = null;
 
   document.getElementById("produtoControlaEstoque").checked =
     itemControlaEstoque(produto);
@@ -1575,8 +1855,24 @@ async function salvarProduto() {
   const estoque = controlaEstoque
     ? normalizarEstoque(document.getElementById("produtoEstoque")?.value)
     : 0;
+  const estoqueMinimo = controlaEstoque
+    ? normalizarEstoque(document.getElementById("produtoEstoqueMinimo")?.value)
+    : 0;
+  const unidadeVenda = controlaEstoque
+    ? String(document.getElementById("produtoUnidadeVenda")?.value || "un").trim()
+    : "un";
   const codigo = String(document.getElementById("produtoCodigo")?.value || "").trim();
-  const categoria = obterCategoriaProduto();
+  let categoria = obterCategoriaProduto();
+  const categoriaSelecionada = String(
+    document.getElementById("produtoCategoria")?.value || ""
+  ).trim();
+  const motivoAjuste = String(
+    document.getElementById("produtoMotivoAjuste")?.value || ""
+  ).trim();
+  const estoqueFoiAlterado = Boolean(
+    id && controlaEstoque && produtoEstoqueOriginal !== null &&
+    estoque !== Number(produtoEstoqueOriginal)
+  );
   const ativo = document.getElementById("produtoAtivo")?.checked === true;
   const produtoRapido = ativo && document.getElementById("produtoRapido")?.checked === true;
 
@@ -1592,6 +1888,22 @@ async function salvarProduto() {
     await abrirAlertaProduto({
       titulo: "Preço inválido",
       mensagem: "Informe um preço maior que zero."
+    });
+    return;
+  }
+
+  if (categoriaSelecionada === "outros" && (!categoria || categoria === "outros")) {
+    await abrirAlertaProduto({
+      titulo: "Informe a categoria",
+      mensagem: "Digite o nome da categoria que deseja cadastrar."
+    });
+    return;
+  }
+
+  if (estoqueFoiAlterado && motivoAjuste.length < 3) {
+    await abrirAlertaProduto({
+      titulo: "Motivo obrigatório",
+      mensagem: "Informe o motivo da alteração do estoque para manter o histórico correto."
     });
     return;
   }
@@ -1630,12 +1942,18 @@ async function salvarProduto() {
 
     const empresaId = obterEmpresaId();
 
+    if (categoriaSelecionada === "outros") {
+      categoria = await salvarCategoriaPersonalizadaProduto(categoria, tipoItem);
+    }
+
     const payload = {
       empresa_id: empresaId,
       nome: nome,
       preco: preco,
       preco_custo: precoCusto,
-      estoque: estoque,
+      estoque: estoqueFoiAlterado ? Number(produtoEstoqueOriginal) : estoque,
+      estoque_minimo: estoqueMinimo,
+      unidade_venda: unidadeVenda,
       codigo: codigo || null,
       codigo_barras: codigo || null,
       categoria: categoria || null,
@@ -1656,6 +1974,17 @@ async function salvarProduto() {
         .eq("empresa_id", empresaId);
 
       if (error) throw error;
+
+      if (estoqueFoiAlterado) {
+        const { error: ajusteError } = await sb.rpc("ajustar_estoque_produto", {
+          p_produto_id: id,
+          p_novo_estoque: estoque,
+          p_motivo: motivoAjuste,
+          p_operador_id: obterOperadorAtualIdProdutos()
+        });
+
+        if (ajusteError) throw ajusteError;
+      }
 
       await salvarItensComboProduto(id);
 
@@ -1691,6 +2020,254 @@ async function salvarProduto() {
           ? "Já existe um item com este nome ou código cadastrado."
           : err.message || "Não foi possível salvar o item."
     });
+  }
+}
+
+// ======================================================
+// MOVIMENTAÇÃO E HISTÓRICO DE ESTOQUE
+// ======================================================
+function operadorPodeMovimentarEstoqueProduto() {
+  return typeof window.crvOperadorPodeEspecial !== "function" ||
+    window.crvOperadorPodeEspecial("movimentar_estoque") === true;
+}
+
+async function abrirModalMovimentacaoEstoque(id) {
+  const produto = produtos.find(item => String(item.id) === String(id));
+
+  if (!produto || !itemControlaEstoque(produto)) return;
+
+  if (!operadorPodeMovimentarEstoqueProduto()) {
+    await abrirAlertaProduto({
+      titulo: "Acesso não permitido",
+      mensagem: "Este operador não possui permissão para movimentar estoque."
+    });
+    return;
+  }
+
+  if (!sistemaOnline()) {
+    await abrirAlertaProduto({
+      titulo: "Operação online",
+      mensagem: "Movimentações administrativas de estoque exigem conexão com o Supabase."
+    });
+    return;
+  }
+
+  produtoMovimentacaoSelecionado = produto;
+
+  document.getElementById("movEstoqueProdutoId").value = produto.id;
+  document.getElementById("movEstoqueProdutoNome").textContent = produto.nome;
+  document.getElementById("movEstoqueTipo").value = "entrada";
+  document.getElementById("movEstoqueQuantidade").value = "";
+  document.getElementById("movEstoqueNovoTotal").value = "";
+  document.getElementById("movEstoqueMotivo").value = "";
+
+  atualizarResumoMovimentacaoEstoque();
+  atualizarFormularioMovimentacaoEstoque();
+
+  const modal = document.getElementById("modalMovimentacaoEstoque");
+  if (modal) modal.style.display = "flex";
+
+  await carregarHistoricoEstoqueProduto();
+
+  setTimeout(() => document.getElementById("movEstoqueQuantidade")?.focus(), 80);
+  if (window.lucide) lucide.createIcons();
+}
+
+function fecharModalMovimentacaoEstoque() {
+  const modal = document.getElementById("modalMovimentacaoEstoque");
+  if (modal) modal.style.display = "none";
+
+  produtoMovimentacaoSelecionado = null;
+  movimentacaoEstoqueEmProcessamento = false;
+}
+
+function atualizarResumoMovimentacaoEstoque() {
+  const produto = produtoMovimentacaoSelecionado;
+  const resumo = document.getElementById("movEstoqueAtual");
+
+  if (!produto || !resumo) return;
+
+  const quantidade = Number(produto.estoque || 0);
+  resumo.textContent = `${quantidade} ${labelUnidadeVendaProduto(
+    unidadeVendaProduto(produto),
+    quantidade
+  )}`;
+}
+
+function atualizarFormularioMovimentacaoEstoque() {
+  const tipo = String(document.getElementById("movEstoqueTipo")?.value || "entrada");
+  const grupoQuantidade = document.getElementById("movEstoqueQuantidadeGrupo");
+  const grupoNovoTotal = document.getElementById("movEstoqueNovoTotalGrupo");
+
+  if (grupoQuantidade) grupoQuantidade.style.display = tipo === "ajuste" ? "none" : "flex";
+  if (grupoNovoTotal) grupoNovoTotal.style.display = tipo === "ajuste" ? "flex" : "none";
+}
+
+function labelTipoMovimentacaoEstoque(tipo) {
+  const labels = {
+    entrada: "Entrada",
+    saida: "Saída manual",
+    ajuste: "Ajuste",
+    perda: "Perda",
+    vencimento: "Vencimento",
+    devolucao: "Devolução",
+    venda: "Venda",
+    cancelamento_venda: "Cancelamento de venda",
+    carga_inicial: "Carga inicial"
+  };
+
+  return labels[String(tipo || "")] || String(tipo || "Movimentação");
+}
+
+function formatarDataHoraEstoqueProduto(valor) {
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return "—";
+
+  return data.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short"
+  });
+}
+
+async function carregarHistoricoEstoqueProduto() {
+  const lista = document.getElementById("movEstoqueHistoricoLista");
+  const produtoId = produtoMovimentacaoSelecionado?.id;
+
+  if (!lista || !produtoId) return;
+
+  lista.innerHTML = `<div class="mov-estoque-carregando">Carregando histórico...</div>`;
+
+  try {
+    const { data, error } = await sb
+      .from("estoque_movimentacoes")
+      .select("id, tipo, quantidade, variacao, estoque_anterior, estoque_posterior, motivo, criado_em")
+      .eq("empresa_id", obterEmpresaId())
+      .eq("produto_id", produtoId)
+      .order("criado_em", { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    const movimentacoes = Array.isArray(data) ? data : [];
+
+    if (!movimentacoes.length) {
+      lista.innerHTML = `
+        <div class="mov-estoque-vazio">
+          Nenhuma movimentação registrada após a ativação do histórico.
+        </div>
+      `;
+      return;
+    }
+
+    lista.innerHTML = movimentacoes.map(item => {
+      const entrada = Number(item.variacao || 0) > 0;
+      const sinal = entrada ? "+" : "−";
+
+      return `
+        <div class="mov-estoque-item ${entrada ? "entrada" : "saida"}">
+          <div class="mov-estoque-item-main">
+            <strong>${escaparHTMLProduto(labelTipoMovimentacaoEstoque(item.tipo))}</strong>
+            <span>${escaparHTMLProduto(item.motivo)}</span>
+            <small>${formatarDataHoraEstoqueProduto(item.criado_em)}</small>
+          </div>
+          <div class="mov-estoque-item-valores">
+            <strong>${sinal}${Math.abs(Number(item.variacao || 0))}</strong>
+            <span>${Number(item.estoque_anterior || 0)} → ${Number(item.estoque_posterior || 0)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    lista.innerHTML = `
+      <div class="mov-estoque-vazio erro">
+        Não foi possível carregar o histórico: ${escaparHTMLProduto(err.message)}
+      </div>
+    `;
+  }
+}
+
+async function salvarMovimentacaoEstoqueProduto() {
+  if (movimentacaoEstoqueEmProcessamento || !produtoMovimentacaoSelecionado) return;
+
+  const tipo = String(document.getElementById("movEstoqueTipo")?.value || "entrada");
+  const quantidade = normalizarEstoque(
+    document.getElementById("movEstoqueQuantidade")?.value
+  );
+  const novoEstoque = normalizarEstoque(
+    document.getElementById("movEstoqueNovoTotal")?.value
+  );
+  const motivo = String(document.getElementById("movEstoqueMotivo")?.value || "").trim();
+
+  if (tipo !== "ajuste" && quantidade <= 0) {
+    await abrirAlertaProduto({
+      titulo: "Quantidade inválida",
+      mensagem: "Informe uma quantidade maior que zero."
+    });
+    return;
+  }
+
+  if (motivo.length < 3) {
+    await abrirAlertaProduto({
+      titulo: "Motivo obrigatório",
+      mensagem: "Informe o motivo da movimentação de estoque."
+    });
+    return;
+  }
+
+  const botao = document.getElementById("btnConfirmarMovimentacaoEstoque");
+
+  try {
+    movimentacaoEstoqueEmProcessamento = true;
+    if (botao) botao.disabled = true;
+
+    const parametrosComuns = {
+      p_produto_id: produtoMovimentacaoSelecionado.id,
+      p_motivo: motivo,
+      p_operador_id: obterOperadorAtualIdProdutos()
+    };
+
+    const resposta = tipo === "ajuste"
+      ? await sb.rpc("ajustar_estoque_produto", {
+          ...parametrosComuns,
+          p_novo_estoque: novoEstoque
+        })
+      : await sb.rpc("movimentar_estoque_produto", {
+          ...parametrosComuns,
+          p_tipo: tipo,
+          p_quantidade: quantidade,
+          p_referencia_tipo: "manual",
+          p_referencia_id: null,
+          p_venda_id: null,
+          p_caixa_id: null
+        });
+
+    if (resposta.error) throw resposta.error;
+
+    const resultado = resposta.data || {};
+    produtoMovimentacaoSelecionado.estoque = Number(
+      resultado.estoque_posterior ?? novoEstoque
+    );
+
+    document.getElementById("movEstoqueQuantidade").value = "";
+    document.getElementById("movEstoqueNovoTotal").value = "";
+    document.getElementById("movEstoqueMotivo").value = "";
+
+    atualizarResumoMovimentacaoEstoque();
+    await carregarHistoricoEstoqueProduto();
+    await carregarProdutos();
+    preencherFiltrosCategoriaProduto();
+    renderProdutos();
+
+    logProdutos("Movimentação de estoque registrada.", "success");
+  } catch (err) {
+    await abrirAlertaProduto({
+      titulo: "Movimentação não registrada",
+      mensagem: escaparHTMLProduto(err.message)
+    });
+  } finally {
+    movimentacaoEstoqueEmProcessamento = false;
+    if (botao) botao.disabled = false;
   }
 }
 
@@ -1799,6 +2376,8 @@ function fecharModal() {
   if (modalExcluir) {
     modalExcluir.style.display = "none";
   }
+
+  produtoEstoqueOriginal = null;
 }
 
 // ======================================================
@@ -1887,6 +2466,10 @@ document.addEventListener("input", event => {
   ) {
     atualizarPreviewMargemProduto();
   }
+
+  if (event.target?.id === "produtoEstoque") {
+    atualizarMotivoAjusteProduto();
+  }
 });
 
 // ======================================================
@@ -1896,6 +2479,9 @@ function setupMascarasProdutos() {
   aplicarMascaraMoedaInput(document.getElementById("produtoPreco"));
   aplicarMascaraMoedaInput(document.getElementById("produtoPrecoCusto"));
   aplicarMascaraEstoqueInput(document.getElementById("produtoEstoque"));
+  aplicarMascaraEstoqueInput(document.getElementById("produtoEstoqueMinimo"));
+  aplicarMascaraEstoqueInput(document.getElementById("movEstoqueQuantidade"));
+  aplicarMascaraEstoqueInput(document.getElementById("movEstoqueNovoTotal"));
   aplicarMascaraCodigoBarrasInput(document.getElementById("produtoCodigo"));
 
 const produtoNome = document.getElementById("produtoNome");
@@ -1937,7 +2523,7 @@ function verificarEstoqueBaixo() {
     const estoque = Number(produto.estoque || 0);
 
     return itemControlaEstoque(produto) &&
-      estoque <= 5 &&
+      estoque <= estoqueMinimoProduto(produto) &&
       produto.ativo !== false;
   });
 
