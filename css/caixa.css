@@ -2722,7 +2722,7 @@ body.light .jogo-caixa-status.cobranca {
   flex: 0 0 275px;
 }
 
-/* Botão Modo balcão — texto e ícone brancos no ativo e hover */
+/* Botões operacionais — texto e ícone brancos no ativo e hover */
 [data-theme="light"] #btnModoBalcao.active,
 [data-theme="light"] #btnModoBalcao.active span,
 [data-theme="light"] #btnModoBalcao.active i,
@@ -2730,12 +2730,17 @@ body.light .jogo-caixa-status.cobranca {
 [data-theme="light"] #btnModoBalcao:hover,
 [data-theme="light"] #btnModoBalcao:hover span,
 [data-theme="light"] #btnModoBalcao:hover i,
-[data-theme="light"] #btnModoBalcao:hover svg {
+[data-theme="light"] #btnModoBalcao:hover svg,
+[data-theme="light"] #btnMovimentacoesCaixa:hover,
+[data-theme="light"] #btnMovimentacoesCaixa:hover span,
+[data-theme="light"] #btnMovimentacoesCaixa:hover i,
+[data-theme="light"] #btnMovimentacoesCaixa:hover svg {
   color: #ffffff !important;
 }
 
 [data-theme="light"] #btnModoBalcao.active svg,
-[data-theme="light"] #btnModoBalcao:hover svg {
+[data-theme="light"] #btnModoBalcao:hover svg,
+[data-theme="light"] #btnMovimentacoesCaixa:hover svg {
   stroke: #ffffff !important;
 }
 
@@ -3745,13 +3750,51 @@ body.light .jogo-caixa-status.cobranca {
    CONVENIÊNCIA / ADEGA — MOVIMENTAÇÕES OPERACIONAIS
    ===================================================== */
 .modal-movimentacoes-caixa {
+  box-sizing: border-box;
   width: min(720px, calc(100vw - 32px));
-  max-height: min(820px, calc(100vh - 32px));
+  max-height: min(820px, calc(100dvh - 32px));
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
+.modal-movimentacoes-caixa .modal-header,
+.modal-movimentacoes-caixa .modal-footer {
+  flex: 0 0 auto;
+}
+
+.modal-movimentacoes-caixa .modal-header {
+  gap: 12px;
+}
+
+.modal-movimentacoes-caixa .modal-header > div {
+  min-width: 0;
+}
+
+.modal-movimentacoes-caixa .modal-header .btn-ghost {
+  flex: 0 0 auto;
+}
+
 .modal-movimentacoes-caixa .modal-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 4px;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-movimentacoes-caixa .modal-footer {
+  justify-content: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-movimentacoes-caixa .modal-footer .btn-ghost {
+  width: min(100%, 160px);
+  justify-content: center;
 }
 
 .mov-caixa-resumo {
@@ -3797,7 +3840,9 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 .mov-caixa-registrar {
-  justify-self: end;
+  width: min(100%, 360px);
+  justify-self: center;
+  justify-content: center;
 }
 
 .mov-caixa-historico,
@@ -3865,17 +3910,86 @@ body.light .jogo-caixa-status.cobranca {
 }
 
 @media (max-width: 640px) {
+  #modalMovimentacoesCaixa.modal-overlay {
+    align-items: center;
+    padding: 8px;
+    overflow: hidden;
+  }
+
   .modal-movimentacoes-caixa {
-    width: calc(100vw - 16px);
-    max-height: calc(100vh - 16px);
+    width: 100%;
+    max-width: 100%;
+    height: min(760px, calc(100dvh - 16px));
+    max-height: calc(100dvh - 16px);
+    margin: 0;
+    padding: 16px 14px 14px;
+  }
+
+  .modal-movimentacoes-caixa .modal-header {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .modal-movimentacoes-caixa .modal-header h3 {
+    margin: 0 0 3px;
+    font-size: 1.05rem;
+    line-height: 1.15;
+  }
+
+  .modal-movimentacoes-caixa .modal-header small {
+    display: block;
+    font-size: .76rem;
+    line-height: 1.35;
+  }
+
+  .modal-movimentacoes-caixa .modal-body {
+    gap: 12px;
+    padding-right: 3px;
   }
 
   .mov-caixa-resumo {
     grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .mov-caixa-resumo > div {
+    padding: 10px 12px;
+  }
+
+  .mov-caixa-form {
+    min-width: 0;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .modal-movimentacoes-caixa .form-row {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .modal-movimentacoes-caixa .input-group,
+  .modal-movimentacoes-caixa .input,
+  .modal-movimentacoes-caixa select,
+  .modal-movimentacoes-caixa input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
   }
 
   .mov-caixa-item {
     align-items: flex-start;
+  }
+
+  .mov-caixa-historico-header {
+    align-items: flex-start;
+  }
+
+  .modal-movimentacoes-caixa .modal-footer {
+    margin-top: 10px;
+    padding-top: 10px;
   }
 }
 
@@ -4826,50 +4940,67 @@ body.caixa-modo-balcao .pdv-finalizar {
     max-width: 380px;
     margin: 0 auto;
     padding: 12px;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    justify-content: initial;
+    gap: 8px;
   }
 
   .caixa-infobar-actions .caixa-view-toggle,
   .caixa-infobar-actions #btnFecharCaixa {
-    flex: 1 1 0;
-    width: auto;
+    width: 100%;
     min-width: 0;
-    max-width: 180px;
+    max-width: none;
     min-height: 46px;
     height: 46px;
     margin: 0;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: .74rem;
+    line-height: 1;
+  }
+
+  .caixa-infobar-actions #btnFecharCaixa {
+    grid-column: 1 / -1;
   }
 
   body.caixa-modo-balcao .caixa-infobar {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr;
     padding: 10px;
     gap: 10px;
   }
 
   body.caixa-modo-balcao .caixa-info-item.highlight {
-    flex: 1 1 auto;
     min-width: 0;
     padding: 6px 8px;
   }
 
   body.caixa-modo-balcao #btnFecharCaixa {
-    width: auto;
-    min-width: 132px;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
     margin: 0;
   }
 
   body.caixa-modo-balcao .caixa-infobar-actions {
     width: 100%;
     margin-left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   body.caixa-modo-balcao .caixa-infobar-actions .caixa-view-toggle,
   body.caixa-modo-balcao .caixa-infobar-actions #btnFecharCaixa {
-    flex: 1 1 0;
-    width: auto;
+    width: 100%;
     min-width: 0;
     max-width: none;
     margin: 0;
+  }
+
+  body.caixa-modo-balcao .caixa-infobar-actions #btnFecharCaixa {
+    grid-column: 1 / -1;
   }
 
   body.caixa-modo-balcao .pdv-search {
@@ -4909,11 +5040,10 @@ body.caixa-modo-balcao .pdv-finalizar {
 @media (max-width: 380px) {
   body.caixa-modo-balcao .caixa-infobar {
     align-items: stretch;
-    flex-direction: column;
   }
 
   body.caixa-modo-balcao .caixa-infobar-actions {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   body.caixa-modo-balcao .caixa-infobar-actions .caixa-view-toggle,
@@ -4924,6 +5054,7 @@ body.caixa-modo-balcao .pdv-finalizar {
   body.caixa-modo-balcao #btnFecharCaixa {
     width: 100%;
     max-width: none;
+    grid-column: auto;
   }
 
   .jogo-caixa-jogador-row {
