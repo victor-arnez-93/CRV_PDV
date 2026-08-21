@@ -957,6 +957,19 @@ function aplicarVisibilidadeMovimentacoesCaixa() {
   botao.style.display = featureAtiva && temPermissao ? "inline-flex" : "none";
 }
 
+function atualizarExemploMotivoMovimentacaoCaixa() {
+  const select = document.getElementById("movCaixaTipo");
+  const motivoInput = document.getElementById("movCaixaMotivo");
+
+  if (!select || !motivoInput) return;
+
+  const tipo = String(select.value || "").toLowerCase();
+
+  motivoInput.placeholder = tipo === "suprimento"
+    ? "Ex: entrada de dinheiro para reforço de troco"
+    : "Ex: retirada para pagamento de fornecedor";
+}
+
 function atualizarPermissoesFormularioMovimentacoesCaixa() {
   const select = document.getElementById("movCaixaTipo");
   if (!select) return;
@@ -972,6 +985,8 @@ function atualizarPermissoesFormularioMovimentacoesCaixa() {
   if (!operadorPodeEspecialCaixa(select.value)) {
     select.value = podeSangria ? "sangria" : "suprimento";
   }
+
+  atualizarExemploMotivoMovimentacaoCaixa();
 }
 
 async function abrirModalMovimentacoesCaixa() {
@@ -4608,10 +4623,13 @@ function setupInputs() {
     document.getElementById("movCaixaValor")
   );
 
-  document.getElementById("movCaixaTipo")?.addEventListener(
-    "change",
-    atualizarPermissoesFormularioMovimentacoesCaixa
-  );
+document.getElementById("movCaixaTipo")?.addEventListener(
+  "change",
+  () => {
+    atualizarPermissoesFormularioMovimentacoesCaixa();
+    atualizarExemploMotivoMovimentacaoCaixa();
+  }
+);
   const chkUltimoFechamento = document.getElementById("chkUsarUltimoFechamento");
 const inputValorInicial = document.getElementById("valorInicial");
 
