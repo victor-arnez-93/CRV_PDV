@@ -852,6 +852,76 @@ function crvInicializarTema() {
   });
 }
 
+function crvOrganizarSidebarPorSecoes() {
+  const nav = document.querySelector(".sidebar-nav");
+
+  if (!nav) return;
+
+  const secoes = [
+    {
+      titulo: "Operação",
+      rotas: ["dashboard.html", "caixa.html", "agenda.html", "vendas.html"]
+    },
+    {
+      titulo: "Cadastros",
+      rotas: ["produtos.html", "clientes.html", "comandas.html"]
+    },
+    {
+      titulo: "Gestão",
+      rotas: ["relatorios.html"]
+    },
+    {
+      titulo: "Sistema",
+      rotas: ["configuracoes.html"]
+    }
+  ];
+
+  const itens = Array.from(nav.querySelectorAll(".nav-item"));
+  const itensPorRota = new Map();
+
+  itens.forEach(item => {
+    const href = item.getAttribute("href") || "";
+    const rota = href.split("/").pop().split(/[?#]/)[0];
+
+    if (rota) itensPorRota.set(rota, item);
+  });
+
+  nav.querySelectorAll(".nav-section-head, .nav-section-label").forEach(el => {
+    el.remove();
+  });
+
+  const itensOrganizados = new Set();
+
+  secoes.forEach(secao => {
+    const itensSecao = secao.rotas
+      .map(rota => itensPorRota.get(rota))
+      .filter(Boolean);
+
+    if (!itensSecao.length) return;
+
+    const label = document.createElement("span");
+    label.className = "nav-section-label";
+    label.textContent = secao.titulo;
+    nav.appendChild(label);
+
+    itensSecao.forEach(item => {
+      nav.appendChild(item);
+      itensOrganizados.add(item);
+    });
+  });
+
+  const itensFuturos = itens.filter(item => !itensOrganizados.has(item));
+
+  if (itensFuturos.length) {
+    const label = document.createElement("span");
+    label.className = "nav-section-label";
+    label.textContent = "Mais";
+    nav.appendChild(label);
+
+    itensFuturos.forEach(item => nav.appendChild(item));
+  }
+}
+
 function crvInicializarSidebarMobile() {
   const btnMenu = document.getElementById('btnMenu');
   const sidebar = document.getElementById('sidebar');
@@ -1737,6 +1807,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 crvInicializarTema();
+crvOrganizarSidebarPorSecoes();
 crvInicializarSidebarMobile();
 crvInicializarSidebarDesktop();
 crvInicializarRelogio();

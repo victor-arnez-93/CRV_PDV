@@ -1985,3 +1985,17 @@
     align-items: flex-start;
   }
 }
+
+/* ======================================================
+   ALTURA UNIFORME DOS CARDS — SOMENTE DESKTOP
+====================================================== */
+
+@media (min-width: 1025px) {
+  .produto-card {
+    min-height: 268px;
+  }
+
+  .produto-card .produto-footer {
+    margin-top: auto;
+  }
+}

@@ -108,12 +108,24 @@ p { line-height: 1.6; color: var(--text-secondary); }
 }
 
 .nav-section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--menu-section-color);
   padding: 12px 8px 4px;
+}
+
+.nav-section-label::after {
+  content: "";
+  height: 1px;
+  flex: 1 1 auto;
+  min-width: 18px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  opacity: .42;
 }
 
 .nav-item {
@@ -1033,6 +1045,10 @@ select:-webkit-autofill {
   font-size: 0;
 }
 
+.app-shell.sidebar-collapsed .nav-section-label::after {
+  display: none;
+}
+
 .app-shell.sidebar-collapsed .nav-section-head {
   justify-content: center;
 }
@@ -1192,6 +1208,10 @@ html[data-theme="dark"] .comandas-header > :first-child {
   .app-shell.sidebar-collapsed .nav-section-label,
   .app-shell.sidebar-collapsed .nav-item {
     font-size: inherit;
+  }
+
+  .app-shell.sidebar-collapsed .nav-section-label::after {
+    display: block;
   }
 
   .app-shell.sidebar-collapsed .nav-section-head {
