@@ -960,7 +960,6 @@ function crvInicializarSidebarDesktop() {
       head = document.createElement("div");
       head.className = "nav-section-head";
       primeiroLabel.parentNode.insertBefore(head, primeiroLabel);
-      head.appendChild(primeiroLabel);
     }
 
     toggle = document.createElement("button");
