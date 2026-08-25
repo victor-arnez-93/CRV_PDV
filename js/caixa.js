@@ -3014,7 +3014,7 @@ async function limparCarrinho() {
   if (modoPDV === "comanda" && comandaAtiva) {
     await alertaCaixa(
       "Comanda ativa",
-      "Para sair da comanda, use o botão <strong>Limpar</strong> do card da comanda ativa."
+      "Para sair sem fechar a comanda, use o botão <strong>Sair da comanda</strong> no card da comanda ativa."
     );
     return;
   }
@@ -9085,37 +9085,39 @@ async function limparComandaAtiva() {
     return;
   }
 
+  try {
+    await carregarItensComanda();
+  } catch (err) {
+    console.warn("[CAIXA][SAIR COMANDA]", err);
+  }
+
+  const quantidadeItens = carrinho.reduce((total, item) => {
+    return total + Number(item.quantidade || 0);
+  }, 0);
+
+  const possuiItens = carrinho.length > 0;
+  const codigoComanda = comandaAtiva.codigo || "—";
+
+  const textoPermanencia = quantidadeItens === 1
+    ? "O item permanecerá salvo"
+    : `Os ${quantidadeItens} itens permanecerão salvos`;
+
   const confirmar = await abrirConfirmacaoCaixa({
     titulo: "Sair da comanda",
-    mensagem: `
-      Deseja sair da comanda <strong>${comandaAtiva.codigo || "—"}</strong>?
-    `,
-    textoConfirmar: "Sair"
+    mensagem: possuiItens
+      ? `
+        Você vai sair da comanda <strong>${codigoComanda}</strong>.<br><br>
+        <strong>${textoPermanencia}</strong> e a comanda continuará aberta.
+      `
+      : `
+        Você vai sair da comanda <strong>${codigoComanda}</strong>.<br><br>
+        Ela está vazia e continuará aberta. Para liberá-la sem gerar venda,
+        use <strong>Fechar comanda</strong>.
+      `,
+    textoConfirmar: "Sair e manter aberta"
   });
 
   if (!confirmar) return;
-
-  try {
-    await carregarItensComanda();
-
-    if (!carrinho.length && sistemaOnline()) {
-      await sb
-        .from("comandas")
-        .update({
-          status: "livre",
-          nome_cliente: null,
-          observacoes: null,
-          data_abertura: null,
-          data_fechamento: null,
-          total: 0
-        })
-        .eq("id", comandaAtiva.id)
-        .eq("empresa_id", obterEmpresaId());
-    }
-
-  } catch (err) {
-    console.warn("[CAIXA][LIMPAR COMANDA]", err);
-  }
 
   comandaAtiva = null;
   comandaOculta = false;
@@ -9131,15 +9133,15 @@ async function limparComandaAtiva() {
     input.focus();
   }
 
-await carregarComandasCaixa({
-  forcar: true
-});
+  await carregarComandasCaixa({
+    forcar: true
+  });
 
-filtrarComandasCaixa("");
+  filtrarComandasCaixa("");
 
-await atualizarBadgesModosCaixa();
+  await atualizarBadgesModosCaixa();
 
-renderComandasAbertasNoCaixa();
+  renderComandasAbertasNoCaixa();
 }
 
 document.addEventListener("click", event => {
