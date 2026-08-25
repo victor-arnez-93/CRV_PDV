@@ -3014,7 +3014,7 @@ async function limparCarrinho() {
   if (modoPDV === "comanda" && comandaAtiva) {
     await alertaCaixa(
       "Comanda ativa",
-      "Para sair sem fechar a comanda, use o botão <strong>Sair da comanda</strong> no card da comanda ativa."
+      "Para ocultar sem fechar a comanda, use o botão <strong>Ocultar comanda</strong> no card da comanda ativa."
     );
     return;
   }
@@ -9103,18 +9103,18 @@ async function limparComandaAtiva() {
     : `Os ${quantidadeItens} itens permanecerão salvos`;
 
   const confirmar = await abrirConfirmacaoCaixa({
-    titulo: "Sair da comanda",
+    titulo: "Ocultar comanda",
     mensagem: possuiItens
       ? `
-        Você vai sair da comanda <strong>${codigoComanda}</strong>.<br><br>
+        Você vai ocultar a comanda <strong>${codigoComanda}</strong>.<br><br>
         <strong>${textoPermanencia}</strong> e a comanda continuará aberta.
       `
       : `
-        Você vai sair da comanda <strong>${codigoComanda}</strong>.<br><br>
+        Você vai ocultar a comanda <strong>${codigoComanda}</strong>.<br><br>
         Ela está vazia e continuará aberta. Para liberá-la sem gerar venda,
         use <strong>Fechar comanda</strong>.
       `,
-    textoConfirmar: "Sair e manter aberta"
+    textoConfirmar: "Ocultar e manter aberta"
   });
 
   if (!confirmar) return;
