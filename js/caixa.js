@@ -9152,17 +9152,6 @@ document.addEventListener("click", event => {
   }
 });
 
-document.addEventListener("click", event => {
-  const btnOcultar = event.target.closest("#btnOcultarComanda");
-
-  if (btnOcultar) {
-    comandaOculta = true;
-
-    atualizarInterfaceModoPDV();
-    renderComandasAbertasNoCaixa();
-  }
-});
-
 // ======================================================
 // FECHAR COMANDA
 // ======================================================
