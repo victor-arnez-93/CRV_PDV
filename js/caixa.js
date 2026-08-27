@@ -1695,9 +1695,15 @@ function renderUltimoFechamentoCaixa() {
 
   if (!boxCheck || !info || !inputValor || !check) return;
 
-  if (!ultimoFechamentoCaixa?.valor_final) {
+  const possuiUltimoFechamento =
+    ultimoFechamentoCaixa &&
+    ultimoFechamentoCaixa.valor_final !== null &&
+    ultimoFechamentoCaixa.valor_final !== undefined;
+
+  if (!possuiUltimoFechamento) {
     boxCheck.style.display = "none";
     info.style.display = "none";
+    check.checked = false;
     inputValor.disabled = false;
     return;
   }
@@ -1726,23 +1732,58 @@ function renderUltimoFechamentoCaixa() {
 // ABRIR CAIXA
 // ======================================================
 async function abrirCaixa() {
+  if (operacaoCaixaEmProcessamento) return;
+
+  if (caixa && caixa.status === "aberto") {
+    await alertaCaixa(
+      "Caixa já aberto",
+      "Já existe um caixa aberto."
+    );
+    return;
+  }
+
   const inputValor = document.getElementById("valorInicial");
-  const valor = normalizarNumero(inputValor?.value || 0);
 
-  if (!sistemaOnline()) {
-    if (operacaoCaixaEmProcessamento) return;
+  if (!inputValor) {
+    await alertaCaixa(
+      "Valor inicial indisponível",
+      "O campo de valor inicial do caixa não foi encontrado."
+    );
+    return;
+  }
 
-    if (caixa && caixa.status === "aberto") {
-      await alertaCaixa(
-        "Caixa já aberto",
-        "Já existe um caixa aberto neste dispositivo."
-      );
-      return;
-    }
+  const valor = normalizarNumero(inputValor.value);
 
-    try {
-      operacaoCaixaEmProcessamento = true;
+  const possuiUltimoFechamento =
+    ultimoFechamentoCaixa &&
+    ultimoFechamentoCaixa.valor_final !== null &&
+    ultimoFechamentoCaixa.valor_final !== undefined;
 
+  const usandoUltimoFechamento =
+    possuiUltimoFechamento &&
+    document.getElementById("chkUsarUltimoFechamento")?.checked === true;
+
+  const origemValor = usandoUltimoFechamento
+    ? "Saldo final do último fechamento"
+    : "Valor informado manualmente";
+
+  operacaoCaixaEmProcessamento = true;
+
+  try {
+    const confirmado = await abrirConfirmacaoCaixa({
+      titulo: "Confirmar abertura do caixa",
+      mensagem: `
+        O caixa será aberto com o valor inicial de
+        <strong>${fmt(valor)}</strong>.<br><br>
+        <strong>Origem:</strong> ${origemValor}.<br><br>
+        Confirma a abertura?
+      `,
+      textoConfirmar: "Confirmar abertura"
+    });
+
+    if (!confirmado) return;
+
+    if (!sistemaOnline()) {
       const escopo = obterEscopoOfflineCaixa();
 
       if (!escopo) {
@@ -1753,6 +1794,7 @@ async function abrirCaixa() {
 
       const caixaId = gerarUUIDCaixa();
       const agora = new Date().toISOString();
+
       const payload = {
         id: caixaId,
         valor_inicial: valor,
@@ -1785,9 +1827,12 @@ async function abrirCaixa() {
 
       await salvarCacheCaixa("caixa_status", caixa);
       await salvarCacheCaixa("caixa_vendas", vendas);
-      await salvarCacheCaixa("caixa_movimentacoes", caixaMovimentacoes);
+      await salvarCacheCaixa(
+        "caixa_movimentacoes",
+        caixaMovimentacoes
+      );
 
-      if (inputValor) inputValor.value = "";
+      inputValor.value = "";
 
       renderEstado();
       renderCarrinho();
@@ -1800,25 +1845,14 @@ async function abrirCaixa() {
         tempo: 6500
       });
 
-      logCaixa("Caixa aberto e persistido offline.", "warn");
-    } catch (err) {
-      await alertaCaixa("Não foi possível abrir o Caixa", err.message);
-    } finally {
-      operacaoCaixaEmProcessamento = false;
+      logCaixa(
+        "Caixa aberto e persistido offline.",
+        "warn"
+      );
+
+      return;
     }
 
-    return;
-  }
-
-  if (caixa && caixa.status === "aberto") {
-    await alertaCaixa(
-  "Caixa já aberto",
-  "Já existe um caixa aberto."
-);
-    return;
-  }
-
-  try {
     const empresaId = obterEmpresaId();
     const usuarioId = obterUsuarioId();
 
@@ -1845,35 +1879,48 @@ async function abrirCaixa() {
     if (error) throw error;
 
     caixa = data;
+
     await registrarAuditoriaCaixa({
-  acao: "abrir_caixa",
-  tabela: "caixa",
-  registroId: data.id,
-  descricao: "Caixa aberto",
-  dadosDepois: data
-});
+      acao: "abrir_caixa",
+      tabela: "caixa",
+      registroId: data.id,
+      descricao: "Caixa aberto",
+      dadosDepois: data
+    });
+
     vendas = [];
     caixaMovimentacoes = [];
     carrinho = [];
 
     await salvarCacheCaixa("caixa_status", caixa);
     await salvarCacheCaixa("caixa_vendas", vendas);
-    await salvarCacheCaixa("caixa_movimentacoes", caixaMovimentacoes);
+    await salvarCacheCaixa(
+      "caixa_movimentacoes",
+      caixaMovimentacoes
+    );
 
-    if (inputValor) inputValor.value = "";
+    inputValor.value = "";
 
     renderEstado();
     renderCarrinho();
     renderHistorico();
 
-    logCaixa("Caixa aberto no Supabase.", "success");
-
+    logCaixa(
+      "Caixa aberto no Supabase.",
+      "success"
+    );
   } catch (err) {
-    logCaixa("Erro ao abrir: " + err.message, "error");
+    logCaixa(
+      "Erro ao abrir: " + err.message,
+      "error"
+    );
+
     await alertaCaixa(
-  "Erro ao abrir caixa",
-  err.message
-);
+      "Não foi possível abrir o Caixa",
+      err.message
+    );
+  } finally {
+    operacaoCaixaEmProcessamento = false;
   }
 }
 
@@ -1967,28 +2014,75 @@ function calcularDiferenca() {
 }
 
 async function fecharCaixa() {
-  if (!sistemaOnline()) {
-    if (operacaoCaixaEmProcessamento) return;
+  if (operacaoCaixaEmProcessamento) return;
 
-    if (!caixa?.id || caixa.status !== "aberto") {
-      await alertaCaixa("Caixa fechado", "Nenhum caixa aberto.");
-      return;
-    }
+  if (!caixa?.id || caixa.status !== "aberto") {
+    await alertaCaixa(
+      "Caixa fechado",
+      "Nenhum caixa aberto para fechar."
+    );
+    return;
+  }
 
-    try {
-      operacaoCaixaEmProcessamento = true;
+  const modalFechamento =
+    document.getElementById("modalFechamento");
 
+  /*
+   * Proteção contra chamadas diretas de fecharCaixa().
+   * Se o resumo não estiver aberto, apenas abre o modal
+   * de conferência e não grava o fechamento.
+   */
+  if (
+    !modalFechamento ||
+    modalFechamento.style.display !== "flex"
+  ) {
+    await confirmarFechamento();
+    return;
+  }
+
+  const inputValorFechamento =
+    document.getElementById("valorFechamento");
+
+  const textoValorFinal = String(
+    inputValorFechamento?.value || ""
+  ).trim();
+
+  /*
+   * Impede que a ausência do campo seja convertida
+   * silenciosamente em R$ 0,00.
+   */
+  if (!inputValorFechamento || !textoValorFinal) {
+    await alertaCaixa(
+      "Valor de fechamento obrigatório",
+      "Informe o valor contado fisicamente antes de confirmar o fechamento."
+    );
+    return;
+  }
+
+  const valorFinal =
+    normalizarNumero(textoValorFinal);
+
+  const dataFechamento =
+    new Date().toISOString();
+
+  const operacaoOffline =
+    !sistemaOnline();
+
+  operacaoCaixaEmProcessamento = true;
+
+  try {
+    let caixaFechado;
+
+    if (operacaoOffline) {
       const escopo = obterEscopoOfflineCaixa();
 
       if (!escopo) {
-        throw new Error("Contexto offline da empresa não encontrado.");
+        throw new Error(
+          "Contexto offline da empresa não encontrado."
+        );
       }
 
-      const valorFinal = normalizarNumero(
-        document.getElementById("valorFechamento")?.value || 0
-      );
-      const dataFechamento = new Date().toISOString();
-      const caixaFechado = {
+      caixaFechado = {
         ...caixa,
         status: "fechado",
         valor_final: valorFinal,
@@ -2007,22 +2101,76 @@ async function fecharCaixa() {
           operador_fechamento_id: escopo.operador_id
         }
       });
+    } else {
+      const usuarioId = obterUsuarioId();
+      const operadorId = obterOperadorAtualId();
 
-      ultimoFechamentoCaixa = caixaFechado;
-      caixa = null;
-      vendas = [];
-      caixaMovimentacoes = [];
-      carrinho = [];
+      caixaFechado = {
+        ...caixa,
+        status: "fechado",
+        valor_final: valorFinal,
+        data_fechamento: dataFechamento,
+        usuario_fechamento: usuarioId,
+        operador_fechamento_id: operadorId
+      };
 
-      await salvarCacheCaixa("caixa_status", null);
-      await salvarCacheCaixa("caixa_vendas", []);
-      await salvarCacheCaixa("caixa_movimentacoes", []);
+      const { error } = await sb
+        .from("caixa")
+        .update({
+          status: "fechado",
+          valor_final: valorFinal,
+          data_fechamento: dataFechamento,
+          usuario_fechamento: usuarioId,
+          operador_fechamento_id: operadorId
+        })
+        .eq("id", caixa.id)
+        .eq("empresa_id", obterEmpresaId())
+        .eq("status", "aberto");
 
-      fecharModal();
-      renderEstado();
-      renderCarrinho();
-      renderHistorico();
+      if (error) throw error;
 
+      await registrarAuditoriaCaixa({
+        acao: "fechar_caixa",
+        tabela: "caixa",
+        registroId: caixa.id,
+        descricao: `Caixa fechado com valor final de ${fmt(valorFinal)}`,
+        dadosAntes: caixa,
+        dadosDepois: caixaFechado
+      });
+    }
+
+    /*
+     * Mantém o fechamento recém-realizado disponível
+     * imediatamente na tela de abertura.
+     */
+    ultimoFechamentoCaixa = caixaFechado;
+
+    caixa = null;
+    vendas = [];
+    caixaMovimentacoes = [];
+    carrinho = [];
+
+    await salvarCacheCaixa(
+      "caixa_status",
+      null
+    );
+
+    await salvarCacheCaixa(
+      "caixa_vendas",
+      []
+    );
+
+    await salvarCacheCaixa(
+      "caixa_movimentacoes",
+      []
+    );
+
+    fecharModal();
+    renderEstado();
+    renderCarrinho();
+    renderHistorico();
+
+    if (operacaoOffline) {
       crvToast({
         titulo: "Caixa fechado offline",
         mensagem: "O fechamento foi salvo e será sincronizado na ordem correta.",
@@ -2030,79 +2178,28 @@ async function fecharCaixa() {
         tempo: 6500
       });
 
-      logCaixa("Caixa fechado e persistido offline.", "warn");
-    } catch (err) {
-      await alertaCaixa("Não foi possível fechar o Caixa", err.message);
-    } finally {
-      operacaoCaixaEmProcessamento = false;
+      logCaixa(
+        "Caixa fechado e persistido offline.",
+        "warn"
+      );
+    } else {
+      logCaixa(
+        "Caixa fechado no Supabase.",
+        "success"
+      );
     }
-
-    return;
-  }
-
-  if (!caixa?.id) {
-    await alertaCaixa(
-      "Caixa fechado",
-      "Nenhum caixa aberto."
-    );
-    return;
-  }
-
-  try {
-    const valorFinal = normalizarNumero(
-      document.getElementById("valorFechamento")?.value || 0
-    );
-
-    const usuarioId = obterUsuarioId();
-
-    const { error } = await sb
-      .from("caixa")
-      .update({
-        status: "fechado",
-        valor_final: valorFinal,
-        data_fechamento: new Date().toISOString(),
-        usuario_fechamento: usuarioId,
-        operador_fechamento_id: obterOperadorAtualId()
-      })
-      .eq("id", caixa.id)
-      .eq("empresa_id", obterEmpresaId());
-
-    if (error) throw error;
-
-    await registrarAuditoriaCaixa({
-      acao: "fechar_caixa",
-      tabela: "caixa",
-      registroId: caixa.id,
-      descricao: `Caixa fechado com valor final de ${fmt(valorFinal)}`,
-      dadosAntes: caixa,
-      dadosDepois: {
-        status: "fechado",
-        valor_final: valorFinal
-      }
-    });
-
-    caixa = null;
-    vendas = [];
-    caixaMovimentacoes = [];
-    carrinho = [];
-
-    await salvarCacheCaixa("caixa_status", null);
-    await salvarCacheCaixa("caixa_vendas", []);
-    await salvarCacheCaixa("caixa_movimentacoes", []);
-
-    fecharModal();
-    renderEstado();
-    renderCarrinho();
-    renderHistorico();
-
-    logCaixa("Caixa fechado no Supabase.", "success");
-
   } catch (err) {
-    logCaixa("Erro ao fechar: " + err.message, "error");
+    logCaixa(
+      "Erro ao fechar: " + err.message,
+      "error"
+    );
+
     await alertaCaixa(
-      "Erro ao fechar caixa",
+      "Não foi possível fechar o Caixa",
       err.message
     );
+  } finally {
+    operacaoCaixaEmProcessamento = false;
   }
 }
 
@@ -4635,8 +4732,15 @@ const inputValorInicial = document.getElementById("valorInicial");
 
 if (chkUltimoFechamento && inputValorInicial) {
   chkUltimoFechamento.addEventListener("change", () => {
-    if (chkUltimoFechamento.checked && ultimoFechamentoCaixa?.valor_final) {
-      const valorFinal = Number(ultimoFechamentoCaixa.valor_final || 0);
+    const possuiUltimoFechamento =
+      ultimoFechamentoCaixa &&
+      ultimoFechamentoCaixa.valor_final !== null &&
+      ultimoFechamentoCaixa.valor_final !== undefined;
+
+    if (chkUltimoFechamento.checked && possuiUltimoFechamento) {
+      const valorFinal = Number(
+        ultimoFechamentoCaixa.valor_final || 0
+      );
 
       inputValorInicial.value = valorFinal.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
