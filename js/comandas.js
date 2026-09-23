@@ -1159,24 +1159,45 @@ if (!confirmar) return;
 // ======================================================
 // AÇÕES
 // ======================================================
+// Proteção operacional: não apagar consumo pela tela de gerenciamento.
+async function comandaSemConsumoParaGerenciar(id) {
+  if (!sistemaOnlineComandas()) {
+    await abrirAvisoComanda({ titulo: "Conexão necessária", mensagem: "Conecte para verificar o consumo antes de alterar esta comanda." });
+    return false;
+  }
+  const { data, error } = await sb.from("comanda_itens").select("id")
+    .eq("empresa_id", obterEmpresaIdComandas()).eq("comanda_id", id).limit(1);
+  if (error || data?.length) {
+    await abrirAvisoComanda({
+      titulo: error ? "Não foi possível verificar" : "Comanda com consumo",
+      mensagem: error ? "A comanda foi preservada. Tente novamente com conexão."
+        : "Esta comanda possui itens. Abra-a no Caixa para conferir, corrigir os itens ou receber o pagamento antes de liberar, cancelar ou excluir."
+    });
+    return false;
+  }
+  return true;
+}
+
 async function liberarComanda(id) {
   const comanda = comandas.find(c => c.id === id);
 
   if (!comanda) return;
+
+  if (!await comandaSemConsumoParaGerenciar(id)) return;
 
   if (comanda.status === "aberta") {
     const confirmarAberta = await abrirConfirmacaoComanda({
       titulo: "Liberar comanda aberta",
       mensagem: `
         A comanda <strong>${comanda.codigo}</strong> está aberta.<br><br>
-        Liberar agora apagará os itens vinculados a ela.
+        A comanda está sem consumo e será liberada para novo atendimento.
       `,
-      textoConfirmar: "Liberar Mesmo Assim"
+      textoConfirmar: "Liberar comanda"
     });
 
     if (!confirmarAberta) return;
 
-    await apagarItensComanda(id);
+    if (!await comandaSemConsumoParaGerenciar(id)) return;
   }
 
   if (comanda.status === "fechada" || comanda.status === "cancelada") {
@@ -1221,6 +1242,8 @@ async function cancelarComanda(id) {
   const comanda = comandas.find(c => c.id === id);
 
   if (!comanda) return;
+
+  if (!await comandaSemConsumoParaGerenciar(id)) return;
 
   if (comanda.status === "fechada") {
     abrirAvisoComanda({
@@ -1270,6 +1293,8 @@ async function excluirComanda(id) {
 
   if (!comanda) return;
 
+  if (!await comandaSemConsumoParaGerenciar(id)) return;
+
   if (comanda.status === "aberta") {
     abrirAvisoComanda({
   titulo: "Comanda aberta",
@@ -1291,7 +1316,7 @@ const confirmar = await abrirConfirmacaoComanda({
 if (!confirmar) return;
 
   try {
-    await apagarItensComanda(id);
+    if (!await comandaSemConsumoParaGerenciar(id)) return;
 
     const { error } = await sb
       .from("comandas")

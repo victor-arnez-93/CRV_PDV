@@ -175,20 +175,7 @@ function vendaEhComandaVendas(venda) {
 }
 
 function podeCancelarVendaDiretaVendas(venda) {
-  if (!venda || vendaCanceladaVendas(venda)) return false;
-  if (!featureCancelamentoVendaAtiva() || !operadorPodeCancelarVenda()) return false;
-  if (!window.APP_STATUS?.online || !window.APP_STATUS?.supabase_ok || !window.sb) return false;
-
-  const origem = String(venda.origem || "pdv").toLowerCase();
-
-  return origem === "pdv" &&
-    !vendaEhComandaVendas(venda) &&
-    !vendaTemJogoVendas(venda) &&
-    !venda.comanda_id &&
-    !venda.agenda_id &&
-    !venda.agenda_jogador_id &&
-    Boolean(venda.caixa_id) &&
-    String(venda.caixa_id) === String(caixaAbertoIdVendas || "");
+  return window.crvEstornos?.permitido(venda, caixaAbertoIdVendas) === true;
 }
 
 function obterOrigemVisualVenda(venda) {
@@ -974,90 +961,21 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
 
 async function abrirModalCancelamentoVenda() {
   const venda = vendasData.find(item => String(item.id) === String(vendaSelecionadaIdVendas));
-
-  if (!podeCancelarVendaDiretaVendas(venda)) {
-    if (typeof crvToast === "function") {
-      crvToast({
-        titulo: "Cancelamento indisponível",
-        mensagem: "Somente uma venda direta do caixa ainda aberto pode ser cancelada aqui.",
-        tipo: "warn"
-      });
-    }
-    return;
-  }
-
-  const motivo = document.getElementById("motivoCancelamentoVenda");
-  if (motivo) motivo.value = "";
-
-  const modal = document.getElementById("modalCancelarVenda");
-  if (modal) modal.style.display = "flex";
-
-  setTimeout(() => motivo?.focus(), 50);
-  if (typeof lucide !== "undefined") lucide.createIcons();
-}
-
-function fecharModalCancelamentoVenda() {
-  const modal = document.getElementById("modalCancelarVenda");
-  if (modal) modal.style.display = "none";
-}
-
-async function confirmarCancelamentoVenda() {
-  if (cancelamentoVendaEmProcessamento) return;
-
-  const venda = vendasData.find(item => String(item.id) === String(vendaSelecionadaIdVendas));
-  const motivo = String(document.getElementById("motivoCancelamentoVenda")?.value || "").trim();
-
-  if (!podeCancelarVendaDiretaVendas(venda)) {
-    if (typeof crvToast === "function") {
-      crvToast({ titulo: "Cancelamento bloqueado", mensagem: "A venda não atende mais às condições de cancelamento.", tipo: "warn" });
-    }
-    return;
-  }
-
-  if (motivo.length < 3) {
-    if (typeof crvToast === "function") {
-      crvToast({ titulo: "Motivo obrigatório", mensagem: "Informe um motivo com pelo menos 3 caracteres.", tipo: "warn" });
-    }
-    return;
-  }
-
-  const botao = document.getElementById("btnConfirmarCancelamentoVenda");
-
-  try {
-    cancelamentoVendaEmProcessamento = true;
-    if (botao) botao.disabled = true;
-
-    const { error } = await sb.rpc("cancelar_venda_direta", {
-      p_venda_id: venda.id,
-      p_motivo: motivo,
-      p_operador_id: sessionStorage.getItem("CRV_OPERADOR_ID") || null
-    });
-
-    if (error) throw error;
-
-    fecharModalCancelamentoVenda();
+  if (!venda) return;
+  await window.crvEstornos.abrir(venda, caixaAbertoIdVendas, async resultado => {
+    Object.assign(venda, resultado.venda);
     fecharModalDetalheVendas();
+    renderResumo();
+    renderTabela();
     await carregarVendas();
     renderResumo();
     renderTabela();
-
-    if (typeof crvToast === "function") {
-      crvToast({
-        titulo: "Venda cancelada",
-        mensagem: "Totais recalculados e estoque devolvido com rastreabilidade.",
-        tipo: "success"
-      });
-    }
-  } catch (err) {
-    if (typeof crvToast === "function") {
-      crvToast({ titulo: "Não foi possível cancelar", mensagem: err.message, tipo: "error", tempo: 7000 });
-    }
-  } finally {
-    cancelamentoVendaEmProcessamento = false;
-    if (botao) botao.disabled = false;
-  }
+  });
 }
 
+// Compatibilidade com os listeners antigos; o diálogo é compartilhado com o Caixa.
+function fecharModalCancelamentoVenda() { window.crvEstornos?.fechar(); }
+function confirmarCancelamentoVenda() { window.crvEstornos?.confirmar(); }
 
 // ===== STATUS CAIXA =====
 // Status agora é controlado globalmente pelo app.js via Supabase.
@@ -1142,6 +1060,7 @@ document.addEventListener("click", event => {
 });
 
 document.addEventListener("keydown", event => {
+    if (document.querySelector(".crv-estorno-dialog[open]")) return;
   if (event.key === "Escape") {
     const modalCancelar = document.getElementById("modalCancelarVenda");
 

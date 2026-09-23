@@ -191,7 +191,7 @@ function handleLogin(e) {
   return;
 }
 
-window.location.href = "dashboard.html";
+window.location.href = window.crvPreferenciasCaixa?.destinoLogin() || "dashboard.html";
 })();
 }
 

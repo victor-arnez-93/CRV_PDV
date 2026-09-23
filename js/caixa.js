@@ -20,7 +20,7 @@ let filtroTipoModalCaixa = "produto";
 let metodoPagamento = "dinheiro";
 let modoPDV = "venda";
 let modoBalcaoCaixa = false;
-let rapidosBalcaoOcultos = true;
+let rapidosBalcaoOcultos = false;
 let comandaAtiva = null;
 let comandaOculta = false;
 let caixaInicializado = false;
@@ -140,7 +140,7 @@ function aplicarModoBalcaoCaixa(ativo, { persistir = true } = {}) {
   body.classList.toggle("caixa-operador-restrito", operadorRestrito);
 
   if (modoBalcaoCaixa && !estavaAtivo) {
-    rapidosBalcaoOcultos = true;
+    rapidosBalcaoOcultos = window.crvPreferenciasCaixa.ler("rapidos-ocultos") === "1";
   }
 
   aplicarEstadoRapidosBalcaoCaixa();
@@ -219,6 +219,7 @@ function atualizarRotuloCobrancaAvulsaCaixa() {
 }
 
 function setupModoBalcaoCaixa() {
+  window.crvPreferenciasCaixa.prepararOpcao();
   const botao = document.getElementById("btnModoBalcao");
 
   if (!botao || botao.dataset.ready === "1") return;
@@ -289,6 +290,7 @@ function setupRapidosBalcaoCaixa() {
   botao.dataset.ready = "1";
   botao.addEventListener("click", () => {
     rapidosBalcaoOcultos = !rapidosBalcaoOcultos;
+    window.crvPreferenciasCaixa.salvar("rapidos-ocultos", rapidosBalcaoOcultos ? "1" : "0");
     aplicarEstadoRapidosBalcaoCaixa();
   });
 
@@ -4664,6 +4666,30 @@ return Number(venda.total || 0) > 0;
       </div>
     `;
 
+    if (window.crvEstornos?.permitido(venda, caixa?.id)) {
+      const acao = item.querySelector(".historico-item-action");
+      acao.innerHTML = "";
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = "btn-ghost btn-estorno-caixa";
+      botao.textContent = "Estornar";
+      botao.setAttribute("aria-label", `Estornar ${titulo}, ${fmt(Number(venda.total || 0))}`);
+      botao.onclick = () => window.crvEstornos.abrir(venda, caixa.id, async resultado => {
+        // Atualiza o estado local antes do reload: um erro de rede posterior não desfaz o estorno.
+        const atual = vendas.find(v => String(v.id) === String(resultado.venda_id));
+        if (atual) Object.assign(atual, resultado.venda);
+        await salvarCacheCaixa("caixa_vendas", vendas);
+        atualizarInfobar();
+        renderHistorico();
+        await carregarProdutos();
+        renderProdutosRapidos();
+      });
+      acao.appendChild(botao);
+    } else if (cancelada && venda.motivo_cancelamento) {
+      const motivo = document.createElement("small");
+      motivo.textContent = `Motivo: ${venda.motivo_cancelamento}`;
+      item.querySelector(".historico-item-content").appendChild(motivo);
+    }
     box.appendChild(item);
   });
 
@@ -4761,6 +4787,7 @@ if (chkUltimoFechamento && inputValorInicial) {
 
 function setupAtalhos() {
   document.addEventListener("keydown", event => {
+    if (document.querySelector(".crv-estorno-dialog[open]")) return;
     if (event.key === "F2") {
       event.preventDefault();
 
@@ -9881,3 +9908,8 @@ function setupAtividadesRecentesToggle() {
 setTimeout(() => {
   crvCarregarConfiguracoesEmpresa();
 }, 900);
+
+// Reavaliar estornos ao trocar permissões ou carregar recursos da empresa.
+["crv:operador-alterado", "crv:config-pronta"].forEach(evento => {
+  document.addEventListener(evento, () => { if (caixaInicializado) renderHistorico(); });
+});

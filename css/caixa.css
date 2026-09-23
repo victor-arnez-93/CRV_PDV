@@ -5133,3 +5133,36 @@ body.caixa-modo-balcao .pdv-finalizar {
     grid-row: 1;
   }
 }
+
+/* Incremental 22/09: preferências locais e área de pagamento acessível. */
+.caixa-preferencia-inicio {
+  display: flex; align-items: center; gap: 9px; min-height: 44px;
+  margin: -8px 0 10px; font-size: .82rem; cursor: pointer;
+}
+.caixa-preferencia-inicio input { width: 20px; height: 20px; }
+body.caixa-modo-balcao .pdv-cart {
+  min-height: 0;
+}
+@media (min-width: 901px) and (min-height: 700px) {
+  body.caixa-modo-balcao .pdv-cart {
+    position: sticky; top: 8px;
+    height: calc(100dvh - 220px); min-height: 470px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  body.caixa-modo-balcao .pdv-cart > :not(.cart-items) { flex-shrink: 0; }
+  body.caixa-modo-balcao .cart-items {
+    flex: 1 1 80px; min-height: 60px; overflow-y: auto;
+  }
+}
+body.caixa-modo-balcao .pdv-finalizar {
+  position: sticky; bottom: 8px; z-index: 2;
+}
+@media (pointer: coarse) {
+  .qty-btn, .cart-item-remove, .pay-btn, .cartao-subopcoes button,
+  .pdv-mode-btn, .btn-abrir-modal-comandas, .btn-estorno-caixa {
+    min-width: 44px; min-height: 44px; touch-action: manipulation;
+  }
+  body.caixa-modo-balcao .pay-btn { min-height: 44px; height: auto; }
+  .cart-item-qty { gap: 8px; }
+  .comanda-caixa-item { min-height: 64px; }
+}
