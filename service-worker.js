@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "crv-pdv-caixa";
-const CACHE_NAME = `${CACHE_PREFIX}-v6-20260922-balcao-estorno`;
+const CACHE_NAME = `${CACHE_PREFIX}-v7-20260923-comanda-parcial`;
 
 const APP_SHELL = [
   "./caixa.html",
@@ -12,6 +12,8 @@ const APP_SHELL = [
   "./js/auth.js",
   "./js/app.js",
   "./js/caixa.js",
+  "./js/core/comandas-caixa.js",
+  "./css/comandas-caixa.css",
   "./js/core/preferencias-caixa.js",
   "./js/core/estornos.js",
   "./css/estornos.css",

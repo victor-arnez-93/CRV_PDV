@@ -1,0 +1,44 @@
+/* Faixas compactas: conteúdo rola dentro do componente, sem alargar o PDV. */
+.pdv-main,.pdv-left,.pdv-grid>*,.comandas-abertas-caixa{min-width:0}
+.comandas-abertas-lista{display:flex!important;flex-wrap:nowrap!important;gap:10px;overflow-x:auto!important;max-width:100%;padding:3px 2px 10px;scrollbar-width:thin;scrollbar-color:var(--crv-gold,#cfaa42) transparent}
+.comanda-aberta-item{flex:0 0 176px!important;min-width:0!important;min-height:88px!important;padding:12px!important;text-align:left}
+.comanda-aberta-cliente{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.comanda-card{padding:12px 16px!important;gap:12px!important;flex-direction:row!important;align-items:center;flex-wrap:wrap;margin:10px 0!important}
+.comanda-card-top{gap:12px!important}.comanda-card-top>div{display:flex;gap:10px;align-items:center}
+.comanda-card .comanda-codigo{font-size:18px!important}.comanda-card .comanda-status,.comanda-card .comanda-meta{display:none!important}
+.comanda-card .comanda-total{margin:0!important;font-size:14px}.comanda-card .comanda-actions{margin:0 0 0 auto!important;gap:8px!important}
+.comanda-card button{min-height:44px;padding:8px 14px!important;font-size:14px!important}
+body.modo-balcao .pdv-quick-grid,body.modo-balcao-caixa .pdv-quick-grid,body.caixa-modo-balcao .pdv-quick-grid{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:10px;max-height:none!important;padding-bottom:10px}
+body.modo-balcao .quick-item,body.modo-balcao-caixa .quick-item,body.caixa-modo-balcao .quick-item{flex:0 0 165px!important;min-height:110px!important;height:110px!important}
+.caixa-em-comanda .cart-payment,.caixa-em-comanda .cart-troco,.caixa-em-comanda .cart-discount,.caixa-em-comanda .cart-total-row.discount{display:none!important}
+.crv-comanda-dialog{box-sizing:border-box;width:min(960px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:0;border:1px solid var(--border,#444);border-radius:20px;background:var(--bg-card,#151515);color:var(--text-primary,#fafafa);box-shadow:0 24px 80px #0008;overflow:auto;margin:auto}
+.crv-comanda-dialog::backdrop{background:#0009;backdrop-filter:blur(3px)}
+.cc-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 22px;border-bottom:1px solid var(--border,#444);background:var(--bg-card,#151515)}
+.cc-header small{font-size:11px;letter-spacing:.1em;color:var(--text-muted,#aaa)}.cc-header h2{font-size:23px;margin:4px 0;overflow-wrap:anywhere}.cc-header h2 span{font-size:17px;font-weight:500}
+.cc-corpo{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:24px;padding:20px 22px}.cc-corpo h3{font-size:16px;margin:12px 0}
+.cc-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cc-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border,#444);font-size:14px}.cc-item span{min-width:0;overflow-wrap:anywhere}.cc-item strong{white-space:nowrap}.cc-item small{display:block;margin-top:4px;color:var(--text-muted,#aaa)}
+.cc-itens{max-height:300px;overflow:auto}.cc-historico{max-height:240px;overflow:auto}.cc-sub{font-size:12px;line-height:1.5;color:var(--text-muted,#aaa)}
+.cc-receber{border-left:1px solid var(--border,#444);padding-left:22px;min-width:0}.cc-receber label{display:grid;gap:6px;font-size:14px;margin:12px 0}.cc-receber input,.cc-receber select{box-sizing:border-box;width:100%;min-height:44px;border:1px solid var(--border,#444);border-radius:10px;padding:10px 12px;background:var(--bg-elevated,#222);color:var(--text-primary,#fafafa);font:inherit}
+.cc-resumo>div{display:flex;justify-content:space-between;gap:10px;margin:8px 0}.cc-saldo{font-size:19px;padding:12px 0;border-top:1px solid var(--border,#444)}
+.crv-comanda-dialog button{min-height:44px;cursor:pointer;font:inherit;border-radius:10px}.cc-receber fieldset{padding:0;border:0;min-width:0}.cc-receber fieldset>button{width:100%;margin:5px 0;padding:12px}.cc-receber button:disabled{opacity:.5;cursor:wait}
+.cc-aviso{padding:10px;border:1px solid #a67d28;border-radius:8px;font-size:13px}#ccErro{font-size:13px;line-height:1.5;white-space:pre-wrap}.cc-cancelado{opacity:.65}.cc-cancelado b{text-decoration:line-through}
+.crv-comanda-dialog :focus-visible{outline:3px solid var(--crv-gold,#cfaa42);outline-offset:2px}
+[data-theme="light"] .crv-comanda-dialog{background:#fff;color:#18202b;--bg-card:#fff;--bg-elevated:#f6f7f9;--text-primary:#18202b;--text-muted:#596272;--border:#d8dde5}
+@media(max-width:700px){.cc-corpo{grid-template-columns:1fr;padding:16px;gap:14px}.cc-receber{border-left:0;border-top:1px solid var(--border,#444);padding:12px 0 0}.cc-header{padding:14px 16px}.cc-itens{max-height:210px}.cc-historico{max-height:180px}.comanda-card .comanda-actions{margin-left:0!important}.comanda-aberta-item{flex-basis:155px!important}}
+body.caixa-modo-balcao .caixa-infobar{justify-content:space-between}
+body.caixa-modo-balcao .caixa-infobar-actions{margin-left:auto}
+body.caixa-modo-balcao .caixa-preferencia-inicio{margin:6px 0 12px;font-size:13px}
+.caixa-em-comanda .cart-totals>.cart-total-row:first-child{display:none}
+.caixa-em-comanda .cart-totals::after{content:'Pagamentos, desconto e saldo em Detalhes / receber';display:block;font-size:12px;color:var(--text-muted);margin:8px 0}
+body.caixa-modo-balcao .pdv-quick-grid{min-height:0!important;overflow-y:hidden!important}
+body.caixa-modo-balcao.rapidos-balcao-ocultos .pdv-quick-grid{display:none!important}
+.cc-consumo{min-width:0}.cc-header>div{min-width:0}
+.crv-comanda-dialog button{padding:9px 13px;min-height:44px;line-height:1.2}
+.crv-comanda-dialog #ccFechar{width:44px;height:44px;padding:8px;flex:0 0 44px}
+.cc-receber label{margin:8px 0;font-size:13px;gap:4px}.cc-receber label small{display:inline}
+.cc-receber input,.cc-receber select{padding:8px 10px}
+.cc-receber fieldset>button{padding:9px;margin:4px 0;font-size:14px}
+.cc-header{padding:12px 20px}.cc-corpo{padding-top:14px;padding-bottom:14px;gap:18px}
+@media(min-width:701px){.cc-receber{font-size:14px}.cc-receber .cc-sub{font-size:11px;line-height:1.3}.cc-resumo label{grid-template-columns:1fr 105px;align-items:center}.cc-resumo input{min-height:38px}.cc-saldo{padding:8px 0}.cc-corpo h3{margin:8px 0}.cc-header h2{font-size:21px}}
+.cc-header{position:sticky;top:0;z-index:2}

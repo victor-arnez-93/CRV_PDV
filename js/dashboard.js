@@ -318,14 +318,14 @@ if (empresaUsaAgendaEsportivaDashboard()) {
     });
 
     const faturamento = vendasHoje.reduce((acc, v) => acc + Number(v.total || 0), 0);
-    const totalVendas = vendasHoje.length;
-    const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
+    const concluidas = vendasHoje.filter(v => v.comanda_evento !== "parcial");
+    const totalConcluido = concluidas.reduce((a,v) => a + (v.comanda_evento === "fechamento" ? Number(v.comanda_total_consumido)-Number(v.desconto||0) : Number(v.total||0)),0);
+    const totalVendas = concluidas.length;
+    const ticketMedio = totalVendas > 0 ? totalConcluido / totalVendas : 0;
 
-    const lucroBruto = itensHoje.reduce((acc, item) => {
-      return acc + Number(item.lucro_total || 0);
-    }, 0);
+    const lucroBruto = vendasHoje.reduce((acc,v) => acc + (v.comanda_lucro_total != null ? Number(v.comanda_lucro_total) : itensHoje.filter(i => i.venda_id === v.id).reduce((a,i) => a + Number(i.lucro_total||0),0)),0);
 
-    const margem = faturamento > 0 ? (lucroBruto / faturamento) * 100 : 0;
+    const margem = totalConcluido > 0 ? (lucroBruto / totalConcluido) * 100 : 0;
 
     const pagamentos = {
       dinheiro: 0,

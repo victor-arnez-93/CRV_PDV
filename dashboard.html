@@ -150,6 +150,7 @@
 
     <!-- MAIN -->
     <main class="main-content">
+<p style="font-size:12px;color:var(--text-muted);padding:12px 24px">Recebimentos incluem parciais na data do pagamento. Itens, lucro e ticket são apurados no fechamento da venda.</p>
 
       <!-- Saudação -->
       <div class="dash-greeting">
@@ -169,7 +170,7 @@
         <div class="card dash-card">
           <div class="card-title">
             <i data-lucide="trending-up" width="13" height="13"></i>
-            Faturamento do Dia
+            Recebimentos do Dia
           </div>
           <div class="card-value" id="faturamentoDia">R$ 0,00</div>
           <div class="card-delta positive" id="deltaDia">— sem movimentação</div>
@@ -257,14 +258,14 @@
         <!-- Gráfico de faturamento -->
         <div class="card dash-chart-card">
           <div class="dash-chart-header">
-            <h3>Faturamento — últimos 7 dias</h3>
+            <h3>Recebimentos — últimos 7 dias</h3>
             <div class="chart-legend">
               <span class="legend-dot" style="background:var(--crv-orange)"></span>
               <span>Entradas</span>
             </div>
           </div>
           <div class="dash-chart-wrap">
-            <canvas id="chartFaturamento"></canvas>
+            <canvas id="chartRecebimentos"></canvas>
           </div>
         </div>
 

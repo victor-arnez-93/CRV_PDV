@@ -1954,7 +1954,7 @@ async function confirmarFechamento() {
 function preencherModalFechamento() {
   const totalVendido = calcularTotalVendido();
   const totalDinheiro = calcularTotalVendidoDinheiro();
-  const qtdVendas = vendasAtivasCaixa().length;
+  const qtdVendas = vendasAtivasCaixa().filter(v => v.comanda_evento !== "parcial").length;
   const valorInicial = Number(caixa?.valor_inicial || 0);
   const totalSuprimentos = calcularTotalMovimentacoesCaixa("suprimento");
   const totalSangrias = calcularTotalMovimentacoesCaixa("sangria");
@@ -3207,7 +3207,7 @@ function calcularTotalVendidoDinheiro() {
 
 function atualizarTotais() {
   const subtotal = calcularSubtotalCarrinho();
-  const desconto = calcularDesconto();
+  const desconto = modoPDV === "comanda" ? 0 : calcularDesconto();
   const total = Math.max(0, subtotal - desconto);
 
   const subtotalEl = document.getElementById("subtotal");
@@ -3217,6 +3217,8 @@ function atualizarTotais() {
   if (subtotalEl) subtotalEl.textContent = fmt(subtotal);
   if (descontoEl) descontoEl.textContent = "- " + fmt(desconto);
   if (totalEl) totalEl.textContent = fmt(total);
+  const rotuloTotal = document.querySelector(".cart-total-row.total > span:first-child");
+  if (rotuloTotal) rotuloTotal.textContent = modoPDV === "comanda" ? "CONSUMO" : "TOTAL";
 
   calcularTroco();
 }
@@ -3226,7 +3228,7 @@ function atualizarInfobar() {
   const infoSaldo = document.getElementById("infoSaldo");
 
   if (infoQtdVendas) {
-    infoQtdVendas.textContent = vendasAtivasCaixa().length;
+    infoQtdVendas.textContent = vendasAtivasCaixa().filter(v => v.comanda_evento !== "parcial").length;
   }
 
   const saldo = calcularSaldoEsperadoCaixa();
@@ -4580,7 +4582,7 @@ function renderHistorico() {
   if (!box) return;
 
   if (badge) {
-    badge.textContent = `${vendasAtivasCaixa().length} vendas ativas`;
+    badge.textContent = `${vendasAtivasCaixa().filter(v => v.comanda_evento !== "parcial").length} vendas ativas`;
   }
 
   if (!vendas.length) {
@@ -4676,8 +4678,10 @@ return Number(venda.total || 0) > 0;
       botao.setAttribute("aria-label", `Estornar ${titulo}, ${fmt(Number(venda.total || 0))}`);
       botao.onclick = () => window.crvEstornos.abrir(venda, caixa.id, async resultado => {
         // Atualiza o estado local antes do reload: um erro de rede posterior não desfaz o estorno.
-        const atual = vendas.find(v => String(v.id) === String(resultado.venda_id));
-        if (atual) Object.assign(atual, resultado.venda);
+        for (const alterada of resultado.vendas || [resultado.venda]) {
+          const atual = vendas.find(v => String(v.id) === String(alterada.id));
+          if (atual) Object.assign(atual, alterada);
+        }
         await salvarCacheCaixa("caixa_vendas", vendas);
         atualizarInfobar();
         renderHistorico();
@@ -4787,7 +4791,7 @@ if (chkUltimoFechamento && inputValorInicial) {
 
 function setupAtalhos() {
   document.addEventListener("keydown", event => {
-    if (document.querySelector(".crv-estorno-dialog[open]")) return;
+    if (document.querySelector(".crv-estorno-dialog[open], .crv-comanda-dialog[open]")) return;
     if (event.key === "F2") {
       event.preventDefault();
 
@@ -5002,6 +5006,7 @@ if (modo === "jogos") {
 }
 
 function atualizarInterfaceModoPDV() {
+  document.body.classList.toggle("caixa-em-comanda", modoPDV === "comanda");
 
   const inputBusca = document.getElementById("inputBusca");
   const comandaCard = document.getElementById("comandaCard");
@@ -5116,8 +5121,8 @@ function atualizarInterfaceModoPDV() {
       meta.style.display = "block";
 
       meta.innerHTML = `
-        ${nomeCliente ? `<span><strong>Responsável:</strong> ${nomeCliente}</span>` : ""}
-        ${observacoes ? `<span><strong>Origem:</strong> ${observacoes}</span>` : ""}
+        ${nomeCliente ? `<span><strong>Responsável:</strong> ${window.crvComandasCaixa.esc(nomeCliente)}</span>` : ""}
+        ${observacoes ? `<span><strong>Origem:</strong> ${window.crvComandasCaixa.esc(observacoes)}</span>` : ""}
         <span><strong>Situação:</strong> comanda aberta para consumo</span>
       `;
     } else {
@@ -5132,7 +5137,7 @@ function atualizarInterfaceModoPDV() {
     const span = btnFinalizar.querySelector("span");
 
     if (span) {
-      span.textContent = "Fechar Comanda";
+      span.textContent = "Detalhes / receber";
     }
   }
 
@@ -7740,11 +7745,11 @@ function renderComandasAbertasNoCaixa() {
           data-comanda-id="${comanda.id}"
         >
           <strong class="comanda-aberta-codigo">
-            ${comanda.codigo || "—"}
+            ${window.crvComandasCaixa.esc(comanda.codigo || "—")}
           </strong>
 
           <span class="comanda-aberta-cliente">
-            ${comanda.nome_cliente || "Sem identificação"}
+            ${window.crvComandasCaixa.esc(comanda.nome_cliente || "Sem identificação")}
           </span>
 
           <span class="comanda-aberta-total">
@@ -7765,13 +7770,7 @@ function renderComandasAbertasNoCaixa() {
 
       if (!comanda) return;
 
-      comandaAtiva = comanda;
-      comandaOculta = false;
-
-      await carregarItensComanda();
-
-      atualizarInterfaceModoPDV();
-      renderComandasAbertasNoCaixa();
+      await window.crvComandasCaixa.abrir(comanda.id);
     };
   });
 
@@ -9296,344 +9295,12 @@ document.addEventListener("click", event => {
 });
 
 async function fecharComanda() {
-
   if (vendaEmProcessamento) return;
-
-  if (!sistemaOnline()) {
-    await alertaCaixa(
-      "Comanda protegida no modo offline",
-      "Para evitar itens duplicados ou fechamento incompleto, comandas serão liberadas offline em uma etapa específica. Use a Venda rápida enquanto estiver sem conexão."
-    );
-    return;
-  }
-
-  if (!caixa || caixa.status !== "aberto") {
-    await alertaCaixa(
-  "Caixa fechado",
-  "Abra o caixa antes de fechar uma comanda."
-);
-    return;
-  }
-
-  if (!comandaAtiva?.id) {
-    await alertaCaixa(
-  "Comanda",
-  "Nenhuma comanda ativa."
-);
-    return;
-  }
-
-  await carregarItensComanda();
-
-  if (!carrinho.length) {
-    const confirmarVazia = await abrirConfirmacaoCaixa({
-      titulo: "Fechar comanda vazia",
-      mensagem: `
-        Esta comanda não possui itens.<br><br>
-        Deseja liberar a comanda <strong>${comandaAtiva.codigo || "—"}</strong> sem gerar venda?
-      `,
-      textoConfirmar: "Liberar comanda"
-    });
-
-    if (!confirmarVazia) return;
-
-    await sb
-      .from("comandas")
-      .update({
-        status: "livre",
-        nome_cliente: null,
-        observacoes: null,
-        data_abertura: null,
-        data_fechamento: null,
-        total: 0
-      })
-      .eq("id", comandaAtiva.id)
-      .eq("empresa_id", obterEmpresaId());
-
-comandaAtiva = null;
-carrinho = [];
-
-await carregarComandasCaixa({
-  forcar: true
-});
-
-filtrarComandasCaixa("");
-
-renderCarrinho();
-atualizarInterfaceModoPDV();
-
-await atualizarBadgesModosCaixa();
-
-renderComandasAbertasNoCaixa();
-
-return;
-  }
-
-const confirmar = await abrirConfirmacaoCaixa({
-  titulo: "Fechar comanda",
-  mensagem: `
-    Fechar a comanda <strong>${comandaAtiva.codigo}</strong>?
-  `,
-  textoConfirmar: "Fechar Comanda"
-});
-
-if (!confirmar) return;
-
-  const subtotal = calcularSubtotalCarrinho();
-  const desconto = calcularDesconto();
-  const total = calcularTotalCarrinho();
-
-if (desconto > subtotal) {
-  await alertaCaixa(
-    "Desconto inválido",
-    "O desconto não pode ser maior que o subtotal."
-  );
-  return;
+  if (!comandaAtiva?.id) return alertaCaixa("Comanda", "Selecione uma comanda aberta.");
+  return window.crvComandasCaixa.abrir(comandaAtiva.id);
 }
 
-  if (total <= 0) {
-    await alertaCaixa(
-  "Total inválido",
-  "Total da comanda inválido."
-);
-    return;
-  }
 
-  const valorRecebido = normalizarNumero(
-    document.getElementById("valorRecebido")?.value || 0
-  );
-
-  if (
-    metodoPagamento === "dinheiro" &&
-    valorRecebido > 0 &&
-    valorRecebido < total
-  ) {
-    await alertaCaixa(
-  "Pagamento insuficiente",
-  "Valor recebido menor que o total da comanda."
-);
-    return;
-  }
-
-  const troco =
-    metodoPagamento === "dinheiro"
-      ? Math.max(0, valorRecebido - total)
-      : 0;
-
-  let vendaCriadaId = null;
-
-  try {
-    vendaEmProcessamento = true;
-    bloquearBotaoFinalizar(true);
-
-    await validarCarrinhoComEstoque();
-
-    const empresaId = obterEmpresaId();
-
-let vendaData = null;
-
-// A comanda gera uma única venda com tudo que foi efetivamente recebido:
-// consumos comuns e jogadores avulsos. Os itens de jogo preservam seus
-// vínculos para aparecer corretamente em Vendas e Relatórios.
-if (carrinho.length > 0) {
-  const vendaPayload = {
-    empresa_id: empresaId,
-    caixa_id: caixa.id,
-    cliente_id: null,
-    subtotal: subtotal,
-    desconto: desconto,
-    total: total,
-    forma_pagamento: metodoPagamento,
-    troco: troco,
-    origem: "comanda",
-    origem_id: comandaAtiva.id,
-    descricao: `Comanda ${comandaAtiva.codigo || ""} fechada`,
-    data: new Date().toISOString(),
-    operador_id: obterOperadorAtualId()
-  };
-
-  const { data: vendaComandaData, error: vendaError } = await sb
-    .from("vendas")
-    .insert([vendaPayload])
-    .select("*")
-    .single();
-
-  if (vendaError) throw vendaError;
-
-  vendaData = vendaComandaData;
-  vendaCriadaId = vendaData.id;
-
-  const itensPayload = carrinho.map(item => {
-    const precoVenda = Number(item.preco || 0);
-    const precoCusto = Number(item.preco_custo || 0);
-    const quantidade = Number(item.quantidade || 0);
-
-    const lucroUnitario = precoVenda - precoCusto;
-    const lucroTotal = lucroUnitario * quantidade;
-
-    return {
-      empresa_id: empresaId,
-      venda_id: vendaData.id,
-      produto_id: item.produto_manual ? null : item.id,
-      nome: item.nome,
-      preco: precoVenda,
-      preco_custo: precoCusto,
-      lucro_unitario: lucroUnitario,
-      lucro_total: lucroTotal,
-      quantidade: quantidade,
-      origem: item.agenda_jogador_id
-        ? "agenda_avulso"
-        : item.origem || "pdv",
-      origem_id: item.origem_id || null,
-      agenda_id: item.agenda_jogador_id
-        ? item.origem_id || null
-        : null,
-      agenda_jogador_id: item.agenda_jogador_id || null
-    };
-  });
-
-  const { error: itensError } = await sb
-    .from("vendas_itens")
-    .insert(itensPayload);
-
-  if (itensError) throw itensError;
-}
-
-    const jogadoresDaComanda = carrinho.filter(item => {
-      return item.agenda_jogador_id;
-    });
-
-    if (jogadoresDaComanda.length) {
-      const idsJogadoresAgenda = jogadoresDaComanda.map(item => {
-        return item.agenda_jogador_id;
-      });
-
-      const { error: erroAtualizarJogadoresComanda } = await sb
-        .from("agenda_jogadores")
-        .update({
-          pago: true,
-          status_pagamento: STATUS_JOGADOR_CAIXA.PAGO_EM_COMANDA,
-          forma_pagamento: metodoPagamento || "dinheiro",
-          comanda_id: null,
-          venda_id: vendaData?.id || null,
-          pago_em: new Date().toISOString(),
-          atualizado_em: new Date().toISOString()
-        })
-        .eq("empresa_id", empresaId)
-        .in("id", idsJogadoresAgenda);
-
-      if (erroAtualizarJogadoresComanda) {
-        throw erroAtualizarJogadoresComanda;
-      }
-
-      const agendaIds = [
-        ...new Set(
-          jogadoresDaComanda
-            .map(item => item.origem_id)
-            .filter(Boolean)
-        )
-      ];
-
-        for (const agendaId of agendaIds) {
-          await atualizarResumoAgendaAposComandaCaixa(agendaId);
-        }
-    }
-
-    await baixarEstoqueProdutos(vendaData?.id || null);
-
-const { error: erroRemoverItensComanda } = await sb
-  .from("comanda_itens")
-  .delete()
-  .eq("empresa_id", empresaId)
-  .eq("comanda_id", comandaAtiva.id);
-
-if (erroRemoverItensComanda) throw erroRemoverItensComanda;
-
-const { error: erroComanda } = await sb
-  .from("comandas")
-  .update({
-    status: "livre",
-    nome_cliente: null,
-    observacoes: null,
-    data_abertura: null,
-    data_fechamento: null,
-    total: 0
-  })
-  .eq("id", comandaAtiva.id)
-  .eq("empresa_id", empresaId);
-
-    if (erroComanda) throw erroComanda;
-
-if (vendaData) {
-  vendas.unshift(vendaData);
-
-  exibirModalSucesso(total, troco);
-} else {
-  await alertaCaixa(
-    "Comanda fechada",
-    "Comanda fechada sem venda extra. O valor do jogo foi mantido na cobrança da agenda."
-  );
-}
-
-    comandaAtiva = null;
-    comandaOculta = false;
-    carrinho = [];
-
-    const descontoInput = document.getElementById("inputDesconto");
-    const valorRecebidoInput = document.getElementById("valorRecebido");
-
-    if (descontoInput) descontoInput.value = "";
-    if (valorRecebidoInput) valorRecebidoInput.value = "";
-
-    await carregarComandasCaixa();
-    await atualizarBadgesModosCaixa();
-
-    renderCarrinho();
-    atualizarInfobar();
-    renderHistorico();
-    atualizarInterfaceModoPDV();
-    renderComandasAbertasNoCaixa();
-
-    await carregarProdutos();
-    renderProdutosRapidos();
-
-    logVenda("Comanda fechada e venda salva no Supabase.", "success");
-
-  } catch (err) {
-
-    if (vendaCriadaId) {
-      try {
-        await sb
-          .from("vendas_itens")
-          .delete()
-          .eq("venda_id", vendaCriadaId)
-          .eq("empresa_id", obterEmpresaId());
-
-        await sb
-          .from("vendas")
-          .delete()
-          .eq("id", vendaCriadaId)
-          .eq("empresa_id", obterEmpresaId());
-      } catch (rollbackErr) {
-        logVenda("Falha ao desfazer venda incompleta: " + rollbackErr.message, "error");
-      }
-    }
-
-    logVenda("Erro ao fechar comanda: " + err.message, "error");
-    await alertaCaixa(
-  "Erro ao fechar comanda",
-  err.message
-);
-
-  } finally {
-    vendaEmProcessamento = false;
-    bloquearBotaoFinalizar(false);
-  }
-}
-
-// ======================================================
-// REMOVER ITEM DO CARRINHO / COMANDA
-// ======================================================
 async function removerItemCarrinho(index) {
 
   const item = carrinho[index];

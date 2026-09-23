@@ -352,8 +352,7 @@ vendas = Array.isArray(vendasSupabase)
         ...venda,
         itens: itensVenda,
         lucro_total:
-          Number(venda.lucro_total || 0) ||
-          lucroTotal
+          venda.comanda_lucro_total != null ? Number(venda.comanda_lucro_total) : (Number(venda.lucro_total || 0) || lucroTotal)
       };
     });
 
@@ -601,11 +600,11 @@ function renderRelatorio() {
 
   const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
   const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
-  const qtd = vendas.length;
-  const ticket = qtd > 0 ? faturamento / qtd : 0;
-  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+  const qtd = vendas.filter(v => v.comanda_evento !== "parcial").length;
+  const ticket = qtd > 0 ? totalConcluidoComandas(vendas) / qtd : 0;
+  const margem = totalConcluidoComandas(vendas) > 0 ? (lucro / totalConcluidoComandas(vendas)) * 100 : 0;
 
-  document.getElementById("relFaturamento").textContent = fmt(faturamento);
+  document.getElementById("relRecebimentos").textContent = fmt(faturamento);
   document.getElementById("relLucro").textContent = fmt(lucro);
   document.getElementById("relMargem").textContent = `Margem: ${margem.toFixed(1)}%`;
   document.getElementById("relVendas").textContent = qtd;
@@ -627,7 +626,7 @@ renderComparativoPeriodo(faturamento);
 }
 
 function renderComparativoPeriodo(faturamentoAtual) {
-  const delta = document.getElementById("relFaturamentoDelta");
+  const delta = document.getElementById("relRecebimentosDelta");
   if (!delta) return;
 
   const { inicio, fim } = getIntervaloPeriodo();
@@ -1574,7 +1573,8 @@ function obterResumoFinanceiroRelatorio() {
   const vendas = getVendasFiltradas();
   const faturamento = vendas.reduce((acc, venda) => acc + Number(venda.total || 0), 0);
   const lucro = vendas.reduce((acc, venda) => acc + Number(venda.lucro_total || 0), 0);
-  const ticket = vendas.length ? faturamento / vendas.length : 0;
+  const quantidade = vendas.filter(v => v.comanda_evento !== "parcial").length;
+  const ticket = quantidade ? totalConcluidoComandas(vendas) / quantidade : 0;
   const pagamentos = vendas.reduce((acc, venda) => {
     const forma = labelFormaPagamentoRelatorio(venda.forma_pagamento);
     acc[forma] = (acc[forma] || 0) + Number(venda.total || 0);
@@ -1906,14 +1906,14 @@ function exportarPDFFinanceiro() {
     <h2>Resumo do período</h2>
 
     <div class="resumo">
-      <div class="box"><small>Faturamento</small><strong>${fmt(resumo.faturamento)}</strong></div>
+      <div class="box"><small>Recebimentos</small><strong>${fmt(resumo.faturamento)}</strong></div>
       <div class="box"><small>Lucro bruto</small><strong>${fmt(resumo.lucro)}</strong></div>
-      <div class="box"><small>Vendas</small><strong>${resumo.vendas.length}</strong></div>
+      <div class="box"><small>Vendas</small><strong>${resumo.vendas.filter(v => v.comanda_evento !== "parcial").length}</strong></div>
       <div class="box"><small>Ticket médio</small><strong>${fmt(resumo.ticket)}</strong></div>
     </div>
 
     <p>
-      O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos itens no momento da venda.
+      Recebimentos incluem parciais na data do pagamento. Itens, lucro, margem e ticket consideram vendas concluídas no período. O lucro bruto considera os custos cadastrados nos itens no momento da venda.
     </p>
 
     <h2>Formas de pagamento</h2>
@@ -1940,7 +1940,7 @@ function exportarPDFVendasProdutos() {
       </tr>`).join("")}
     </tbody></table>
     <h2>Produtos e itens</h2>
-    <table><thead><tr><th>Item</th><th class="right">Qtd.</th><th class="right">Faturamento</th><th class="right">Lucro</th></tr></thead><tbody>
+    <table><thead><tr><th>Item</th><th class="right">Qtd.</th><th class="right">Recebimentos</th><th class="right">Lucro</th></tr></thead><tbody>
       ${ranking.map(item => `<tr><td>${escaparHTMLRelatorio(item.nome)}</td><td class="right">${item.qtd}</td><td class="right">${fmt(item.total)}</td><td class="right">${fmt(item.lucro)}</td></tr>`).join("")}
     </tbody></table>
   `);
@@ -1984,8 +1984,8 @@ function exportarExcelFinanceiro() {
     [`Empresa: ${nomeFantasiaRelatorio}`],
     [`Período: ${getPeriodoLabel()} (${getPeriodoDetalhado()})`],
     [], ["Indicador", "Valor"],
-    ["Faturamento", resumo.faturamento], ["Lucro bruto", resumo.lucro],
-    ["Vendas", resumo.vendas.length], ["Ticket médio", resumo.ticket]
+    ["Recebimentos", resumo.faturamento], ["Lucro bruto", resumo.lucro],
+    ["Vendas concluídas", resumo.vendas.filter(v => v.comanda_evento !== "parcial").length], ["Ticket médio", resumo.ticket]
   ];
   const ws = XLSX.utils.aoa_to_sheet(linhas);
   ws["!cols"] = [{ wch: 24 }, { wch: 18 }];
@@ -2022,7 +2022,7 @@ function exportarExcelVendasProdutos() {
   XLSX.utils.book_append_sheet(wb, wsVendas, "Vendas");
 
   const ranking = montarRankingProdutos(vendas).sort((a, b) => b.total - a.total);
-  const linhasItens = [["Item", "Quantidade", "Faturamento", "Lucro"], ...ranking.map(item => [item.nome, item.qtd, item.total, item.lucro])];
+  const linhasItens = [["Item", "Quantidade", "Recebimentos", "Lucro"], ...ranking.map(item => [item.nome, item.qtd, item.total, item.lucro])];
   const wsItens = XLSX.utils.aoa_to_sheet(linhasItens);
   wsItens["!cols"] = [{ wch: 38 }, { wch: 14 }, { wch: 18 }, { wch: 18 }];
   aplicarEstilosBasicosExcel(wsItens, { headerRow: 1, moedaColunasPorIndice: [2, 3] });
@@ -2078,9 +2078,9 @@ function exportarExcelCompleto() {
 
   const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
   const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
-  const qtd = vendas.length;
-  const ticket = qtd > 0 ? faturamento / qtd : 0;
-  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+  const qtd = vendas.filter(v => v.comanda_evento !== "parcial").length;
+  const ticket = qtd > 0 ? totalConcluidoComandas(vendas) / qtd : 0;
+  const margem = totalConcluidoComandas(vendas) > 0 ? (lucro / totalConcluidoComandas(vendas)) * 100 : 0;
 
   const rankingVendidos = montarRankingProdutos(vendas)
     .sort((a, b) => b.qtd - a.qtd)
@@ -2106,7 +2106,7 @@ function exportarExcelCompleto() {
     [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
     [],
     ["Indicador", "Valor"],
-    ["Faturamento", Number(faturamento || 0)],
+    ["Recebimentos", Number(faturamento || 0)],
     ["Lucro bruto", Number(lucro || 0)],
     ["Total de vendas", Number(qtd || 0)],
     ["Ticket médio", Number(ticket || 0)],
@@ -2132,7 +2132,8 @@ function exportarExcelCompleto() {
   vendas.forEach(v => {
     const total = Number(v.total || 0);
     const lucroVenda = Number(v.lucro_total || 0);
-    const margemVenda = total > 0 ? (lucroVenda / total) : 0;
+    const baseMargem = v.comanda_evento === "fechamento" ? Number(v.comanda_total_consumido)-Number(v.desconto||0) : total;
+    const margemVenda = baseMargem > 0 ? (lucroVenda / baseMargem) : 0;
 
     vendasLinhas.push([
       formatarDataVendaRelatorio(v.data),
@@ -2192,7 +2193,7 @@ function exportarExcelCompleto() {
   // ABA ITENS POR LUCRO
   // =========================
   const produtosLucroLinhas = [
-    ["Item", "Quantidade", "Faturamento", "Lucro"]
+    ["Item", "Quantidade", "Recebimentos", "Lucro"]
   ];
 
   rankingLucro.forEach(produto => {
@@ -2342,9 +2343,9 @@ function exportarPDFCompleto() {
 
   const faturamento = vendas.reduce((acc, v) => acc + Number(v.total || 0), 0);
   const lucro = vendas.reduce((acc, v) => acc + Number(v.lucro_total || 0), 0);
-  const qtd = vendas.length;
-  const ticket = qtd > 0 ? faturamento / qtd : 0;
-  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
+  const qtd = vendas.filter(v => v.comanda_evento !== "parcial").length;
+  const ticket = qtd > 0 ? totalConcluidoComandas(vendas) / qtd : 0;
+  const margem = totalConcluidoComandas(vendas) > 0 ? (lucro / totalConcluidoComandas(vendas)) * 100 : 0;
 
   const rankingVendidos = montarRankingProdutos(vendas)
     .sort((a, b) => b.qtd - a.qtd)
@@ -2506,7 +2507,7 @@ function exportarPDFCompleto() {
 
       <div class="resumo">
         <div class="box">
-          <div class="label">Faturamento</div>
+          <div class="label">Recebimentos</div>
           <div class="valor">${fmt(faturamento)}</div>
         </div>
 
@@ -2527,7 +2528,7 @@ function exportarPDFCompleto() {
       </div>
 
       <p>
-        O faturamento representa o valor total vendido no período selecionado. O lucro bruto considera os custos cadastrados nos itens no momento da venda. A margem bruta estimada do período foi de ${margem.toFixed(1)}%.
+        Recebimentos incluem parciais na data do pagamento. Itens, lucro, margem e ticket consideram vendas concluídas no período. O lucro bruto considera os custos cadastrados nos itens no momento da venda. A margem bruta estimada do período foi de ${margem.toFixed(1)}%.
       </p>
 
 <h2>Formas de pagamento</h2>
@@ -2592,7 +2593,7 @@ function exportarPDFCompleto() {
           <tr>
             <th>Item</th>
             <th class="right">Qtd.</th>
-            <th class="right">Faturamento</th>
+            <th class="right">Recebimentos</th>
             <th class="right">Lucro</th>
           </tr>
         </thead>
@@ -2703,4 +2704,9 @@ function mostrarModalAviso(mensagem) {
     document.getElementById("btnFecharModalAviso").onclick = () => {
         modal.remove();
     };
+}
+
+// Recebimentos entram na data do caixa; itens, lucro e ticket na conclusão da venda.
+function totalConcluidoComandas(lista) {
+ return lista.filter(v => v.comanda_evento !== "parcial").reduce((a,v) => a + (v.comanda_evento === "fechamento" ? Number(v.comanda_total_consumido)-Number(v.desconto||0) : Number(v.total||0)),0);
 }

@@ -34,7 +34,7 @@ window.crvEstornos = (() => {
       <form id="estornoForm">
         <h2 id="estornoTitulo">Estornar venda</h2>
         <p id="estornoResumo"></p>
-        <p>O lançamento permanece no histórico, sai dos totais ativos e os produtos baixados retornam ao estoque. A comanda não é reaberta.</p>
+        <p id="estornoEfeito">O lançamento permanece no histórico, sai dos totais ativos e os produtos baixados retornam ao estoque. A comanda não é reaberta.</p>
         <p class="estorno-aviso">Pix e cartão: faça a devolução também no banco ou na maquininha. Este registro não devolve dinheiro automaticamente.</p>
         <label for="estornoMotivo">Motivo do estorno *</label>
         <textarea id="estornoMotivo" class="input" rows="3" minlength="3" maxlength="240" required placeholder="Ex.: venda lançada duas vezes"></textarea>
@@ -69,6 +69,14 @@ window.crvEstornos = (() => {
       focoAnterior = document.activeElement;
       dialogo.querySelector("#estornoResumo").textContent =
         `${atual.descricao || (atual.origem === "comanda" ? "Comanda fechada" : "Venda rápida")} · ${dinheiro(atual.total)} · ${atual.forma_pagamento || ""} · ${new Date(atual.data).toLocaleString("pt-BR")} · ${String(atual.id).slice(0, 8)}`;
+      const parcial = atual.comanda_evento === "parcial";
+      dialogo.querySelector("#estornoEfeito").textContent = parcial
+        ? "Estorna somente este recebimento. O saldo a pagar aumenta, a comanda continua aberta e o consumo e o estoque permanecem iguais."
+        : atual.comanda_evento === "fechamento"
+          ? "Estorna o fechamento e todas as parciais deste atendimento, desde que recebidas neste mesmo caixa aberto. Devolve os produtos ao estoque; a comanda não é reaberta."
+          : "O lançamento permanece no histórico, sai dos totais ativos e os produtos baixados retornam ao estoque. A comanda não é reaberta.";
+      const check = dialogo.querySelector("#estornoEstoque");
+      check.required = !parcial; check.closest("label").hidden = parcial;
       dialogo.querySelector("#estornoMotivo").value = "";
       dialogo.querySelector("#estornoEstoque").checked = false;
       dialogo.querySelector("#estornoErro").textContent = "";
@@ -89,7 +97,7 @@ window.crvEstornos = (() => {
     for (const chave of chaves) {
       const lista = await db.obterCache(chave);
       if (!Array.isArray(lista)) continue;
-      const nova = lista.map(v => String(v.id) === String(resultado.venda_id) ? { ...v, ...resultado.venda } : v);
+      const nova = lista.map(v => { const atual = (resultado.vendas || [resultado.venda]).find(x => String(x.id) === String(v.id)); return atual ? { ...v, ...atual } : v; });
       if (await db.salvarCache(chave, nova) === false) throw new Error("Cache não atualizado");
     }
     const produtos = new Map((resultado.produtos || []).map(p => [String(p.id), p]));
@@ -113,7 +121,7 @@ window.crvEstornos = (() => {
     const erro = dialogo.querySelector("#estornoErro");
     const motivo = dialogo.querySelector("#estornoMotivo").value.trim();
     if (motivo.length < 3 || motivo.length > 240) { erro.textContent = "Informe um motivo entre 3 e 240 caracteres."; return; }
-    if (!dialogo.querySelector("#estornoEstoque").checked) { erro.textContent = "Confirme a situação dos produtos antes de continuar."; return; }
+    if (contexto.venda.comanda_evento !== "parcial" && !dialogo.querySelector("#estornoEstoque").checked) { erro.textContent = "Confirme a situação dos produtos antes de continuar."; return; }
     if (!permitido(contexto.venda, contexto.caixaId) || contexto.empresa !== window.APP_EMPRESA_ID ||
         contexto.operadorId !== (sessionStorage.getItem("CRV_OPERADOR_ID") || null)) {
       erro.textContent = "A conexão, empresa ou operador mudou. Feche e abra o estorno novamente."; return;
@@ -145,7 +153,7 @@ window.crvEstornos = (() => {
       avisar(falhaAtualizacao
         ? "Estorno confirmado no banco. Recarregue as telas com conexão antes de continuar; parte dos dados locais não atualizou."
         : data.ja_estornada ? "Esta venda já estava estornada. Nenhuma devolução foi duplicada."
-        : "Estorno registrado. Totais ativos recalculados e estoque devolvido.", falhaAtualizacao ? "warn" : "success");
+        : "Estorno registrado. Totais atualizados; estoque tratado conforme o tipo do lançamento.", falhaAtualizacao ? "warn" : "success");
     } catch (err) {
       erro.textContent = err.message || "Não foi possível confirmar. Consulte o histórico antes de repetir.";
     } finally {

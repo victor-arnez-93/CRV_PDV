@@ -526,6 +526,9 @@ if (idsVendas.length) {
 
       return {
         id: v.id,
+        comanda_evento: v.comanda_evento,
+        comanda_total_consumido: v.comanda_total_consumido,
+        comanda_total_recebido_antes: v.comanda_total_recebido_antes,
         hora: formatarHoraVendaBrasil(obterDataVenda(v)),
         data: obterDataVenda(v),
         total: Number(v.total || 0),
@@ -560,7 +563,7 @@ if (idsVendas.length) {
     });
 
 document.getElementById("subtitleVendas").textContent =
-  `${vendasData.length} venda(s) registrada(s) · ${formatarDataTitulo(dataSelecionada)}`;
+  `${vendasData.length} lançamento(s) registrado(s) · ${formatarDataTitulo(dataSelecionada)}`;
 
 atualizarTextoDataSelecionada();
 
@@ -579,6 +582,9 @@ vendasData = vendas.map(v => {
 
   return {
     id: v.id,
+        comanda_evento: v.comanda_evento,
+        comanda_total_consumido: v.comanda_total_consumido,
+        comanda_total_recebido_antes: v.comanda_total_recebido_antes,
     hora: formatarHoraVendaBrasil(obterDataVenda(v)),
     data: obterDataVenda(v),
     total: Number(v.total || 0),
@@ -616,8 +622,9 @@ function renderResumo() {
   const base = getVendasFiltradas({ incluirCanceladas: false });
 
   const total = base.reduce((a, v) => a + v.total, 0);
-  const qtd = base.length;
-  const ticket   = qtd > 0 ? total / qtd : 0;
+  const concluidas = base.filter(v => v.comanda_evento !== "parcial");
+  const qtd = concluidas.length;
+  const ticket = qtd > 0 ? concluidas.reduce((a,v) => a + (v.comanda_evento === "fechamento" ? Number(v.comanda_total_consumido)-v.desconto : v.total),0) / qtd : 0;
 
 const dinheiro = base.filter(v => v.formaPagamento === "dinheiro").reduce((a, v) => a + v.total, 0);
 const cartao = base.filter(v => ["cartao", "debito", "credito"].includes(v.formaPagamento)).reduce((a, v) => a + v.total, 0);
@@ -831,7 +838,7 @@ const maisItens =
         <td><span class="venda-hora">${v.hora}</span></td>
         <td>
           <div class="venda-itens">
-            <span class="venda-item-nome">${escaparHTMLVendas(primeiro?.nome || '—')}</span>
+            <span class="venda-item-nome">${escaparHTMLVendas(v.comanda_evento === 'parcial' ? (v.descricao || 'Pagamento parcial de comanda') : (primeiro?.nome || v.descricao || '—'))}</span>
             ${maisItens ? `<span class="venda-item-more">${maisItens}</span>` : ''}
             ${cancelada ? '<span class="venda-status-cancelada">Cancelada</span>' : ''}
           </div>
@@ -867,6 +874,10 @@ function verDetalhe(id) {
   const body = document.getElementById('modalDetalheBody');
 
   body.innerHTML = `
+    ${venda.comanda_evento ? `<div class="detalhe-row"><strong>${venda.comanda_evento === 'parcial' ? 'Recebimento parcial — comanda aberta no momento do pagamento' : 'Fechamento de comanda'}</strong></div>
+    <div class="detalhe-row"><span>Consumo no momento</span><span>${fmt(venda.comanda_total_consumido)}</span></div>
+    <div class="detalhe-row"><span>Recebido anteriormente</span><span>${fmt(venda.comanda_total_recebido_antes)}</span></div>
+    <div class="detalhe-row"><span>Recebido neste lançamento</span><strong>${fmt(venda.total)}</strong></div>` : ''}
     ${vendaCanceladaVendas(venda) ? `
       <div class="detalhe-cancelamento">
         <strong>Venda cancelada</strong>
@@ -944,7 +955,7 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
     <div class="divider" style="margin:8px 0;"></div>
 
     <div class="detalhe-row total">
-      <span>TOTAL</span>
+      <span>${venda.comanda_evento ? "RECEBIDO NESTE LANÇAMENTO" : "TOTAL"}</span>
       <span>${fmt(venda.total)}</span>
     </div>
   `;
@@ -963,7 +974,10 @@ async function abrirModalCancelamentoVenda() {
   const venda = vendasData.find(item => String(item.id) === String(vendaSelecionadaIdVendas));
   if (!venda) return;
   await window.crvEstornos.abrir(venda, caixaAbertoIdVendas, async resultado => {
-    Object.assign(venda, resultado.venda);
+    for (const alterada of resultado.vendas || [resultado.venda]) {
+      const atual = vendasData.find(v => String(v.id) === String(alterada.id));
+      if (atual) Object.assign(atual, alterada);
+    }
     fecharModalDetalheVendas();
     renderResumo();
     renderTabela();
