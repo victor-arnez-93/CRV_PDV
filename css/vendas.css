@@ -399,6 +399,7 @@
 
 /* scroll interno apenas na lista de itens do detalhe */
 #modalDetalhe .detalhe-itens {
+  flex-shrink: 0;
   max-height: min(320px, 40dvh);
   overflow-y: auto;
   padding-right: 6px;
@@ -412,6 +413,7 @@
 
 .vendas-comanda-pagamentos {
   display: grid;
+  flex-shrink: 0;
   gap: 7px;
   max-height: min(220px, 30dvh);
   overflow-y: auto;
