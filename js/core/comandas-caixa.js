@@ -3,7 +3,23 @@ window.crvComandasCaixa = (() => {
   let dialogo, detalhe, ocupado = false, abrindo = false, foco, contexto;
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const moeda = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
-  const valor = v => { const s=String(v??'').trim().replace(/R\$\s*/g,''); return /^\d+(?:[.,]\d{1,2})?$/.test(s) ? Math.round(Number(s.replace(',','.'))*100)/100 : NaN; };
+  const valor = v => {
+    const s = String(v ?? '').trim().replace(/^R\$\s*/, '').replace(/\s/g, '');
+    if (/^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(s)) return Number(s.replace(/\./g, '').replace(',', '.'));
+    if (/^\d+(?:[.,]\d{1,2})?$/.test(s)) return Number(s.replace(',', '.'));
+    return NaN;
+  };
+  const campoMoeda = v => moeda(v).replace(/\u00a0/g, ' ');
+  function mascararMoeda(input) {
+    const digitos = input.value.replace(/\D/g, '').slice(0, 11);
+    input.value = digitos ? campoMoeda(Number(digitos) / 100) : '';
+  }
+  function formatarPagador(nome) {
+    const minusculas = new Set(['da', 'de', 'do', 'das', 'dos', 'e']);
+    return String(nome || '').toLocaleLowerCase('pt-BR').replace(/\S+/g, (parte, inicio) =>
+      inicio > 0 && minusculas.has(parte) ? parte : parte.charAt(0).toLocaleUpperCase('pt-BR') + parte.slice(1)
+    );
+  }
   function novaConfirmacao() {
     if (crypto.randomUUID) return crypto.randomUUID();
     const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;
@@ -61,13 +77,13 @@ window.crvComandasCaixa = (() => {
     <div class="cc-itens">${d.itens.length?d.itens.map(i=>`<div class="cc-item"><span><b>${esc(i.quantidade)} × ${esc(i.nome)}</b><small>${moeda(i.preco)} cada</small></span><strong>${moeda(i.preco*i.quantidade)}</strong></div>`).join(''):'<p class="cc-vazio">Nenhum item lançado. Use Editar consumo para selecionar esta comanda e adicionar produtos.</p>'}</div>
     <h3>Pagamentos</h3><div class="cc-historico">${d.pagamentos.length?d.pagamentos.map(p=>`<div class="cc-item ${p.status_operacional==='cancelada'?'cc-cancelado':''}"><span><b>${moeda(p.total)} · ${esc(p.forma_pagamento)}</b><small>${esc(new Date(p.data).toLocaleString('pt-BR'))}${p.comanda_pagador?' · '+esc(p.comanda_pagador):''} · ${p.status_operacional==='cancelada'?'Estornado':'Recebido'} · ${esc(p.id.slice(0,8))}</small></span>${window.crvEstornos?.permitido(p,caixa?.id)?`<button type="button" class="btn-ghost" data-estorno="${esc(p.id)}">Estornar</button>`:''}</div>`).join(''):'<p class="cc-vazio">Nenhum pagamento registrado.</p>'}</div>
     <p class="cc-sub">Pagamentos parciais mantêm a comanda aberta.</p></div>
-    <form id="ccForm" class="cc-receber"><div class="cc-resumo"><div><span>Consumo</span><b>${moeda(d.consumo)}</b></div><div><span>Já recebido</span><b>${moeda(d.recebido)}</b></div><label>Desconto total${d.recebido>0?" (fixo após parcial)":""}<input id="ccDesconto" inputmode="decimal" value="${Number(d.desconto).toFixed(2)}" ${d.recebido>0?'readonly':''} /></label><div class="cc-saldo"><span>Falta pagar</span><strong id="ccSaldo">${moeda(d.saldo)}</strong></div></div>
+    <form id="ccForm" class="cc-receber"><div class="cc-resumo"><div><span>Consumo</span><b>${moeda(d.consumo)}</b></div><div><span>Já recebido</span><b>${moeda(d.recebido)}</b></div><label>Desconto total${d.recebido>0?" (fixo após parcial)":""}<input id="ccDesconto" inputmode="decimal" value="${campoMoeda(d.desconto)}" ${d.recebido>0?'readonly':''} /></label><div class="cc-saldo"><span>Falta pagar</span><strong id="ccSaldo">${moeda(d.saldo)}</strong></div></div>
     ${!aberto?'<p class="cc-aviso">Abra o caixa para receber.</p>':''}
     ${pend?'<p class="cc-aviso">Há uma confirmação sem resposta neste dispositivo. Consulte o resultado antes de fazer outro recebimento.</p><button type="button" class="btn-primary" id="ccRetomar">Consultar confirmação pendente</button>':''}
-    <fieldset class="cc-campos" ${!d.itens.length?'hidden':''} ${!aberto||pend?'disabled':''}><label>Valor a receber agora<input id="ccValor" inputmode="decimal" autocomplete="off" value="${Math.max(0,Number(d.saldo)).toFixed(2)}" /></label>
+    <fieldset class="cc-campos" ${!d.itens.length?'hidden':''} ${!aberto||pend?'disabled':''}><label>Valor a receber agora<input id="ccValor" inputmode="decimal" autocomplete="off" value="${campoMoeda(Math.max(0,Number(d.saldo)))}" required /></label>
     <label>Forma de pagamento<select id="ccForma"><option value="dinheiro">Dinheiro</option><option value="pix">Pix</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option></select></label>
     <label id="ccDinheiroLabel">Dinheiro entregue<input id="ccEntregue" inputmode="decimal" autocomplete="off" placeholder="Igual ao valor a pagar" /></label><p id="ccTroco" class="cc-sub">Troco: ${moeda(0)}</p>
-    <label>Quem pagou (opcional)<input id="ccPagador" maxlength="120" placeholder="Ex.: João" autocomplete="off" /></label>
+    <label>Quem pagou <small id="ccPagadorObrigatorio">(obrigatório)</small><input id="ccPagador" maxlength="120" placeholder="Ex.: João" autocomplete="off" /></label>
     <div class="cc-acoes"><button class="btn-ghost" id="ccParcial" type="submit" ${d.itens.length && d.saldo>0?'':'disabled'}><span>Receber pagamento parcial</span></button><button class="btn-secondary" id="ccQuitar" type="button" ${d.itens.length?'':'hidden'}><span>Finalizar comanda</span></button></div></fieldset>
     ${!d.itens.length?'<p class="cc-sub">Adicione produtos para registrar um pagamento.</p><button type="button" id="ccEncerrarVazia" class="btn-ghost" '+(!aberto||pend?'disabled':'')+'>Encerrar comanda vazia</button>':''}
     <p class="cc-sub">Finalizar recebe o saldo restante e encerra a comanda. Confira cartão/Pix antes de registrar.</p>
@@ -85,9 +101,17 @@ window.crvComandasCaixa = (() => {
       if(botao.dataset.confirmar==='sim') confirmar(true);
       else {botao.dataset.confirmar='sim';botao.textContent='Confirmar encerramento';erro('A comanda vazia será encerrada sem registrar venda. Confirme para continuar.');}
     });
-    $('ccDesconto').oninput=()=>{const x=saldoAtual();$('ccSaldo').textContent=Number.isFinite(x)?moeda(x):'Valor inválido';$('ccParcial').disabled=!d.itens.length||!Number.isFinite(x)||x<=0;};
+    $('ccDesconto').oninput=()=>{mascararMoeda($('ccDesconto'));const x=saldoAtual();$('ccSaldo').textContent=Number.isFinite(x)?moeda(x):'Valor inválido';$('ccParcial').disabled=!d.itens.length||!Number.isFinite(x)||x<=0;};
     const troco=()=>{const dinheiro=$('ccForma').value==='dinheiro';$('ccDinheiroLabel').hidden=!dinheiro;$('ccTroco').hidden=!dinheiro;const a=valor($('ccValor').value),b=valor($('ccEntregue').value);$('ccTroco').textContent='Troco: '+moeda(Math.max(0,(Number.isFinite(b)?b:a)-a));};
-    $('ccForma').onchange=troco;$('ccEntregue').oninput=troco;$('ccValor').oninput=troco;
+    $('ccForma').onchange=troco;
+    $('ccEntregue').oninput=()=>{mascararMoeda($('ccEntregue'));troco();};
+    $('ccValor').oninput=()=>{mascararMoeda($('ccValor'));troco();};
+    $('ccPagador').oninput=()=>{$('ccPagador').value=formatarPagador($('ccPagador').value);};
+    ['ccValor', 'ccEntregue', 'ccDesconto'].forEach(id => {
+      $(id).addEventListener('focus', event => {
+        if (!event.target.readOnly) event.target.select();
+      });
+    });
     $('ccRetomar')?.addEventListener('click',()=>enviar(pendente()));
     dialogo.querySelectorAll('[data-estorno]').forEach(b=>b.onclick=()=>{
       const p=d.pagamentos.find(x=>x.id===b.dataset.estorno);
@@ -106,9 +130,13 @@ window.crvComandasCaixa = (() => {
       const desconto=valor($('ccDesconto').value),saldo=saldoAtual(),pagar=fechar?saldo:valor($('ccValor').value),forma=$('ccForma').value;
       const entregue=forma==='dinheiro'&&$('ccEntregue').value.trim()?valor($('ccEntregue').value):pagar;
       if(![desconto,saldo,pagar,entregue].every(Number.isFinite)||desconto<0||saldo<0||pagar<0||pagar>saldo||(!fechar&&pagar===0)||entregue<pagar)throw Error('Confira o desconto, o valor a pagar e o dinheiro entregue.');
-      if(fechar&&Number($('ccValor').value.replace(',','.'))!==saldo&&detalhe.itens.length){$('ccValor').value=saldo.toFixed(2);throw Error('O fechamento recebe todo o saldo restante. Confira o valor atualizado e confirme novamente.');}
+      if(detalhe.itens.length&&!$('ccPagador').value.trim()){
+        $('ccPagador').focus();
+        throw Error('Informe o nome de quem pagou para registrar o pagamento.');
+      }
+      if(fechar&&valor($('ccValor').value)!==saldo&&detalhe.itens.length){$('ccValor').value=campoMoeda(saldo);throw Error('O fechamento recebe todo o saldo restante. Confira o valor atualizado e confirme novamente.');}
       const c=detalhe.comanda;
-      const pedido={p_comanda_id:c.id,p_caixa_id:contexto.caixa,p_atendimento_id:c.crv_atendimento_id,p_revisao:c.crv_revisao,p_valor:pagar,p_forma:forma,p_desconto:desconto,p_entregue:entregue,p_fechar:fechar,p_operacao_id:novaConfirmacao(),p_operador_id:contexto.operador,p_pagador:$('ccPagador').value.trim()||null};
+      const pedido={p_comanda_id:c.id,p_caixa_id:contexto.caixa,p_atendimento_id:c.crv_atendimento_id,p_revisao:c.crv_revisao,p_valor:pagar,p_forma:forma,p_desconto:desconto,p_entregue:entregue,p_fechar:fechar,p_operacao_id:novaConfirmacao(),p_operador_id:contexto.operador,p_pagador:formatarPagador($('ccPagador').value.trim())||null};
       sessionStorage.setItem(chave(),JSON.stringify(pedido));await enviar(pedido);
     }catch(e){erro(e);}
   }

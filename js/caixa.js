@@ -7795,6 +7795,7 @@ function renderComandasAbertasNoCaixa() {
           <span class="comanda-aberta-total">
             ${fmt(comanda.total || 0)}
           </span>
+          ${comanda._crvParcial ? '<span class="comanda-aberta-parcial">Parcial recebida</span>' : ''}
           <small class="comanda-aberta-selecao">${comandaAtiva?.id === comanda.id ? "Selecionada" : "Selecionar"}</small>
         </button>
       `).join("")}
@@ -8142,6 +8143,31 @@ async function carregarComandasCaixa(opcoes = {}) {
     if (error) throw error;
 
     comandasCaixa = Array.isArray(data) ? data : [];
+    const abertasComId = comandasCaixa.filter(item => item.status === "aberta");
+    if (abertasComId.length) {
+      try {
+        const { data: eventos, error: erroEventos } = await sb
+          .from("vendas")
+          .select("comanda_id, comanda_evento, status_operacional, data")
+          .eq("empresa_id", obterEmpresaId())
+          .in("comanda_id", abertasComId.map(item => item.id))
+          .in("comanda_evento", ["parcial", "fechamento"])
+          .order("data", { ascending: false });
+        if (erroEventos) throw erroEventos;
+        const ultimoEvento = new Map();
+        for (const evento of eventos || []) {
+          const id = String(evento.comanda_id);
+          if (!ultimoEvento.has(id) && evento.status_operacional !== "cancelada") {
+            ultimoEvento.set(id, evento.comanda_evento);
+          }
+        }
+        abertasComId.forEach(item => {
+          item._crvParcial = ultimoEvento.get(String(item.id)) === "parcial";
+        });
+      } catch (erroParciais) {
+        console.warn("Não foi possível identificar recebimentos parciais nos atalhos.", erroParciais);
+      }
+    }
     ultimaCargaComandasCaixa = Date.now();
 
     await salvarCacheCaixa(

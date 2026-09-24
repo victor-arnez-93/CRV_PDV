@@ -399,9 +399,38 @@
 
 /* scroll interno apenas na lista de itens do detalhe */
 #modalDetalhe .detalhe-itens {
-  max-height: 220px;
+  max-height: min(320px, 40dvh);
   overflow-y: auto;
   padding-right: 6px;
+}
+
+.vendas-comanda-titulo {
+  margin: 10px 0 2px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.vendas-comanda-pagamentos {
+  display: grid;
+  gap: 7px;
+  max-height: min(220px, 30dvh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.vendas-comanda-pagamento {
+  display: grid;
+  gap: 4px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  overflow-wrap: anywhere;
+}
+
+.vendas-comanda-pagamento small {
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 #modalDetalhe .detalhe-itens::-webkit-scrollbar {
@@ -946,7 +975,7 @@
   }
 
   #modalDetalhe .detalhe-itens {
-    max-height: 200px;
+    max-height: min(280px, 38dvh);
     overflow-y: auto;
     overscroll-behavior: contain;
     margin-bottom: 8px;

@@ -37,6 +37,16 @@
   overflow-wrap: anywhere;
   line-height: 1.35;
 }
+.comanda-aberta-parcial {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border: 1px solid var(--crv-golden);
+  border-radius: var(--radius-pill);
+  color: var(--crv-golden);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
 .comanda-aberta-selecao {
   font-size: 10px;
   color: var(--text-muted);

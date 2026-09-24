@@ -2,6 +2,7 @@
 const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 let vendasData = [];
+let historicoComandasVendas = [];
 let filtroAtivo = 'todos';
 let filtroOrigem = 'todos';
 let empresaAtualVendas = null;
@@ -473,6 +474,26 @@ const { data: vendasSupabase, error: erroVendas } = await sb
 
       if (erroVendas) throw erroVendas;
 
+const comandasFechadas = (vendasSupabase || [])
+  .filter(v => v.comanda_evento === "fechamento" && v.comanda_id)
+  .map(v => v.comanda_id);
+historicoComandasVendas = vendasSupabase || [];
+if (comandasFechadas.length) {
+  try {
+    const { data: historico, error: erroHistorico } = await sb
+      .from("vendas")
+      .select("*")
+      .eq("empresa_id", empresaId)
+      .in("comanda_id", [...new Set(comandasFechadas)])
+      .in("comanda_evento", ["parcial", "fechamento"])
+      .order("data", { ascending: true });
+    if (erroHistorico) throw erroHistorico;
+    historicoComandasVendas = historico || [];
+  } catch (erroHistorico) {
+    console.warn("Histórico de pagamentos de comanda indisponível.", erroHistorico);
+  }
+}
+
 const { data: caixasAbertos, error: erroCaixaAberto } = await sb
   .from("caixa")
   .select("id")
@@ -563,7 +584,7 @@ if (idsVendas.length) {
     });
 
 document.getElementById("subtitleVendas").textContent =
-  `${vendasData.length} lançamento(s) registrado(s) · ${formatarDataTitulo(dataSelecionada)}`;
+  `${vendasData.filter(v => v.comanda_evento !== "parcial").length} venda(s) concluída(s) · ${formatarDataTitulo(dataSelecionada)}`;
 
 atualizarTextoDataSelecionada();
 
@@ -575,6 +596,7 @@ atualizarTextoDataSelecionada();
       await obterDadosOfflineVendas();
 
     const vendas = dadosOffline.vendas || [];
+historicoComandasVendas = vendas;
 const itens = dadosOffline.itens || [];
 
 vendasData = vendas.map(v => {
@@ -746,6 +768,12 @@ function getVendasFiltradas({ incluirCanceladas = true } = {}) {
     const passaFiltro =
       filtroAtivo === "todos" ||
       v.formaPagamento === filtroAtivo ||
+      pagamentosDaComanda(v).some(p =>
+        !vendaCanceladaVendas(p) && (
+          normalizarPagamento(p.forma_pagamento) === filtroAtivo ||
+          (filtroAtivo === "cartao" && ["debito", "credito", "cartao"].includes(normalizarPagamento(p.forma_pagamento)))
+        )
+      ) ||
       (
         filtroAtivo === "cartao" &&
         ["cartao", "debito", "credito"].includes(v.formaPagamento)
@@ -795,10 +823,26 @@ if (!passaTexto) {
 
 
 // ===== TABELA =====
+function pagamentosDaComanda(venda) {
+  if (venda.comanda_evento !== "fechamento" || !venda.comanda_id) return [];
+  const eventos = historicoComandasVendas
+    .filter(item => String(item.comanda_id) === String(venda.comanda_id) &&
+      ["parcial", "fechamento"].includes(item.comanda_evento) &&
+      new Date(item.data).getTime() <= new Date(venda.data).getTime())
+    .sort((a, b) => new Date(a.data) - new Date(b.data));
+  const fim = eventos.findIndex(item => String(item.id) === String(venda.id));
+  if (fim < 0) return [venda];
+  let inicio = -1;
+  for (let i = 0; i < fim; i++) {
+    if (eventos[i].comanda_evento === "fechamento") inicio = i;
+  }
+  return eventos.slice(inicio + 1, fim + 1);
+}
+
 function renderTabela() {
 
   const tbody = document.getElementById('vendasTableBody');
-  const lista = getVendasFiltradas();
+  const lista = getVendasFiltradas().filter(v => v.comanda_evento !== "parcial");
   const reversed = [...lista];
 
   if (!reversed.length) {
@@ -838,19 +882,19 @@ const maisItens =
         <td><span class="venda-hora">${v.hora}</span></td>
         <td>
           <div class="venda-itens">
-            <span class="venda-item-nome">${escaparHTMLVendas(v.comanda_evento === 'parcial' ? (v.descricao || 'Pagamento parcial de comanda') : (primeiro?.nome || v.descricao || '—'))}</span>
+            <span class="venda-item-nome">${escaparHTMLVendas(v.comanda_evento === 'fechamento' ? (v.descricao || 'Comanda finalizada') : (primeiro?.nome || v.descricao || '—'))}</span>
             ${maisItens ? `<span class="venda-item-more">${maisItens}</span>` : ''}
             ${cancelada ? '<span class="venda-status-cancelada">Cancelada</span>' : ''}
           </div>
         </td>
         <td>
-          <span class="pagto-badge ${v.formaPagamento}">
+          <span class="pagto-badge ${pagamentosDaComanda(v).length > 1 ? 'misto' : v.formaPagamento}">
             <i data-lucide="${iconPagto[v.formaPagamento] || 'receipt'}" width="11" height="11"></i>
-            ${labelPagto[v.formaPagamento] || 'Outro'}
+            ${pagamentosDaComanda(v).length > 1 ? 'Vários pagamentos' : (labelPagto[v.formaPagamento] || 'Outro')}
           </span>
         </td>
         <td>${v.desconto > 0 ? `<span class="venda-desconto">- ${fmt(v.desconto)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
-        <td><span class="venda-total">${fmt(v.total)}</span></td>
+        <td><span class="venda-total">${fmt(v.comanda_evento === 'fechamento' ? Number(v.comanda_total_consumido || v.subtotal) - v.desconto : v.total)}</span></td>
         <td>
           <button class="btn-ver" onclick="event.stopPropagation(); verDetalhe('${v.id}')">
             <i data-lucide="eye" width="14" height="14"></i>
@@ -872,9 +916,26 @@ function verDetalhe(id) {
   vendaSelecionadaIdVendas = venda.id;
 
   const body = document.getElementById('modalDetalheBody');
+  const pagamentos = pagamentosDaComanda(venda);
+  const recebido = pagamentos
+    .filter(item => !vendaCanceladaVendas(item))
+    .reduce((soma, item) => soma + Number(item.total || 0), 0);
+  const primeiraParcial = pagamentos.find(item => item.comanda_evento === 'parcial' && !vendaCanceladaVendas(item));
+  const consumoAntes = primeiraParcial ? Number(primeiraParcial.comanda_total_consumido || 0) : 0;
+  const acrescimo = Number(venda.comanda_total_consumido || 0) - consumoAntes;
 
   body.innerHTML = `
-    ${venda.comanda_evento ? `<div class="detalhe-row"><strong>${venda.comanda_evento === 'parcial' ? 'Recebimento parcial — comanda aberta no momento do pagamento' : 'Fechamento de comanda'}</strong></div>
+    ${venda.comanda_evento === 'fechamento' ? `<div class="detalhe-row"><strong>Comanda finalizada</strong></div>
+    <div class="detalhe-row"><span>Consumo final</span><strong>${fmt(Number(venda.comanda_total_consumido || venda.subtotal))}</strong></div>
+    ${primeiraParcial && acrescimo > 0 ? `<div class="detalhe-row"><span>Consumo acrescentado após o primeiro pagamento</span><span>${fmt(acrescimo)}</span></div>` : ''}
+    <div class="detalhe-row"><span>Desconto total</span><span>${fmt(venda.desconto)}</span></div>
+    <div class="detalhe-row"><span>Total recebido</span><strong>${fmt(recebido)}</strong></div>
+    <h4 class="vendas-comanda-titulo">Pagamentos da comanda</h4>
+    <div class="vendas-comanda-pagamentos">${pagamentos.map((item, index) => `
+      <div class="vendas-comanda-pagamento">
+        <strong>${index + 1}. ${item.comanda_evento === 'fechamento' ? 'Fechamento' : 'Parcial'} · ${fmt(Number(item.total || 0))}</strong>
+        <small>${escaparHTMLVendas(new Date(item.data).toLocaleString('pt-BR'))} · ${escaparHTMLVendas(labelPagto[normalizarPagamento(item.forma_pagamento)] || item.forma_pagamento || 'Outro')}${item.comanda_pagador ? ' · ' + escaparHTMLVendas(item.comanda_pagador) : ''}${vendaCanceladaVendas(item) ? ' · Estornado' : ''}</small>
+      </div>`).join('')}</div>` : venda.comanda_evento ? `<div class="detalhe-row"><strong>Recebimento parcial — comanda aberta no momento do pagamento</strong></div>
     <div class="detalhe-row"><span>Consumo no momento</span><span>${fmt(venda.comanda_total_consumido)}</span></div>
     <div class="detalhe-row"><span>Recebido anteriormente</span><span>${fmt(venda.comanda_total_recebido_antes)}</span></div>
     <div class="detalhe-row"><span>Recebido neste lançamento</span><strong>${fmt(venda.total)}</strong></div>` : ''}
@@ -921,13 +982,13 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
 </div>
 ` : ""}
 
-    <div class="detalhe-row" style="margin-bottom:12px;">
+    ${venda.comanda_evento !== 'fechamento' ? `<div class="detalhe-row" style="margin-bottom:12px;">
       <span>Pagamento</span>
       <span class="pagto-badge ${venda.formaPagamento}">
         <i data-lucide="${iconPagto[venda.formaPagamento] || 'receipt'}" width="11" height="11"></i>
         ${labelPagto[venda.formaPagamento] || 'Outro'}
       </span>
-    </div>
+    </div>` : ''}
 
     <div class="detalhe-itens">
       ${(venda.itens.length ? venda.itens : [{ nome: venda.descricao || "Venda", quantidade: 1, preco: venda.total }]).map(i => `
@@ -955,8 +1016,8 @@ ${vendaTemJogoVendas(venda) || vendaEhComandaVendas(venda) ? `
     <div class="divider" style="margin:8px 0;"></div>
 
     <div class="detalhe-row total">
-      <span>${venda.comanda_evento ? "RECEBIDO NESTE LANÇAMENTO" : "TOTAL"}</span>
-      <span>${fmt(venda.total)}</span>
+      <span>${venda.comanda_evento === 'fechamento' ? "TOTAL DA COMANDA" : venda.comanda_evento ? "RECEBIDO NESTE LANÇAMENTO" : "TOTAL"}</span>
+      <span>${fmt(venda.comanda_evento === 'fechamento' ? Number(venda.comanda_total_consumido || venda.subtotal) - venda.desconto : venda.total)}</span>
     </div>
   `;
 
