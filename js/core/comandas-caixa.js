@@ -32,6 +32,7 @@ window.crvComandasCaixa = (() => {
     if(ocupado||abrindo||dialogo?.open)return;
     abrindo=true;
     try {
+      await aguardarOperacoesComandaCaixa();
       // Recupera inclusive fechamento cuja resposta se perdeu e já saiu das abertas.
       const key=`crv:comanda:pendente:${obterEmpresaId()}:${id}`;
       const anterior=JSON.parse(sessionStorage.getItem(key)||'null');
@@ -56,29 +57,35 @@ window.crvComandasCaixa = (() => {
     const d=detalhe, c=d.comanda, aberto=caixa?.status==='aberto', pend=pendente();
     dialogo.innerHTML=`<header class="cc-header"><div><small>COMANDA ABERTA</small><h2 id="ccTitulo">${esc(c.codigo)} <span>${esc(c.nome_cliente||'Sem identificação')}</span></h2></div><button type="button" id="ccFechar" class="btn-ghost" aria-label="Fechar detalhes">✕</button></header>
     <div class="cc-corpo"><div class="cc-consumo"><p class="cc-sub">${c.data_abertura?'Aberta em '+esc(new Date(c.data_abertura).toLocaleString('pt-BR')):''}</p>${c.observacoes?`<p>${esc(c.observacoes)}</p>`:''}
-    <div class="cc-section-title"><h3>Consumo</h3><button type="button" id="ccConsumir" class="btn-ghost">Adicionar / corrigir itens</button></div>
-    <div class="cc-itens">${d.itens.length?d.itens.map(i=>`<div class="cc-item"><span><b>${esc(i.quantidade)} × ${esc(i.nome)}</b><small>${moeda(i.preco)} cada</small></span><strong>${moeda(i.preco*i.quantidade)}</strong></div>`).join(''):'<p>Nenhum consumo lançado.</p>'}</div>
-    <h3>Pagamentos</h3><div class="cc-historico">${d.pagamentos.length?d.pagamentos.map(p=>`<div class="cc-item ${p.status_operacional==='cancelada'?'cc-cancelado':''}"><span><b>${moeda(p.total)} · ${esc(p.forma_pagamento)}</b><small>${esc(new Date(p.data).toLocaleString('pt-BR'))}${p.comanda_pagador?' · '+esc(p.comanda_pagador):''} · ${p.status_operacional==='cancelada'?'Estornado':'Recebido'} · ${esc(p.id.slice(0,8))}</small></span>${window.crvEstornos?.permitido(p,caixa?.id)?`<button type="button" class="btn-ghost" data-estorno="${esc(p.id)}">Estornar</button>`:''}</div>`).join(''):'<p>Nenhum pagamento registrado.</p>'}</div>
-    <p class="cc-sub">Cada parcial entra no caixa em que foi recebida. Os produtos são baixados uma única vez, no fechamento.</p></div>
+    <div class="cc-section-title"><h3>Consumo</h3><button type="button" id="ccConsumir" class="btn-ghost">Editar consumo</button></div>
+    <div class="cc-itens">${d.itens.length?d.itens.map(i=>`<div class="cc-item"><span><b>${esc(i.quantidade)} × ${esc(i.nome)}</b><small>${moeda(i.preco)} cada</small></span><strong>${moeda(i.preco*i.quantidade)}</strong></div>`).join(''):'<p class="cc-vazio">Nenhum item lançado. Use Editar consumo para selecionar esta comanda e adicionar produtos.</p>'}</div>
+    <h3>Pagamentos</h3><div class="cc-historico">${d.pagamentos.length?d.pagamentos.map(p=>`<div class="cc-item ${p.status_operacional==='cancelada'?'cc-cancelado':''}"><span><b>${moeda(p.total)} · ${esc(p.forma_pagamento)}</b><small>${esc(new Date(p.data).toLocaleString('pt-BR'))}${p.comanda_pagador?' · '+esc(p.comanda_pagador):''} · ${p.status_operacional==='cancelada'?'Estornado':'Recebido'} · ${esc(p.id.slice(0,8))}</small></span>${window.crvEstornos?.permitido(p,caixa?.id)?`<button type="button" class="btn-ghost" data-estorno="${esc(p.id)}">Estornar</button>`:''}</div>`).join(''):'<p class="cc-vazio">Nenhum pagamento registrado.</p>'}</div>
+    <p class="cc-sub">Pagamentos parciais mantêm a comanda aberta.</p></div>
     <form id="ccForm" class="cc-receber"><div class="cc-resumo"><div><span>Consumo</span><b>${moeda(d.consumo)}</b></div><div><span>Já recebido</span><b>${moeda(d.recebido)}</b></div><label>Desconto total${d.recebido>0?" (fixo após parcial)":""}<input id="ccDesconto" inputmode="decimal" value="${Number(d.desconto).toFixed(2)}" ${d.recebido>0?'readonly':''} /></label><div class="cc-saldo"><span>Falta pagar</span><strong id="ccSaldo">${moeda(d.saldo)}</strong></div></div>
     ${!aberto?'<p class="cc-aviso">Abra o caixa para receber.</p>':''}
     ${pend?'<p class="cc-aviso">Há uma confirmação sem resposta neste dispositivo. Consulte o resultado antes de fazer outro recebimento.</p><button type="button" class="btn-primary" id="ccRetomar">Consultar confirmação pendente</button>':''}
-    <fieldset ${!aberto||pend?'disabled':''}><label>Valor a pagar agora<input id="ccValor" inputmode="decimal" autocomplete="off" value="${Math.max(0,Number(d.saldo)).toFixed(2)}" /></label>
+    <fieldset class="cc-campos" ${!d.itens.length?'hidden':''} ${!aberto||pend?'disabled':''}><label>Valor a receber agora<input id="ccValor" inputmode="decimal" autocomplete="off" value="${Math.max(0,Number(d.saldo)).toFixed(2)}" /></label>
     <label>Forma de pagamento<select id="ccForma"><option value="dinheiro">Dinheiro</option><option value="pix">Pix</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option></select></label>
     <label id="ccDinheiroLabel">Dinheiro entregue<input id="ccEntregue" inputmode="decimal" autocomplete="off" placeholder="Igual ao valor a pagar" /></label><p id="ccTroco" class="cc-sub">Troco: ${moeda(0)}</p>
-    <label>Quem pagou <small>(opcional)</small><input id="ccPagador" maxlength="120" placeholder="Ex.: João" autocomplete="off" /></label>
-    <button class="btn-primary" type="submit">Receber e manter aberta</button><button class="btn-secondary" id="ccQuitar" type="button">${d.itens.length?'Quitar saldo e fechar':'Liberar comanda vazia'}</button></fieldset>
-    <p class="cc-sub">Confira o recebimento na maquininha ou no banco antes de registrar cartão/Pix.</p>
+    <label>Quem pagou (opcional)<input id="ccPagador" maxlength="120" placeholder="Ex.: João" autocomplete="off" /></label>
+    <div class="cc-acoes"><button class="btn-ghost" id="ccParcial" type="submit" ${d.itens.length && d.saldo>0?'':'disabled'}><span>Receber pagamento parcial</span></button><button class="btn-secondary" id="ccQuitar" type="button" ${d.itens.length?'':'hidden'}><span>Finalizar comanda</span></button></div></fieldset>
+    ${!d.itens.length?'<p class="cc-sub">Adicione produtos para registrar um pagamento.</p><button type="button" id="ccEncerrarVazia" class="btn-ghost" '+(!aberto||pend?'disabled':'')+'>Encerrar comanda vazia</button>':''}
+    <p class="cc-sub">Finalizar recebe o saldo restante e encerra a comanda. Confira cartão/Pix antes de registrar.</p>
     <p id="ccErro" role="alert">${esc(aviso)}</p><button type="button" id="ccAtualizar" class="btn-ghost">Atualizar detalhes</button></form></div>`;
     $('ccFechar').onclick=()=>{if(!ocupado)dialogo.close();};
     $('ccAtualizar').onclick=atualizar;
     $('ccConsumir').onclick=async()=>{
       if(ocupado)return;
-      if(modoPDV!=='comanda'&&carrinho.length){erro(Error('Finalize ou limpe a venda atual antes de trocar para esta comanda.'));return;}
-      try {const novo=await consultar(c.id);comandaAtiva=novo.comanda;comandaOculta=false;modoPDV='comanda';dialogo.close();await carregarItensComanda();atualizarInterfaceModoPDV();}catch(e){erro(e);}
+      if(carrinho.length&&!comandaAtiva){erro(Error('Finalize ou limpe a venda atual antes de trocar para esta comanda.'));return;}
+      try {dialogo.close();await selecionarComandaCaixa(c);}catch(e){erro(e);}
     };
     $('ccForm').onsubmit=e=>{e.preventDefault();confirmar(false);};$('ccQuitar').onclick=()=>confirmar(true);
-    $('ccDesconto').oninput=()=>{const x=saldoAtual();$('ccSaldo').textContent=Number.isFinite(x)?moeda(x):'Valor inválido';};
+    $('ccEncerrarVazia')?.addEventListener('click',()=>{
+      const botao=$('ccEncerrarVazia');
+      if(botao.dataset.confirmar==='sim') confirmar(true);
+      else {botao.dataset.confirmar='sim';botao.textContent='Confirmar encerramento';erro('A comanda vazia será encerrada sem registrar venda. Confirme para continuar.');}
+    });
+    $('ccDesconto').oninput=()=>{const x=saldoAtual();$('ccSaldo').textContent=Number.isFinite(x)?moeda(x):'Valor inválido';$('ccParcial').disabled=!d.itens.length||!Number.isFinite(x)||x<=0;};
     const troco=()=>{const dinheiro=$('ccForma').value==='dinheiro';$('ccDinheiroLabel').hidden=!dinheiro;$('ccTroco').hidden=!dinheiro;const a=valor($('ccValor').value),b=valor($('ccEntregue').value);$('ccTroco').textContent='Troco: '+moeda(Math.max(0,(Number.isFinite(b)?b:a)-a));};
     $('ccForma').onchange=troco;$('ccEntregue').oninput=troco;$('ccValor').oninput=troco;
     $('ccRetomar')?.addEventListener('click',()=>enviar(pendente()));

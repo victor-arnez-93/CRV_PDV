@@ -23,6 +23,16 @@ let modoBalcaoCaixa = false;
 let rapidosBalcaoOcultos = false;
 let comandaAtiva = null;
 let comandaOculta = false;
+let filaOperacoesComandaCaixa = Promise.resolve();
+function executarOperacaoComandaCaixa(operacao) {
+  const proxima = filaOperacoesComandaCaixa.then(operacao);
+  filaOperacoesComandaCaixa = proxima.catch(() => {});
+  return proxima;
+}
+async function aguardarOperacoesComandaCaixa() {
+  await filaOperacoesComandaCaixa;
+}
+
 let caixaInicializado = false;
 let vendaEmProcessamento = false;
 let operacaoCaixaEmProcessamento = false;
@@ -2759,6 +2769,12 @@ item.onclick = async () => {
 // CARRINHO
 // ======================================================
 async function adicionarCarrinho(produto) {
+  if (modoPDV === "comanda") {
+    if (comandaAtiva?.id) return adicionarProdutoNaComanda(produto);
+    await alertaCaixa("Selecione uma comanda", "Clique na comanda que receberá os produtos antes de adicionar itens.");
+    return;
+  }
+
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Caixa fechado",
@@ -2984,6 +3000,10 @@ async function adicionarManual() {
     return;
   }
 
+  if (modoPDV === "comanda" && !comandaAtiva?.id) {
+    await alertaCaixa("Selecione uma comanda", "Selecione a comanda antes de lançar uma cobrança.");
+    return;
+  }
   const nomeFinal = `[${tipo.toUpperCase()}] ${descricao}`;
 
   if (modoPDV === "comanda" && comandaAtiva) {
@@ -4924,6 +4944,12 @@ function setupModoPDV() {
 }
 
 async function alterarModoPDV(modo) {
+  await aguardarOperacoesComandaCaixa();
+  if (modo !== modoPDV && carrinho.length && !comandaAtiva) {
+    await alertaCaixa("Carrinho em andamento", "Finalize ou limpe o carrinho atual antes de trocar de modo.");
+    return;
+  }
+
 
   if (!sistemaOnline() && modo !== "venda") {
     await alertaCaixa(
@@ -5007,6 +5033,16 @@ if (modo === "jogos") {
 
 function atualizarInterfaceModoPDV() {
   document.body.classList.toggle("caixa-em-comanda", modoPDV === "comanda");
+  document.querySelectorAll(".pdv-mode-btn[data-mode]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === modoPDV);
+  });
+  const destino = document.getElementById("cartDestinoComanda");
+  if (destino) {
+    destino.hidden = modoPDV !== "comanda";
+    destino.textContent = comandaAtiva
+      ? `Produtos para a comanda ${comandaAtiva.codigo}${comandaAtiva.nome_cliente ? " · " + comandaAtiva.nome_cliente : ""}`
+      : "Selecione uma comanda acima para lançar produtos.";
+  }
 
   const inputBusca = document.getElementById("inputBusca");
   const comandaCard = document.getElementById("comandaCard");
@@ -5064,12 +5100,12 @@ function atualizarInterfaceModoPDV() {
 
   if (!comandaAtiva) {
     if (btnFinalizar) {
-      btnFinalizar.onclick = null;
+      btnFinalizar.onclick = abrirModalSelecionarComanda;
 
       const span = btnFinalizar.querySelector("span");
 
       if (span) {
-        span.textContent = "Abra uma comanda";
+        span.textContent = "Selecionar comanda";
       }
     }
 
@@ -5108,6 +5144,8 @@ function atualizarInterfaceModoPDV() {
   if (codigo) {
     codigo.textContent = comandaAtiva.codigo || "—";
   }
+  const totalComanda = document.getElementById("comandaTotal");
+  if (totalComanda) totalComanda.textContent = fmt(comandaAtiva.total || 0);
 
   if (status) {
     status.textContent = comandaAtiva.status || "aberta";
@@ -5137,11 +5175,11 @@ function atualizarInterfaceModoPDV() {
     const span = btnFinalizar.querySelector("span");
 
     if (span) {
-      span.textContent = "Detalhes / receber";
+      span.textContent = "Abrir consumo e pagamentos";
     }
   }
 
-  inputBusca.placeholder = "Ler produto para adicionar na comanda...";
+  inputBusca.placeholder = `Adicionar produto na comanda ${comandaAtiva.codigo}...`;
   inputBusca.focus();
 
   renderComandasAbertasNoCaixa();
@@ -7743,6 +7781,8 @@ function renderComandasAbertasNoCaixa() {
           type="button"
           class="comanda-aberta-item ${comandaAtiva?.id === comanda.id ? "active" : ""}"
           data-comanda-id="${comanda.id}"
+          aria-pressed="${comandaAtiva?.id === comanda.id}"
+          title="Selecionar comanda para lançar produtos"
         >
           <strong class="comanda-aberta-codigo">
             ${window.crvComandasCaixa.esc(comanda.codigo || "—")}
@@ -7755,6 +7795,7 @@ function renderComandasAbertasNoCaixa() {
           <span class="comanda-aberta-total">
             ${fmt(comanda.total || 0)}
           </span>
+          <small class="comanda-aberta-selecao">${comandaAtiva?.id === comanda.id ? "Selecionada" : "Selecionar"}</small>
         </button>
       `).join("")}
     </div>
@@ -7770,7 +7811,11 @@ function renderComandasAbertasNoCaixa() {
 
       if (!comanda) return;
 
-      await window.crvComandasCaixa.abrir(comanda.id);
+      if (comandaAtiva?.id === comanda.id) {
+        await limparComandaAtiva();
+      } else {
+        await selecionarComandaCaixa(comanda);
+      }
     };
   });
 
@@ -8337,8 +8382,12 @@ if (input) {
   });
 }
 
-async function selecionarComandaCaixa(comanda) {
+async function selecionarComandaCaixaInterno(comanda) {
   if (!comanda?.id) return;
+  if (!jogadorComandaPendenteCaixa && carrinho.length && !comandaAtiva) {
+    await alertaCaixa("Carrinho em andamento", "Finalize ou limpe o carrinho atual antes de selecionar uma comanda.");
+    return;
+  }
 
   if (!sistemaOnline()) {
     await alertaCaixa(
@@ -8442,7 +8491,9 @@ async function selecionarComandaCaixa(comanda) {
 
     comandaAtiva = comandaOperacional;
     comandaOculta = false;
-
+    modoPDV = "comanda";
+    carrinho = [];
+    renderCarrinho();
     await carregarItensComanda();
 
     fecharModalSelecionarComanda();
@@ -8577,7 +8628,7 @@ async function processarLeituraProduto(codigoLido) {
 // ======================================================
 // LEITOR COMANDA
 // ======================================================
-async function processarLeituraComanda(codigoLido) {
+async function processarLeituraComandaInterno(codigoLido) {
 
   if (!sistemaOnline()) {
     await alertaCaixa(
@@ -8755,7 +8806,8 @@ const { data: aberta, error: erroAbrir } =
 
     comandaAtiva = comanda;
     comandaOculta = false;
-
+    carrinho = [];
+    renderCarrinho();
     await carregarItensComanda();
 
     atualizarInterfaceModoPDV();
@@ -8779,7 +8831,7 @@ const { data: aberta, error: erroAbrir } =
 // ======================================================
 // ITENS DA COMANDA
 // ======================================================
-async function adicionarProdutoNaComanda(produto) {
+async function adicionarProdutoNaComandaInterno(produto) {
   if (!comandaAtiva?.id) {
     await alertaCaixa(
       "Comanda",
@@ -8991,7 +9043,7 @@ async function adicionarProdutoNaComanda(produto) {
   renderComandasAbertasNoCaixa();
 }
 
-async function adicionarItemManualNaComanda({
+async function adicionarItemManualNaComandaInterno({
   nome,
   preco,
   quantidade
@@ -9206,7 +9258,7 @@ async function carregarItensComanda(opcoes = {}) {
 // ======================================================
 // LIMPAR COMANDA ATIVA
 // ======================================================
-async function limparComandaAtiva() {
+async function limparComandaAtivaInterno() {
   if (!comandaAtiva?.id) {
     comandaAtiva = null;
     carrinho = [];
@@ -9221,34 +9273,7 @@ async function limparComandaAtiva() {
     console.warn("[CAIXA][SAIR COMANDA]", err);
   }
 
-  const quantidadeItens = carrinho.reduce((total, item) => {
-    return total + Number(item.quantidade || 0);
-  }, 0);
-
-  const possuiItens = carrinho.length > 0;
-  const codigoComanda = comandaAtiva.codigo || "—";
-
-  const textoPermanencia = quantidadeItens === 1
-    ? "O item permanecerá salvo"
-    : `Os ${quantidadeItens} itens permanecerão salvos`;
-
-  const confirmar = await abrirConfirmacaoCaixa({
-    titulo: "Ocultar comanda",
-    mensagem: possuiItens
-      ? `
-        Você vai ocultar a comanda <strong>${codigoComanda}</strong>.<br><br>
-        <strong>${textoPermanencia}</strong> e a comanda continuará aberta.
-      `
-      : `
-        Você vai ocultar a comanda <strong>${codigoComanda}</strong>.<br><br>
-        Ela está vazia e continuará aberta. Para liberá-la sem gerar venda,
-        use <strong>Fechar comanda</strong>.
-      `,
-    textoConfirmar: "Ocultar e manter aberta"
-  });
-
-  if (!confirmar) return;
-
+  // Os itens já foram persistidos; sair da seleção não exclui consumo.
   comandaAtiva = null;
   comandaOculta = false;
   carrinho = [];
@@ -9295,13 +9320,14 @@ document.addEventListener("click", event => {
 });
 
 async function fecharComanda() {
+  await aguardarOperacoesComandaCaixa();
   if (vendaEmProcessamento) return;
   if (!comandaAtiva?.id) return alertaCaixa("Comanda", "Selecione uma comanda aberta.");
   return window.crvComandasCaixa.abrir(comandaAtiva.id);
 }
 
 
-async function removerItemCarrinho(index) {
+async function removerItemCarrinhoInterno(index) {
 
   const item = carrinho[index];
 
@@ -9407,7 +9433,7 @@ async function removerItemCarrinho(index) {
 // ======================================================
 // ALTERAR QUANTIDADE DO CARRINHO / COMANDA
 // ======================================================
-async function alterarQuantidadeCarrinho(index, delta) {
+async function alterarQuantidadeCarrinhoInterno(index, delta) {
 
   const item = carrinho[index];
 
@@ -9433,7 +9459,7 @@ async function alterarQuantidadeCarrinho(index, delta) {
     Number(item.quantidade || 0) + Number(delta || 0);
 
   if (novaQuantidade <= 0) {
-    await removerItemCarrinho(index);
+    await removerItemCarrinhoInterno(index);
     return;
   }
 
@@ -9580,3 +9606,44 @@ setTimeout(() => {
 ["crv:operador-alterado", "crv:config-pronta"].forEach(evento => {
   document.addEventListener(evento, () => { if (caixaInicializado) renderHistorico(); });
 });
+
+// Mantém a ordem dos cliques e impede que um retorno atrasado misture comandas.
+function selecionarComandaCaixa(comanda) {
+  return executarOperacaoComandaCaixa(() => selecionarComandaCaixaInterno(comanda));
+}
+function processarLeituraComanda(codigo) {
+  return executarOperacaoComandaCaixa(() => processarLeituraComandaInterno(codigo));
+}
+function executarItemComandaCaixa(operacao) {
+  const id = comandaAtiva?.id;
+  return executarOperacaoComandaCaixa(async () => {
+    if (!id || modoPDV !== "comanda" || comandaAtiva?.id !== id) {
+      await alertaCaixa("Comanda alterada", "Confira a comanda selecionada e adicione o item novamente.");
+      return;
+    }
+    return operacao();
+  });
+}
+function adicionarProdutoNaComanda(produto) {
+  return executarItemComandaCaixa(() => adicionarProdutoNaComandaInterno(produto));
+}
+function adicionarItemManualNaComanda(item) {
+  return executarItemComandaCaixa(() => adicionarItemManualNaComandaInterno(item));
+}
+function executarLinhaCarrinhoCaixa(index, operacao) {
+  if (modoPDV !== "comanda") return operacao(index);
+  const itemId = carrinho[index]?.comanda_item_id;
+  return executarItemComandaCaixa(() => {
+    const atual = carrinho.findIndex(item => item.comanda_item_id === itemId);
+    if (itemId && atual >= 0) return operacao(atual);
+  });
+}
+function removerItemCarrinho(index) {
+  return executarLinhaCarrinhoCaixa(index, removerItemCarrinhoInterno);
+}
+function alterarQuantidadeCarrinho(index, delta) {
+  return executarLinhaCarrinhoCaixa(index, atual => alterarQuantidadeCarrinhoInterno(atual, delta));
+}
+function limparComandaAtiva() {
+  return executarOperacaoComandaCaixa(limparComandaAtivaInterno);
+}

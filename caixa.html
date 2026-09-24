@@ -288,7 +288,7 @@
   <div class="comanda-card-top">
     <div>
       <span class="comanda-label">
-        Comanda ativa
+        Lançando na comanda
       </span>
 
       <strong class="comanda-codigo" id="comandaCodigo">
@@ -317,7 +317,7 @@
       id="btnFecharComanda"
     >
       <i data-lucide="check-circle" width="15" height="15"></i>
-      <span>Detalhes / receber</span>
+      <span>Detalhes da comanda</span>
     </button>
 
     <button
@@ -325,8 +325,8 @@
       type="button"
       id="btnCancelarComanda"
     >
-      <i data-lucide="eye-off" width="15" height="15"></i>
-      <span>Ocultar comanda</span>
+      <i data-lucide="log-out" width="15" height="15"></i>
+      <span>Desselecionar</span>
     </button>
 
   </div>
@@ -516,6 +516,8 @@
                   Limpar
                 </button>
               </div>
+
+              <p id="cartDestinoComanda" class="cart-destino-comanda" aria-live="polite" hidden></p>
 
               <!-- Lista de itens -->
               <div class="cart-items" id="cartItems">
