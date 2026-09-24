@@ -23,105 +23,342 @@ let categoriasPersonalizadasProdutos = [];
 let produtoEstoqueOriginal = null;
 let produtoMovimentacaoSelecionado = null;
 let movimentacaoEstoqueEmProcessamento = false;
-let modoEdicaoMassaProdutos = false;
-const produtosSelecionadosMassa = new Set();
+let visualizacaoProdutos = "cards";
+try {
+  visualizacaoProdutos = localStorage.getItem("crv-produtos-visualizacao") === "lista" ? "lista" : "cards";
+} catch (_) {
+  // Mantém a visualização padrão quando o armazenamento não está disponível.
+}
 
-function contaPrincipalProdutos() {
-  return !sessionStorage.getItem("CRV_OPERADOR_ID");
+function setVisualizacaoProdutos(tipo) {
+  visualizacaoProdutos = tipo === "lista" ? "lista" : "cards";
+  try {
+    localStorage.setItem("crv-produtos-visualizacao", visualizacaoProdutos);
+  } catch (_) {
+    // O alternador continua funcional nesta sessão.
+  }
+  renderProdutos();
+}
+
+function podeEditarProdutosEmMassa() {
+  return typeof crvOperadorPodeModulo === "function"
+    && typeof crvOperadorPodeEspecial === "function"
+    && crvOperadorPodeModulo("produtos", "editar")
+    && crvOperadorPodeEspecial("editar_produtos_em_massa");
+}
+
+async function confirmarPermissaoAtualProdutos(acao, especiais = []) {
+  const operadorId = sessionStorage.getItem("CRV_OPERADOR_ID");
+  if (!sistemaOnline()) return false;
+  if (!operadorId) return true;
+
+  const empresaId = obterEmpresaId();
+  if (!empresaId) return false;
+
+  try {
+    const { data: operador, error: erroOperador } = await sb
+      .from("operadores_internos")
+      .select("id, perfil, ativo")
+      .eq("id", operadorId)
+      .eq("empresa_id", empresaId)
+      .maybeSingle();
+    if (erroOperador || !operador?.ativo) return false;
+    if (operador.perfil === "admin") return true;
+
+    const { data: modulo, error: erroModulo } = await sb
+      .from("operador_permissoes")
+      .select("pode_criar, pode_editar, pode_excluir")
+      .eq("empresa_id", empresaId)
+      .eq("operador_id", operadorId)
+      .eq("modulo_codigo", "produtos")
+      .maybeSingle();
+    if (erroModulo || modulo?.[`pode_${acao}`] !== true) return false;
+    if (!especiais.length) return true;
+
+    const { data: permissoes, error: erroEspeciais } = await sb
+      .from("operador_permissoes_especiais")
+      .select("permissao, permitido")
+      .eq("empresa_id", empresaId)
+      .eq("operador_id", operadorId)
+      .in("permissao", especiais);
+    if (erroEspeciais) return false;
+    return especiais.every(permissao => permissoes?.some(
+      item => item.permissao === permissao && item.permitido === true
+    ));
+  } catch (erro) {
+    console.warn("[PRODUTOS] Não foi possível conferir as permissões.", erro);
+    return false;
+  }
 }
 
 function atualizarControlesEdicaoMassaProdutos() {
   const botao = document.getElementById("btnEdicaoMassa");
-  const aplicar = document.getElementById("btnAplicarEdicaoMassa");
-  if (botao) {
-    botao.hidden = !contaPrincipalProdutos();
-    botao.querySelector("span").textContent = modoEdicaoMassaProdutos ? "Cancelar seleção" : "Editar preços em massa";
-  }
-  if (aplicar) {
-    aplicar.hidden = !modoEdicaoMassaProdutos;
-    aplicar.disabled = produtosSelecionadosMassa.size === 0;
-    aplicar.textContent = `Alterar selecionados (${produtosSelecionadosMassa.size})`;
-  }
+  if (botao) botao.hidden = !podeEditarProdutosEmMassa();
 }
 
-function alternarEdicaoMassaProdutos() {
-  if (!contaPrincipalProdutos()) return;
-  modoEdicaoMassaProdutos = !modoEdicaoMassaProdutos;
-  produtosSelecionadosMassa.clear();
-  renderProdutos();
+function tipoEstoqueEdicaoMassa(tipo) {
+  return ["entrada", "saida", "ajuste"].includes(tipo);
 }
 
-function selecionarProdutoMassa(id, marcado) {
-  if (!contaPrincipalProdutos()) return;
-  if (marcado) produtosSelecionadosMassa.add(id);
-  else produtosSelecionadosMassa.delete(id);
-  atualizarControlesEdicaoMassaProdutos();
+function resultadoEdicaoMassa(item, tipo, valor) {
+  const atual = Number(tipo === "preco" ? item.preco : tipo === "preco_custo" ? item.preco_custo : item.estoque || 0);
+  const proximo = tipo === "entrada" ? atual + valor : tipo === "saida" ? atual - valor : valor;
+  return { atual, proximo };
+}
+
+function confirmarEdicaoMassaProdutos(resumo) {
+  return new Promise(resolve => {
+    const modal = document.createElement("dialog");
+    modal.className = "modal-confirmacao-massa-produtos";
+    modal.innerHTML = `
+      <h3>Confirmar edição em massa</h3>
+      <p></p>
+      <div class="edicao-massa-acoes">
+        <button type="button" class="btn-ghost" data-cancelar>Voltar</button>
+        <button type="button" class="btn-secondary" data-confirmar>Confirmar edição</button>
+      </div>`;
+    modal.querySelector("p").textContent = resumo;
+    document.body.appendChild(modal);
+    let resposta = false;
+    modal.querySelector("[data-cancelar]").onclick = () => modal.close();
+    modal.querySelector("[data-confirmar]").onclick = () => {
+      resposta = true;
+      modal.close();
+    };
+    modal.addEventListener("close", () => {
+      modal.remove();
+      resolve(resposta);
+    }, { once: true });
+    modal.showModal();
+  });
 }
 
 async function abrirEdicaoMassaProdutos() {
-  if (!contaPrincipalProdutos() || !modoEdicaoMassaProdutos) return;
-  const selecionados = produtos.filter(item => produtosSelecionadosMassa.has(String(item.id)));
-  if (!selecionados.length) return;
+  if (!podeEditarProdutosEmMassa()) return;
+  if (!sistemaOnline()) {
+    await abrirAlertaProduto({ titulo: "Conexão necessária", mensagem: "A edição em massa exige conexão com o Supabase." });
+    return;
+  }
+  await carregarProdutos();
+  const selecionados = new Set();
+  let filtroModal = "todos";
+  const categoriasModal = [...new Set(produtos.map(item => String(item.categoria || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
   const dialogo = document.createElement("dialog");
   dialogo.className = "modal-edicao-massa-produtos";
+  dialogo.setAttribute("aria-labelledby", "edicaoMassaTitulo");
   dialogo.innerHTML = `
-    <form method="dialog">
-      <h3>Alterar preço de venda</h3>
-      <p>${selecionados.length} item(ns) selecionado(s). O custo e o estoque não serão alterados.</p>
-      <label for="precoMassaProdutos">Novo preço de venda</label>
-      <input id="precoMassaProdutos" class="input" inputmode="decimal" placeholder="Ex.: 7,00" required />
-      <div class="edicao-massa-acoes">
-        <button type="button" class="btn-ghost" data-cancelar>Cancelar</button>
-        <button type="submit" class="btn-primary">Conferir alteração</button>
+    <form id="edicaoMassaForm">
+      <header class="edicao-massa-cabecalho">
+        <div>
+          <h3 id="edicaoMassaTitulo">Edição em massa</h3>
+          <p>Escolha os itens e uma alteração para aplicar a todos.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-cancelar aria-label="Fechar">✕</button>
+      </header>
+      <div class="edicao-massa-corpo">
+        <section class="edicao-massa-secao" aria-label="Selecionar itens">
+          <h4>1. Itens</h4>
+          <input id="edicaoMassaBusca" class="input" type="search" placeholder="Buscar por nome ou código" autocomplete="off" />
+          <div class="edicao-massa-filtros" role="group" aria-label="Filtrar itens">
+            <button type="button" class="active" data-filtro-massa="todos">Todos</button>
+            <button type="button" data-filtro-massa="ativos">Ativos</button>
+            <button type="button" data-filtro-massa="rapidos">Rápidos</button>
+            <button type="button" data-filtro-massa="baixo">Baixo estoque</button>
+            <button type="button" data-filtro-massa="zerado">Sem estoque</button>
+          </div>
+          <select id="edicaoMassaCategoria" class="input" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option>${categoriasModal.map(categoria => `<option value="${escaparHTMLProduto(categoria)}">${escaparHTMLProduto(categoriaLabel[categoria] || categoria)}</option>`).join("")}</select>
+          <div class="edicao-massa-lista" id="edicaoMassaLista"></div>
+          <div class="edicao-massa-selecao"><button type="button" class="btn-ghost" id="edicaoMassaSelecionarVisiveis">Selecionar visíveis</button><button type="button" class="btn-ghost" id="edicaoMassaLimpar">Limpar</button></div>
+        </section>
+        <section class="edicao-massa-secao" aria-label="Definir alteração">
+          <h4>2. Alteração</h4>
+          <label for="edicaoMassaTipo">O que alterar <span class="edicao-massa-obrigatorio">*</span></label>
+          <select id="edicaoMassaTipo" class="input" required>
+            <option value="preco">Preço de venda</option>
+            <option value="preco_custo">Preço de custo</option>
+            <option value="entrada">Entrada no estoque</option>
+            <option value="saida">Saída do estoque</option>
+            <option value="ajuste">Definir estoque final</option>
+          </select>
+          <label for="edicaoMassaValor" id="edicaoMassaValorLabel">Novo preço de venda <span class="edicao-massa-obrigatorio">*</span></label>
+          <input id="edicaoMassaValor" class="input" inputmode="decimal" placeholder="Ex.: 7,00" required />
+          <label for="edicaoMassaMotivo">Motivo <span class="edicao-massa-obrigatorio">*</span></label>
+          <textarea id="edicaoMassaMotivo" class="input" rows="3" minlength="3" maxlength="240" placeholder="Ex.: reajuste do fornecedor" required></textarea>
+          <p class="edicao-massa-ajuda" id="edicaoMassaAjuda">O mesmo valor será aplicado aos itens selecionados.</p>
+        </section>
       </div>
+      <footer class="edicao-massa-rodape">
+        <div id="edicaoMassaResumo" aria-live="polite">Nenhum item selecionado.</div>
+        <div class="edicao-massa-acoes"><button type="button" class="btn-ghost" data-cancelar>Cancelar</button><button type="submit" class="btn-primary">Revisar alteração</button></div>
+      </footer>
     </form>`;
   document.body.appendChild(dialogo);
+  let processando = false;
   dialogo.addEventListener("close", () => dialogo.remove(), { once: true });
-  dialogo.querySelector("[data-cancelar]").onclick = () => dialogo.close();
-  dialogo.querySelector("form").onsubmit = async event => {
+  dialogo.addEventListener("cancel", event => {
+    if (processando) event.preventDefault();
+  });
+  const campo = seletor => dialogo.querySelector(seletor);
+  const tipoAtual = () => campo("#edicaoMassaTipo").value;
+  const elegiveis = () => produtos.filter(item => !tipoEstoqueEdicaoMassa(tipoAtual()) || itemControlaEstoque(item));
+  const filtrados = () => {
+    const busca = campo("#edicaoMassaBusca").value.toLocaleLowerCase("pt-BR").trim();
+    const categoria = campo("#edicaoMassaCategoria").value;
+    return elegiveis().filter(item => {
+      if (categoria && String(item.categoria || "") !== categoria) return false;
+      if (!`${item.nome} ${item.codigo || ""}`.toLocaleLowerCase("pt-BR").includes(busca)) return false;
+      if (filtroModal === "ativos") return item.ativo === true;
+      if (filtroModal === "rapidos") return item.produto_rapido === true;
+      if (filtroModal === "baixo") return itemControlaEstoque(item) && Number(item.estoque || 0) > 0 && Number(item.estoque || 0) <= estoqueMinimoProduto(item);
+      if (filtroModal === "zerado") return itemControlaEstoque(item) && Number(item.estoque || 0) === 0;
+      return true;
+    });
+  };
+  function renderizarLista() {
+    campo("#edicaoMassaLista").innerHTML = filtrados().map(item => `
+      <label class="edicao-massa-item">
+        <input type="checkbox" value="${escaparHTMLProduto(item.id)}" ${selecionados.has(String(item.id)) ? "checked" : ""} />
+        <span><strong>${escaparHTMLProduto(item.nome)}</strong><small>${escaparHTMLProduto(item.codigo || "Sem código")} · Venda ${fmt(item.preco)} · Custo ${fmt(item.preco_custo)}${itemControlaEstoque(item) ? ` · Estoque ${Number(item.estoque || 0)}` : ""}</small></span>
+      </label>`).join("") || '<p class="edicao-massa-vazio">Nenhum item encontrado.</p>';
+    campo("#edicaoMassaResumo").textContent = `${selecionados.size} item(ns) selecionado(s).`;
+  }
+  campo("#edicaoMassaLista").addEventListener("change", event => {
+    const input = event.target.closest('input[type="checkbox"]');
+    if (!input) return;
+    if (input.checked) selecionados.add(input.value);
+    else selecionados.delete(input.value);
+    campo("#edicaoMassaResumo").textContent = `${selecionados.size} item(ns) selecionado(s).`;
+  });
+  campo("#edicaoMassaBusca").oninput = renderizarLista;
+  campo("#edicaoMassaCategoria").onchange = renderizarLista;
+  dialogo.querySelectorAll("[data-filtro-massa]").forEach(botao => botao.onclick = () => {
+    filtroModal = botao.dataset.filtroMassa;
+    dialogo.querySelectorAll("[data-filtro-massa]").forEach(item => item.classList.toggle("active", item === botao));
+    renderizarLista();
+  });
+  campo("#edicaoMassaSelecionarVisiveis").onclick = () => {
+    filtrados().forEach(item => selecionados.add(String(item.id)));
+    renderizarLista();
+  };
+  campo("#edicaoMassaLimpar").onclick = () => {
+    selecionados.clear();
+    renderizarLista();
+  };
+  campo("#edicaoMassaTipo").onchange = () => {
+    const tipo = tipoAtual();
+    if (tipoEstoqueEdicaoMassa(tipo)) {
+      produtos.filter(item => !itemControlaEstoque(item)).forEach(item => selecionados.delete(String(item.id)));
+    }
+    campo("#edicaoMassaValor").value = "";
+    campo("#edicaoMassaValor").placeholder = tipoEstoqueEdicaoMassa(tipo) ? "Quantidade inteira" : "Ex.: 7,00";
+    campo("#edicaoMassaValor").inputMode = tipoEstoqueEdicaoMassa(tipo) ? "numeric" : "decimal";
+    campo("#edicaoMassaValorLabel").firstChild.textContent = ({ preco: "Novo preço de venda ", preco_custo: "Novo preço de custo ", entrada: "Quantidade a acrescentar ", saida: "Quantidade a retirar ", ajuste: "Estoque final de cada item " })[tipo];
+    campo("#edicaoMassaAjuda").textContent = tipoEstoqueEdicaoMassa(tipo) ? "Somente itens com controle de estoque. Cada movimentação será registrada com este motivo." : "O preço atual de cada item será conferido antes de salvar. O motivo será registrado no histórico.";
+    renderizarLista();
+  };
+  if (!crvOperadorPodeEspecial("movimentar_estoque")) {
+    campo("#edicaoMassaTipo").querySelectorAll('option[value="entrada"], option[value="saida"], option[value="ajuste"]')
+      .forEach(option => option.remove());
+  }
+  dialogo.querySelectorAll("[data-cancelar]").forEach(botao => botao.onclick = () => {
+    if (!processando) dialogo.close();
+  });
+  campo("#edicaoMassaForm").onsubmit = async event => {
     event.preventDefault();
-    const novoPreco = normalizarPreco(dialogo.querySelector("#precoMassaProdutos").value);
-    if (!Number.isFinite(novoPreco) || novoPreco <= 0) {
-      dialogo.querySelector("#precoMassaProdutos").setCustomValidity("Informe um preço maior que zero.");
-      dialogo.querySelector("#precoMassaProdutos").reportValidity();
+    if (processando) return;
+    const tipo = tipoAtual();
+    if (!podeEditarProdutosEmMassa() || (tipoEstoqueEdicaoMassa(tipo) && !crvOperadorPodeEspecial("movimentar_estoque"))) {
+      campo("#edicaoMassaResumo").textContent = "Este operador não tem permissão para esta alteração.";
       return;
     }
-    dialogo.close();
-    const confirmado = await abrirAlertaProduto({
-      titulo: "Confirmar alteração de preços",
-      mensagem: `Aplicar ${fmt(novoPreco)} em ${selecionados.length} item(ns)? Confira os selecionados antes de confirmar.`,
-      mostrarCancelar: true,
-      textoConfirmar: "Alterar preços"
+    const textoValor = campo("#edicaoMassaValor").value.trim();
+    const valor = tipoEstoqueEdicaoMassa(tipo) ? Number(textoValor) : normalizarPreco(textoValor);
+    const motivo = campo("#edicaoMassaMotivo").value.trim();
+    const itens = produtos.filter(item => selecionados.has(String(item.id)) && (!tipoEstoqueEdicaoMassa(tipo) || itemControlaEstoque(item)));
+    if (!itens.length) {
+      campo("#edicaoMassaResumo").textContent = "Selecione pelo menos um item.";
+      return;
+    }
+    if (!textoValor || !Number.isFinite(valor) || (tipoEstoqueEdicaoMassa(tipo) && (!Number.isSafeInteger(valor) || valor < 0 || (tipo !== "ajuste" && valor === 0))) || (tipo === "preco" && valor <= 0) || (tipo === "preco_custo" && valor < 0) || (tipo === "saida" && itens.some(item => Number(item.estoque || 0) < valor))) {
+      campo("#edicaoMassaResumo").textContent = "Confira o valor e o estoque disponível dos itens selecionados.";
+      campo("#edicaoMassaValor").focus();
+      return;
+    }
+    if (motivo.length < 3) {
+      campo("#edicaoMassaMotivo").focus();
+      return;
+    }
+    const rotulo = campo("#edicaoMassaTipo").selectedOptions[0].textContent;
+    const antesDepois = itens.slice(0, 4).map(item => {
+      const { atual, proximo } = resultadoEdicaoMassa(item, tipo, valor);
+      return `${item.nome}: ${tipoEstoqueEdicaoMassa(tipo) ? `${atual} → ${proximo}` : `${fmt(atual)} → ${fmt(proximo)}`}`;
     });
-    if (!confirmado || !contaPrincipalProdutos() || !sistemaOnline()) return;
+    const confirmado = await confirmarEdicaoMassaProdutos(
+      `${rotulo} em ${itens.length} item(ns). ${antesDepois.join(" · ")}${itens.length > 4 ? ` · e mais ${itens.length - 4}` : ""}. Motivo: ${motivo}`
+    );
+    if (!confirmado) return;
+    const especiais = ["editar_produtos_em_massa"];
+    if (tipoEstoqueEdicaoMassa(tipo)) especiais.push("movimentar_estoque");
+    if (!podeEditarProdutosEmMassa()
+        || (tipoEstoqueEdicaoMassa(tipo) && !crvOperadorPodeEspecial("movimentar_estoque"))
+        || !await confirmarPermissaoAtualProdutos("editar", especiais)) {
+      campo("#edicaoMassaResumo").textContent = "Confira as permissões e a conexão antes de tentar novamente.";
+      return;
+    }
+    const botaoConfirmar = campo('#edicaoMassaForm button[type="submit"]');
+    processando = true;
+    botaoConfirmar.disabled = true;
+    botaoConfirmar.textContent = "Registrando...";
     const falhas = [];
     let alterados = 0;
-    for (const item of selecionados) {
+    if (!tipoEstoqueEdicaoMassa(tipo)) {
+      let data;
+      let error;
       try {
-        if (!sistemaOnline()) throw new Error("Conexão indisponível");
-        const { data, error } = await sb.from("produtos")
-          .update({ preco: novoPreco, updated_at: new Date().toISOString() })
-          .eq("empresa_id", obterEmpresaId())
-          .eq("id", item.id)
-          .eq("preco", item.preco)
-          .select("id");
-        if (error || data?.length !== 1) throw error || new Error("Preço alterado por outra sessão");
-        alterados++;
-      } catch (_) {
-        falhas.push(item.nome);
+        ({ data, error } = await sb.rpc("crv_editar_precos_em_massa", {
+        p_itens: itens.map(item => ({ id: item.id, anterior: Number(item[tipo] || 0) })),
+        p_campo: tipo,
+        p_valor: valor,
+        p_motivo: motivo
+        }));
+      } catch (falhaRede) {
+        error = falhaRede;
+      }
+      if (error) {
+        processando = false;
+        botaoConfirmar.disabled = false;
+        botaoConfirmar.textContent = "Revisar alteração";
+        campo("#edicaoMassaResumo").textContent = `Preços não alterados: ${error.message || "Confira se a migração SQL foi aplicada."}`;
+        return;
+      }
+      alterados = Number(data?.alterados || itens.length);
+    } else {
+      for (const item of itens) {
+        try {
+          if (!sistemaOnline() || !podeEditarProdutosEmMassa() || !crvOperadorPodeEspecial("movimentar_estoque")) throw new Error("Sessão indisponível");
+          const parametros = { p_produto_id: item.id, p_motivo: motivo, p_operador_id: obterOperadorAtualIdProdutos() };
+          const resposta = tipo === "ajuste"
+            ? await sb.rpc("ajustar_estoque_produto", { ...parametros, p_novo_estoque: valor })
+            : await sb.rpc("movimentar_estoque_produto", { ...parametros, p_tipo: tipo, p_quantidade: valor, p_referencia_tipo: "manual", p_referencia_id: null, p_venda_id: null, p_caixa_id: null });
+          if (resposta.error) throw resposta.error;
+          alterados++;
+        } catch (_) {
+          falhas.push(item.nome);
+        }
       }
     }
     await carregarProdutos();
-    produtosSelecionadosMassa.clear();
-    modoEdicaoMassaProdutos = false;
     renderProdutos();
+    dialogo.close();
     await abrirAlertaProduto({
-      titulo: falhas.length ? "Alteração parcial" : "Preços atualizados",
-      mensagem: `${alterados} item(ns) atualizado(s).${falhas.length ? ` Não atualizados: ${falhas.join(", ")}. Confira alterações concorrentes ou permissões.` : ""}`
+      titulo: falhas.length ? "Alteração parcial" : "Edição concluída",
+      mensagem: `${alterados} item(ns) atualizado(s).${falhas.length ? ` Não atualizados: ${escaparHTMLProduto(falhas.join(", "))}. Confira conexão, saldo de estoque ou permissões.` : ""}`
     });
   };
+  renderizarLista();
   dialogo.showModal();
-  dialogo.querySelector("#precoMassaProdutos").focus();
+  campo("#edicaoMassaBusca").focus();
 }
 const LIMITE_DIGITOS_MOEDA = 9;
 const LIMITE_DIGITOS_ESTOQUE = 6;
@@ -1340,7 +1577,24 @@ function renderProdutos() {
   const subtitle = document.getElementById("subtitleProdutos");
 
   if (!grid) return;
+  grid.classList.toggle("modo-lista", visualizacaoProdutos === "lista");
+  ["cards", "lista"].forEach(tipo => {
+    const botao = document.getElementById(tipo === "lista" ? "btnProdutosLista" : "btnProdutosCards");
+    botao?.classList.toggle("active", visualizacaoProdutos === tipo);
+    botao?.setAttribute("aria-pressed", String(visualizacaoProdutos === tipo));
+  });
   atualizarControlesEdicaoMassaProdutos();
+  const podeCriar = typeof crvOperadorPodeModulo === "function"
+    && crvOperadorPodeModulo("produtos", "criar");
+  const podeEditar = typeof crvOperadorPodeModulo === "function"
+    && crvOperadorPodeModulo("produtos", "editar");
+  const podeExcluir = typeof crvOperadorPodeModulo === "function"
+    && crvOperadorPodeModulo("produtos", "excluir");
+  const botaoNovo = document.getElementById("btnNovoItemCatalogo");
+  if (botaoNovo) {
+    botaoNovo.hidden = !podeCriar;
+    botaoNovo.style.display = podeCriar ? "" : "none";
+  }
 
   const lista = getProdutosFiltrados();
 
@@ -1373,10 +1627,10 @@ function renderProdutos() {
         <i data-lucide="${configuracao.icone}" width="40" height="40" style="opacity:0.3;"></i>
         <p>Nenhum ${configuracao.singular} encontrado</p>
         <small>Cadastre apenas o que o estabelecimento realmente vende.</small>
-        <button class="btn-ghost" onclick="abrirModalNovo()">
+        ${podeCriar ? `<button class="btn-ghost" onclick="abrirModalNovo()">
           <i data-lucide="plus" width="14" height="14"></i>
           Adicionar ${configuracao.singular}
-        </button>
+        </button>` : ""}
       </div>
     `;
 
@@ -1413,7 +1667,6 @@ function renderProdutos() {
 
     return `
       <div class="produto-card tipo-${tipoItem} ${produto.ativo ? "" : "inativo"}">
-        ${modoEdicaoMassaProdutos ? `<label class="produto-selecao-massa"><input type="checkbox" ${produtosSelecionadosMassa.has(String(produto.id)) ? "checked" : ""} onchange="selecionarProdutoMassa('${produto.id}', this.checked)" /> Selecionar</label>` : ""}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div class="produto-badges">
             <span class="produto-tipo-badge tipo-${tipoItem}">
@@ -1472,7 +1725,7 @@ function renderProdutos() {
 
 <div class="produto-actions">
 
-  ${controlaEstoque && featureProdutosAtiva("estoque_operacional") && operadorPodeMovimentarEstoqueProduto() ? `
+  ${controlaEstoque && featureProdutosAtiva("estoque_operacional") && podeEditar && operadorPodeMovimentarEstoqueProduto() ? `
   <button
     class="produto-btn estoque"
     onclick="abrirModalMovimentacaoEstoque('${produto.id}')"
@@ -1482,29 +1735,29 @@ function renderProdutos() {
   </button>
   ` : ""}
 
-  <button
+  ${podeEditar ? `<button
     class="produto-btn"
     onclick="abrirModalEditar('${produto.id}')"
     title="Editar"
   >
     <i data-lucide="pencil" width="13" height="13"></i>
-  </button>
+  </button>` : ""}
 
-  <button
+  ${podeCriar ? `<button
     class="produto-btn"
     onclick="duplicarProduto('${produto.id}')"
     title="Duplicar"
   >
     <i data-lucide="copy" width="13" height="13"></i>
-  </button>
+  </button>` : ""}
 
-  <button
+  ${podeExcluir ? `<button
     class="produto-btn danger"
     onclick="confirmarExcluir('${produto.id}')"
     title="Excluir"
   >
     <i data-lucide="trash-2" width="13" height="13"></i>
-  </button>
+  </button>` : ""}
 
 </div>
         </div>
@@ -1521,6 +1774,8 @@ function renderProdutos() {
 // MODAL NOVO
 // ======================================================
 function abrirModalNovo() {
+  if (typeof crvOperadorPodeModulo !== "function"
+      || !crvOperadorPodeModulo("produtos", "criar")) return;
   const titulo = document.getElementById("modalProdutoTitulo");
   const tipoInicial = tipoAbaAtivo === "taxa_outro"
     ? "taxa"
@@ -1578,6 +1833,8 @@ function abrirModalNovo() {
 // MODAL EDITAR
 // ======================================================
 async function abrirModalEditar(id) {
+  if (typeof crvOperadorPodeModulo !== "function"
+      || !crvOperadorPodeModulo("produtos", "editar")) return;
   const produto = produtos.find(item => item.id === id);
 
   if (!produto) {
@@ -1632,6 +1889,8 @@ async function abrirModalEditar(id) {
 }
 
 async function duplicarProduto(id) {
+  if (typeof crvOperadorPodeModulo !== "function"
+      || !crvOperadorPodeModulo("produtos", "criar")) return;
   const produto = produtos.find(item => item.id === id);
 
   if (!produto) {
@@ -1943,6 +2202,16 @@ async function validarProdutoDuplicadoBanco({ id, nome, codigo }) {
 // ======================================================
 async function salvarProduto() {
   const id = String(document.getElementById("produtoId")?.value || "").trim();
+  const acao = id ? "editar" : "criar";
+  if (typeof crvOperadorPodeModulo !== "function"
+      || !crvOperadorPodeModulo("produtos", acao)
+      || !await confirmarPermissaoAtualProdutos(acao)) {
+    await abrirAlertaProduto({
+      titulo: "Acesso não permitido",
+      mensagem: "Este operador não possui permissão para salvar este item."
+    });
+    return;
+  }
   const nome = formatarNomeProduto(
     document.getElementById("produtoNome")?.value
   );
@@ -1975,6 +2244,14 @@ async function salvarProduto() {
     id && controlaEstoque && produtoEstoqueOriginal !== null &&
     estoque !== Number(produtoEstoqueOriginal)
   );
+  if (estoqueFoiAlterado && (!operadorPodeMovimentarEstoqueProduto()
+      || !await confirmarPermissaoAtualProdutos("editar", ["movimentar_estoque"]))) {
+    await abrirAlertaProduto({
+      titulo: "Acesso não permitido",
+      mensagem: "Este operador não possui permissão para ajustar o estoque."
+    });
+    return;
+  }
   const ativo = document.getElementById("produtoAtivo")?.checked === true;
   const produtoRapido = ativo && document.getElementById("produtoRapido")?.checked === true;
 
@@ -2129,7 +2406,7 @@ async function salvarProduto() {
 // MOVIMENTAÇÃO E HISTÓRICO DE ESTOQUE
 // ======================================================
 function operadorPodeMovimentarEstoqueProduto() {
-  return typeof window.crvOperadorPodeEspecial !== "function" ||
+  return typeof window.crvOperadorPodeEspecial === "function" &&
     window.crvOperadorPodeEspecial("movimentar_estoque") === true;
 }
 
@@ -2232,6 +2509,26 @@ function formatarDataHoraEstoqueProduto(valor) {
   });
 }
 
+function renderizarLinhaHistoricoEstoqueProduto(item) {
+  const variacao = Number(item.variacao || 0);
+  const anterior = Number(item.estoque_anterior || 0);
+  const posterior = Number(item.estoque_posterior || 0);
+  const entrada = variacao > 0;
+  const sinal = variacao > 0 ? "+" : variacao < 0 ? "−" : "";
+  return `
+    <div class="mov-estoque-item ${entrada ? "entrada" : "saida"}">
+      <div class="mov-estoque-item-main">
+        <strong>${escaparHTMLProduto(labelTipoMovimentacaoEstoque(item.tipo))}</strong>
+        <span>${escaparHTMLProduto(item.motivo || "Sem motivo registrado")}</span>
+        <small>${escaparHTMLProduto(formatarDataHoraEstoqueProduto(item.criado_em))}</small>
+      </div>
+      <div class="mov-estoque-item-valores">
+        <strong>${sinal}${Math.abs(variacao)} ${Math.abs(variacao) === 1 ? "unidade" : "unidades"}</strong>
+        <span>Estoque: ${anterior} → ${posterior}</span>
+      </div>
+    </div>`;
+}
+
 async function carregarHistoricoEstoqueProduto() {
   const lista = document.getElementById("movEstoqueHistoricoLista");
   const produtoId = produtoMovimentacaoSelecionado?.id;
@@ -2262,24 +2559,7 @@ async function carregarHistoricoEstoqueProduto() {
       return;
     }
 
-    lista.innerHTML = movimentacoes.map(item => {
-      const entrada = Number(item.variacao || 0) > 0;
-      const sinal = entrada ? "+" : "−";
-
-      return `
-        <div class="mov-estoque-item ${entrada ? "entrada" : "saida"}">
-          <div class="mov-estoque-item-main">
-            <strong>${escaparHTMLProduto(labelTipoMovimentacaoEstoque(item.tipo))}</strong>
-            <span>${escaparHTMLProduto(item.motivo)}</span>
-            <small>${formatarDataHoraEstoqueProduto(item.criado_em)}</small>
-          </div>
-          <div class="mov-estoque-item-valores">
-            <strong>${sinal}${Math.abs(Number(item.variacao || 0))}</strong>
-            <span>${Number(item.estoque_anterior || 0)} → ${Number(item.estoque_posterior || 0)}</span>
-          </div>
-        </div>
-      `;
-    }).join("");
+    lista.innerHTML = movimentacoes.map(renderizarLinhaHistoricoEstoqueProduto).join("");
   } catch (err) {
     lista.innerHTML = `
       <div class="mov-estoque-vazio erro">
@@ -2289,8 +2569,69 @@ async function carregarHistoricoEstoqueProduto() {
   }
 }
 
+async function abrirHistoricoCompletoEstoqueProduto() {
+  const produto = produtoMovimentacaoSelecionado;
+  if (!produto || !sistemaOnline()) return;
+  const dialogo = document.createElement("dialog");
+  dialogo.className = "modal-historico-estoque-completo";
+  dialogo.setAttribute("aria-labelledby", "historicoEstoqueCompletoTitulo");
+  dialogo.innerHTML = `
+    <header>
+      <div><h3 id="historicoEstoqueCompletoTitulo">Todas as movimentações</h3><p>${escaparHTMLProduto(produto.nome)}</p></div>
+      <button type="button" class="btn-ghost" data-fechar aria-label="Fechar histórico">✕</button>
+    </header>
+    <div class="historico-estoque-completo-lista" id="historicoEstoqueCompletoLista"></div>
+    <footer>
+      <button type="button" class="btn-ghost" id="historicoEstoqueMais" hidden>Carregar mais</button>
+      <button type="button" class="btn-ghost" data-fechar>Fechar</button>
+    </footer>`;
+  document.body.appendChild(dialogo);
+  dialogo.addEventListener("close", () => dialogo.remove(), { once: true });
+  dialogo.querySelectorAll("[data-fechar]").forEach(botao => botao.onclick = () => dialogo.close());
+  const lista = dialogo.querySelector("#historicoEstoqueCompletoLista");
+  const mais = dialogo.querySelector("#historicoEstoqueMais");
+  let pagina = 0;
+  async function carregarPagina() {
+    mais.disabled = true;
+    if (pagina === 0) lista.innerHTML = '<p class="edicao-massa-vazio">Carregando histórico...</p>';
+    try {
+      const inicio = pagina * 100;
+      const { data, error } = await sb.from("estoque_movimentacoes")
+        .select("id, tipo, quantidade, variacao, estoque_anterior, estoque_posterior, motivo, criado_em")
+        .eq("empresa_id", obterEmpresaId())
+        .eq("produto_id", produto.id)
+        .order("criado_em", { ascending: false })
+        .order("id", { ascending: false })
+        .range(inicio, inicio + 99);
+      if (error) throw error;
+      const linhas = Array.isArray(data) ? data : [];
+      if (pagina === 0) lista.innerHTML = "";
+      lista.insertAdjacentHTML("beforeend", linhas.map(renderizarLinhaHistoricoEstoqueProduto).join(""));
+      if (!linhas.length && pagina === 0) lista.textContent = "Nenhuma movimentação registrada.";
+      pagina++;
+      mais.hidden = linhas.length < 100;
+    } catch (erro) {
+      if (pagina === 0) lista.textContent = `Não foi possível carregar o histórico: ${erro.message}`;
+      mais.hidden = true;
+    } finally {
+      mais.disabled = false;
+    }
+  }
+  mais.onclick = carregarPagina;
+  dialogo.showModal();
+  await carregarPagina();
+}
+
 async function salvarMovimentacaoEstoqueProduto() {
   if (movimentacaoEstoqueEmProcessamento || !produtoMovimentacaoSelecionado) return;
+  if (!operadorPodeMovimentarEstoqueProduto()
+      || !await confirmarPermissaoAtualProdutos("editar", ["movimentar_estoque"])) {
+    await abrirAlertaProduto({
+      titulo: "Acesso não permitido",
+      mensagem: "Este operador não possui permissão para movimentar estoque."
+    });
+    return;
+  }
 
   const tipo = String(document.getElementById("movEstoqueTipo")?.value || "entrada");
   const quantidade = normalizarEstoque(
@@ -2422,6 +2763,15 @@ async function confirmarExcluir(id) {
 }
 
 async function excluirProduto(id) {
+  if (typeof crvOperadorPodeModulo !== "function"
+      || !crvOperadorPodeModulo("produtos", "excluir")
+      || !await confirmarPermissaoAtualProdutos("excluir")) {
+    await abrirAlertaProduto({
+      titulo: "Acesso não permitido",
+      mensagem: "Este operador não possui permissão para excluir este item."
+    });
+    return;
+  }
   if (!sistemaOnline()) {
     await abrirAlertaProduto({
       titulo: "Sistema offline",

@@ -915,6 +915,14 @@ function cancelarEdicaoConfiguracao() {
 
 async function salvarConfiguracoes() {
   try {
+    if (typeof window.crvOperadorPodeModulo !== "function" ||
+        typeof window.crvOperadorPodeEspecial !== "function" ||
+        !window.crvOperadorPodeModulo("configuracoes", "editar") ||
+        !window.crvOperadorPodeEspecial("configurar_empresa")) {
+      cfgFeedback("Este operador não pode configurar a empresa.", "erro");
+      return;
+    }
+
     cfgFeedback("Salvando configurações...");
 
     const empresaId = window.APP_EMPRESA_ID;

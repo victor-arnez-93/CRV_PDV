@@ -271,6 +271,8 @@ document.addEventListener("crv:operador-alterado", reaplicarAcessoOperadorCaixa)
 
 document.addEventListener("crv:operador-alterado", aplicarVisibilidadeMovimentacoesCaixa);
 
+document.addEventListener("crv:operador-alterado", atualizarPermissaoDescontoCaixa);
+
 function aplicarEstadoRapidosBalcaoCaixa() {
   const body = document.body;
   const botao = document.getElementById("btnToggleRapidosBalcao");
@@ -953,8 +955,23 @@ logCaixa("Tela pronta para operação.", "success");
 });
 
 function operadorPodeEspecialCaixa(permissao) {
-  return typeof window.crvOperadorPodeEspecial !== "function" ||
+  return typeof window.crvOperadorPodeEspecial === "function" &&
     window.crvOperadorPodeEspecial(permissao) === true;
+}
+
+function atualizarPermissaoDescontoCaixa() {
+  const input = document.getElementById("inputDesconto");
+  if (!input) return;
+
+  const permitido = operadorPodeEspecialCaixa("desconto");
+  input.readOnly = !permitido;
+  input.setAttribute("aria-readonly", String(!permitido));
+  input.title = permitido ? "" : "Operador sem permissão para aplicar desconto";
+
+  if (!permitido && calcularDesconto() > 0) {
+    input.value = "";
+    atualizarTotais();
+  }
 }
 
 function aplicarVisibilidadeMovimentacoesCaixa() {
@@ -1744,6 +1761,11 @@ function renderUltimoFechamentoCaixa() {
 // ABRIR CAIXA
 // ======================================================
 async function abrirCaixa() {
+  if (!operadorPodeEspecialCaixa("abrir_caixa")) {
+    await alertaCaixa("Sem permissão", "Este operador não pode abrir o caixa.");
+    return;
+  }
+
   if (operacaoCaixaEmProcessamento) return;
 
   if (caixa && caixa.status === "aberto") {
@@ -1940,6 +1962,11 @@ async function abrirCaixa() {
 // FECHAR CAIXA
 // ======================================================
 async function confirmarFechamento() {
+  if (!operadorPodeEspecialCaixa("fechar_caixa")) {
+    await alertaCaixa("Sem permissão", "Este operador não pode fechar o caixa.");
+    return;
+  }
+
   if (!caixa || caixa.status !== "aberto") {
     await alertaCaixa(
       "Caixa fechado",
@@ -2026,6 +2053,11 @@ function calcularDiferenca() {
 }
 
 async function fecharCaixa() {
+  if (!operadorPodeEspecialCaixa("fechar_caixa")) {
+    await alertaCaixa("Sem permissão", "Este operador não pode fechar o caixa.");
+    return;
+  }
+
   if (operacaoCaixaEmProcessamento) return;
 
   if (!caixa?.id || caixa.status !== "aberto") {
@@ -3953,6 +3985,11 @@ if (!sistemaOnline()) {
   const desconto = calcularDesconto();
   const total = calcularTotalCarrinho();
 
+  if (desconto > 0 && !operadorPodeEspecialCaixa("desconto")) {
+    await alertaCaixa("Sem permissão", "Este operador não pode aplicar desconto.");
+    return;
+  }
+
   if (desconto > subtotal) {
     await alertaCaixa(
       "Desconto inválido",
@@ -4128,6 +4165,11 @@ if (!sistemaOnline()) {
   const subtotal = calcularSubtotalCarrinho();
   const desconto = calcularDesconto();
   const total = calcularTotalCarrinho();
+
+  if (desconto > 0 && !operadorPodeEspecialCaixa("desconto")) {
+    await alertaCaixa("Sem permissão", "Este operador não pode aplicar desconto.");
+    return;
+  }
 
   if (desconto > subtotal) {
     await alertaCaixa(
@@ -4733,6 +4775,8 @@ return Number(venda.total || 0) > 0;
 // ======================================================
 function setupInputs() {
   const desconto = document.getElementById("inputDesconto");
+
+  atualizarPermissaoDescontoCaixa();
 
   if (desconto) {
     desconto.addEventListener("input", atualizarTotais);

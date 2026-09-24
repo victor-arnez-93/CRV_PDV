@@ -130,12 +130,9 @@
           <p id="subtitleProdutos">Carregando catálogo...</p>
         </div>
         <div class="produtos-header-actions">
-          <button class="btn-ghost" id="btnEdicaoMassa" type="button" onclick="alternarEdicaoMassaProdutos()" hidden>
+          <button class="btn-ghost" id="btnEdicaoMassa" type="button" onclick="abrirEdicaoMassaProdutos()" hidden>
             <i data-lucide="list-checks" width="15" height="15"></i>
-            <span>Editar preços em massa</span>
-          </button>
-          <button class="btn-secondary" id="btnAplicarEdicaoMassa" type="button" onclick="abrirEdicaoMassaProdutos()" hidden disabled>
-            Alterar selecionados
+            <span>Edição em massa</span>
           </button>
           <button class="btn-ghost" id="btnGerenciarCategoriasProduto" type="button" onclick="abrirModalCategoriasProduto()" style="display:none;">
             <i data-lucide="tags" width="15" height="15"></i>
@@ -237,6 +234,14 @@
       <option value="recentes">Mais recentes</option>
       <option value="antigos">Mais antigos</option>
     </select>
+    <div class="produtos-visualizacao" role="group" aria-label="Visualização dos itens">
+      <button type="button" class="filtro-btn" id="btnProdutosCards" onclick="setVisualizacaoProdutos('cards')" aria-pressed="true" title="Visualização em cards">
+        <i data-lucide="layout-grid" width="15" height="15"></i> Cards
+      </button>
+      <button type="button" class="filtro-btn" id="btnProdutosLista" onclick="setVisualizacaoProdutos('lista')" aria-pressed="false" title="Visualização em lista">
+        <i data-lucide="list" width="15" height="15"></i> Lista
+      </button>
+    </div>
   </div>
 </div>
 
@@ -531,11 +536,14 @@
         <div class="mov-estoque-historico-header">
           <div>
             <strong>Histórico recente</strong>
-            <small>Últimas movimentações deste produto</small>
+            <small>Estoque anterior, alteração, motivo e resultado</small>
           </div>
-          <button class="btn-ghost" type="button" onclick="carregarHistoricoEstoqueProduto()" title="Atualizar histórico">
-            <i data-lucide="refresh-cw" width="14" height="14"></i>
-          </button>
+          <div class="mov-estoque-historico-acoes">
+            <button class="btn-ghost" type="button" onclick="carregarHistoricoEstoqueProduto()" title="Atualizar histórico" aria-label="Atualizar histórico">
+              <i data-lucide="refresh-cw" width="14" height="14"></i>
+            </button>
+            <button class="btn-ghost" type="button" onclick="abrirHistoricoCompletoEstoqueProduto()">Ver todas as movimentações</button>
+          </div>
         </div>
         <div class="mov-estoque-historico-lista" id="movEstoqueHistoricoLista"></div>
       </div>

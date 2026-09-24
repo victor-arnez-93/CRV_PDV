@@ -33,23 +33,25 @@ window.crvPermissoes = (() => {
 
   function labelPermissaoEspecial(codigo) {
     const labels = {
-      venda_manual: "Venda manual",
       desconto: "Aplicar desconto",
       cancelar_venda: "Cancelar venda",
       abrir_caixa: "Abrir caixa",
       fechar_caixa: "Fechar caixa",
-      editar_jogador: "Editar jogador",
-      remover_jogador: "Remover jogador",
-      enviar_jogador_comanda: "Enviar jogador para comanda",
-      alterar_preco_manual: "Alterar preço manual",
+      editar_produtos_em_massa: "Editar produtos em massa",
       movimentar_estoque: "Movimentar estoque",
       sangria: "Registrar sangria",
       suprimento: "Registrar suprimento",
-      ver_relatorios: "Ver relatórios",
-      configurar_empresa: "Configurar empresa"
+      configurar_empresa: "Configurar empresa e operadores"
     };
 
     return labels[codigo] || codigo;
+  }
+
+  function podeGerenciarOperadores() {
+    return typeof window.crvOperadorPodeModulo === "function"
+      && typeof window.crvOperadorPodeEspecial === "function"
+      && window.crvOperadorPodeModulo("configuracoes", "editar")
+      && window.crvOperadorPodeEspecial("configurar_empresa");
   }
 
   function labelPerfil(perfil) {
@@ -126,19 +128,14 @@ window.crvPermissoes = (() => {
     const podeGerenciarOperacao = ["admin", "gerente"].includes(perfilNormalizado);
 
     return {
-      venda_manual: perfilNormalizado === "admin",
       desconto: true,
       cancelar_venda: true,
       abrir_caixa: true,
       fechar_caixa: true,
-      editar_jogador: true,
-      remover_jogador: true,
-      enviar_jogador_comanda: true,
-      alterar_preco_manual: true,
+      editar_produtos_em_massa: perfilNormalizado === "admin",
       movimentar_estoque: podeGerenciarOperacao,
       sangria: podeGerenciarOperacao,
       suprimento: podeGerenciarOperacao,
-      ver_relatorios: true,
       configurar_empresa: true
     };
   }
@@ -320,6 +317,10 @@ window.crvPermissoes = (() => {
   }
 
   async function salvarOperador() {
+    if (!podeGerenciarOperadores()) {
+      cfgFeedback("Este operador não pode alterar outros operadores.", "erro");
+      return;
+    }
     try {
       const empresaId = window.APP_EMPRESA_ID;
 
@@ -523,6 +524,10 @@ window.crvPermissoes = (() => {
   }
 
   async function alternarAtivoOperador(id) {
+    if (!podeGerenciarOperadores()) {
+      cfgFeedback("Este operador não pode alterar outros operadores.", "erro");
+      return;
+    }
     try {
       const empresaId = window.APP_EMPRESA_ID;
       const operador = operadoresCache.find(op => String(op.id) === String(id));
@@ -619,6 +624,10 @@ window.crvPermissoes = (() => {
   }
 
   async function excluirOperador(id) {
+    if (!podeGerenciarOperadores()) {
+      cfgFeedback("Este operador não pode excluir outros operadores.", "erro");
+      return;
+    }
     try {
       const empresaId = window.APP_EMPRESA_ID;
 
@@ -728,6 +737,18 @@ if (modalPermissoes) {
 
 function renderPermissoes(permissoes, especiais = []) {
   const box = document.getElementById("boxPermissoesOperador");
+  const acoesAtivas = new Set([
+    "abrir_caixa",
+    "fechar_caixa",
+    "desconto",
+    "cancelar_venda",
+    "sangria",
+    "suprimento",
+    "movimentar_estoque",
+    "editar_produtos_em_massa",
+    "configurar_empresa"
+  ]);
+  especiais = especiais.filter(item => acoesAtivas.has(item.permissao));
 
   if (!box) return;
 
@@ -795,6 +816,10 @@ function renderPermissoes(permissoes, especiais = []) {
 }
 
   async function salvarPermissoes() {
+    if (!podeGerenciarOperadores()) {
+      cfgFeedback("Este operador não pode alterar permissões.", "erro");
+      return;
+    }
     try {
       const checksModulos = document.querySelectorAll("[data-permissao-id]");
 
