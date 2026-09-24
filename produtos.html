@@ -130,6 +130,13 @@
           <p id="subtitleProdutos">Carregando catálogo...</p>
         </div>
         <div class="produtos-header-actions">
+          <button class="btn-ghost" id="btnEdicaoMassa" type="button" onclick="alternarEdicaoMassaProdutos()" hidden>
+            <i data-lucide="list-checks" width="15" height="15"></i>
+            <span>Editar preços em massa</span>
+          </button>
+          <button class="btn-secondary" id="btnAplicarEdicaoMassa" type="button" onclick="abrirEdicaoMassaProdutos()" hidden disabled>
+            Alterar selecionados
+          </button>
           <button class="btn-ghost" id="btnGerenciarCategoriasProduto" type="button" onclick="abrirModalCategoriasProduto()" style="display:none;">
             <i data-lucide="tags" width="15" height="15"></i>
             <span>Categorias</span>

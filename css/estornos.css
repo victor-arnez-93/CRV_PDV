@@ -15,4 +15,18 @@
 #estornoErro { color: #ff716d; }
 .estorno-acoes { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
 .estorno-acoes button, .btn-estorno-caixa { min-height: 44px; }
+.historico-item .btn-estorno-caixa {
+  min-width: 88px;
+  width: auto;
+  height: 36px;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+@media (pointer: coarse) {
+  .historico-item .btn-estorno-caixa {
+    min-height: 44px;
+  }
+}
 .crv-estorno-dialog button:disabled { opacity: .6; cursor: wait; }

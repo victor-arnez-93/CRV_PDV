@@ -4620,6 +4620,10 @@ function renderHistorico() {
     .filter(venda => {
       const origem = String(venda.origem || "").toLowerCase();
 
+      // O recebimento parcial permanece nos totais pela data real, mas a
+      // atividade compacta só exibe a comanda ao encerrar o atendimento.
+      if (origem === "comanda" && venda.comanda_evento === "parcial") return false;
+
 if (origem !== "agenda") {
   return true;
 }
@@ -4657,8 +4661,10 @@ return Number(venda.total || 0) > 0;
           ? limparTituloJogoHistoricoCaixa(venda.descricao)
           : (venda.descricao || "Venda finalizada");
 
+    const totalComanda = Number(venda.comanda_total_consumido || venda.subtotal || 0) - Number(venda.desconto || 0);
+    const mostrarTotalComanda = venda.comanda_evento === "fechamento" && Number.isFinite(totalComanda) && totalComanda > 0;
     const detalhe =
-      `${cancelada ? "CANCELADA · " : ""}${String(venda.forma_pagamento || "—").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`;
+      `${cancelada ? "CANCELADA · " : ""}${mostrarTotalComanda ? "Comanda finalizada · " : ""}${String(venda.forma_pagamento || "—").toUpperCase()} · ${formatarDataHoraBrasil(venda.data)}`;
 
     const item = document.createElement("div");
 
@@ -4680,7 +4686,7 @@ return Number(venda.total || 0) > 0;
       </div>
 
       <div class="historico-valor">
-        ${fmt(Number(venda.total || 0))}
+        ${fmt(mostrarTotalComanda ? totalComanda : Number(venda.total || 0))}
       </div>
 
       <div class="historico-item-action">
@@ -7694,6 +7700,17 @@ function setupModalSelecionarComanda() {
       filtrarComandasCaixa(inputBusca.value);
     });
   }
+  document.querySelectorAll("#filtrosComandasCaixa [data-filtro]").forEach(botao => {
+    botao.addEventListener("click", () => {
+      filtroComandasCaixa = botao.dataset.filtro;
+      document.querySelectorAll("#filtrosComandasCaixa [data-filtro]").forEach(item => {
+        const ativo = item === botao;
+        item.classList.toggle("active", ativo);
+        item.setAttribute("aria-pressed", String(ativo));
+      });
+      filtrarComandasCaixa(inputBusca?.value || "");
+    });
+  });
 }
 
 function renderComandasAbertasNoCaixa() {
@@ -8060,6 +8077,12 @@ async function abrirModalSelecionarComanda() {
   if (inputBusca) {
     inputBusca.value = "";
   }
+  filtroComandasCaixa = "todas";
+  document.querySelectorAll("#filtrosComandasCaixa [data-filtro]").forEach(botao => {
+    const ativo = botao.dataset.filtro === "todas";
+    botao.classList.toggle("active", ativo);
+    botao.setAttribute("aria-pressed", String(ativo));
+  });
 
 await carregarComandasCaixa({
   forcar: true,
@@ -8137,7 +8160,7 @@ async function carregarComandasCaixa(opcoes = {}) {
       .from("comandas")
       .select("*")
       .eq("empresa_id", obterEmpresaId())
-      .in("status", ["livre", "aberta"])
+      .in("status", ["livre", "aberta", "fechada"])
       .order("codigo", { ascending: true });
 
     if (error) throw error;
@@ -8202,6 +8225,8 @@ async function carregarComandasCaixa(opcoes = {}) {
   }
 }
 
+let filtroComandasCaixa = "todas";
+
 function filtrarComandasCaixa(termoBusca) {
   const termo = String(termoBusca || "").toLowerCase().trim();
 
@@ -8210,7 +8235,17 @@ function filtrarComandasCaixa(termoBusca) {
     const nome = String(comanda.nome_cliente || "").toLowerCase();
     const obs = String(comanda.observacoes || "").toLowerCase();
 
-    return (
+    const status = String(comanda.status || "livre").toLowerCase();
+    const correspondeFiltro = {
+      todas: status !== "fechada",
+      abertas: status === "aberta",
+      "com-consumo": status === "aberta" && Number(comanda.total || 0) > 0,
+      "com-parcial": status === "aberta" && comanda._crvParcial === true,
+      fechadas: status === "fechada",
+      livres: status === "livre"
+    }[filtroComandasCaixa] ?? true;
+
+    return correspondeFiltro && (
       !termo ||
       codigo.includes(termo) ||
       nome.includes(termo) ||
@@ -8230,7 +8265,7 @@ function renderComandasCaixa() {
     lista.innerHTML = `
       <div class="empty-state">
         <i data-lucide="ticket" width="28" height="28"></i>
-        <p>Nenhuma comanda livre ou aberta encontrada.</p>
+        <p>Nenhuma comanda encontrada para este filtro.</p>
       </div>
     `;
 
@@ -8277,7 +8312,16 @@ ${comanda.observacoes ? `
       </div>
     `;
 
-    btn.onclick = () => selecionarComandaCaixa(comanda);
+    btn.onclick = () => {
+      if (comanda.status === "aberta") {
+        fecharModalSelecionarComanda();
+        window.crvComandasCaixa.abrir(comanda.id);
+      } else if (comanda.status === "fechada") {
+        alertaCaixa("Comanda encerrada", "Para abrir um novo atendimento neste número, libere a comanda em Cadastros > Comandas. O atendimento anterior permanece no histórico.");
+      } else {
+        selecionarComandaCaixa(comanda);
+      }
+    };
 
     lista.appendChild(btn);
   });

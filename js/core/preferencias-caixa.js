@@ -19,6 +19,12 @@ window.crvPreferenciasCaixa = (() => {
     if (input.dataset.ready) return;
     input.dataset.ready = "1";
     input.addEventListener("change", () => salvar("iniciar", input.checked ? "1" : "0"));
+    document.addEventListener("crv:config-pronta", () => {
+      input.checked = ler("iniciar") === "1";
+    });
+    window.addEventListener("pageshow", () => {
+      input.checked = ler("iniciar") === "1";
+    });
   }
   function destinoLogin() {
     // A configuração inicial é tratada antes no login; app.js continua validando permissões.

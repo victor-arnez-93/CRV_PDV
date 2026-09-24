@@ -80,10 +80,12 @@ window.crvComandasCaixa = (() => {
     <form id="ccForm" class="cc-receber"><div class="cc-resumo"><div><span>Consumo</span><b>${moeda(d.consumo)}</b></div><div><span>Já recebido</span><b>${moeda(d.recebido)}</b></div><label>Desconto total${d.recebido>0?" (fixo após parcial)":""}<input id="ccDesconto" inputmode="decimal" value="${campoMoeda(d.desconto)}" ${d.recebido>0?'readonly':''} /></label><div class="cc-saldo"><span>Falta pagar</span><strong id="ccSaldo">${moeda(d.saldo)}</strong></div></div>
     ${!aberto?'<p class="cc-aviso">Abra o caixa para receber.</p>':''}
     ${pend?'<p class="cc-aviso">Há uma confirmação sem resposta neste dispositivo. Consulte o resultado antes de fazer outro recebimento.</p><button type="button" class="btn-primary" id="ccRetomar">Consultar confirmação pendente</button>':''}
-    <fieldset class="cc-campos" ${!d.itens.length?'hidden':''} ${!aberto||pend?'disabled':''}><label>Valor a receber agora<input id="ccValor" inputmode="decimal" autocomplete="off" value="${campoMoeda(Math.max(0,Number(d.saldo)))}" required /></label>
-    <label>Forma de pagamento<select id="ccForma"><option value="dinheiro">Dinheiro</option><option value="pix">Pix</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option></select></label>
-    <label id="ccDinheiroLabel">Dinheiro entregue<input id="ccEntregue" inputmode="decimal" autocomplete="off" placeholder="Igual ao valor a pagar" /></label><p id="ccTroco" class="cc-sub">Troco: ${moeda(0)}</p>
-    <label>Quem pagou <small id="ccPagadorObrigatorio">(obrigatório)</small><input id="ccPagador" maxlength="120" placeholder="Ex.: João" autocomplete="off" /></label>
+    <fieldset class="cc-campos" ${!d.itens.length?'hidden':''} ${!aberto||pend?'disabled':''}><label><span>Valor a receber agora <span class="cc-obrigatorio" aria-label="obrigatório">*</span></span><input id="ccValor" inputmode="decimal" autocomplete="off" value="${campoMoeda(Math.max(0,Number(d.saldo)))}" required /></label>
+    <label><span>Forma de pagamento <span class="cc-obrigatorio" aria-label="obrigatório">*</span></span><select id="ccForma"><option value="dinheiro">Dinheiro</option><option value="pix">Pix</option><option value="debito">Cartão de débito</option><option value="credito">Cartão de crédito</option></select></label>
+    <label id="ccDinheiroLabel">Dinheiro entregue<input id="ccEntregue" inputmode="decimal" autocomplete="off" placeholder="Igual ao valor a pagar" /></label>
+    <label><span>Quem pagou <span class="cc-obrigatorio" aria-label="obrigatório">*</span></span><select id="ccPagadorOpcao"><option value="">Selecione...</option>${c.nome_cliente?.trim()?`<option value="responsavel">${esc(c.nome_cliente)}</option>`:''}<option value="outro">Outra pessoa</option></select><input id="ccPagador" maxlength="120" placeholder="Nome de quem pagou" autocomplete="off" hidden /></label>
+    <p id="ccTroco" class="cc-sub">Troco: ${moeda(0)}</p>
+    <p class="cc-campos-legenda"><span class="cc-obrigatorio">*</span> indica campo obrigatório.</p>
     <div class="cc-acoes"><button class="btn-ghost" id="ccParcial" type="submit" ${d.itens.length && d.saldo>0?'':'disabled'}><span>Receber pagamento parcial</span></button><button class="btn-secondary" id="ccQuitar" type="button" ${d.itens.length?'':'hidden'}><span>Finalizar comanda</span></button></div></fieldset>
     ${!d.itens.length?'<p class="cc-sub">Adicione produtos para registrar um pagamento.</p><button type="button" id="ccEncerrarVazia" class="btn-ghost" '+(!aberto||pend?'disabled':'')+'>Encerrar comanda vazia</button>':''}
     <p class="cc-sub">Finalizar recebe o saldo restante e encerra a comanda. Confira cartão/Pix antes de registrar.</p>
@@ -106,6 +108,12 @@ window.crvComandasCaixa = (() => {
     $('ccForma').onchange=troco;
     $('ccEntregue').oninput=()=>{mascararMoeda($('ccEntregue'));troco();};
     $('ccValor').oninput=()=>{mascararMoeda($('ccValor'));troco();};
+    $('ccPagadorOpcao').onchange=()=>{
+      const opcao=$('ccPagadorOpcao').value;
+      $('ccPagador').hidden=opcao!=='outro';
+      $('ccPagador').value=opcao==='responsavel'?c.nome_cliente:'';
+      if(opcao==='outro')$('ccPagador').focus();
+    };
     $('ccPagador').oninput=()=>{$('ccPagador').value=formatarPagador($('ccPagador').value);};
     ['ccValor', 'ccEntregue', 'ccDesconto'].forEach(id => {
       $(id).addEventListener('focus', event => {
@@ -131,7 +139,7 @@ window.crvComandasCaixa = (() => {
       const entregue=forma==='dinheiro'&&$('ccEntregue').value.trim()?valor($('ccEntregue').value):pagar;
       if(![desconto,saldo,pagar,entregue].every(Number.isFinite)||desconto<0||saldo<0||pagar<0||pagar>saldo||(!fechar&&pagar===0)||entregue<pagar)throw Error('Confira o desconto, o valor a pagar e o dinheiro entregue.');
       if(detalhe.itens.length&&!$('ccPagador').value.trim()){
-        $('ccPagador').focus();
+        ($('ccPagadorOpcao').value==='outro'?$('ccPagador'):$('ccPagadorOpcao')).focus();
         throw Error('Informe o nome de quem pagou para registrar o pagamento.');
       }
       if(fechar&&valor($('ccValor').value)!==saldo&&detalhe.itens.length){$('ccValor').value=campoMoeda(saldo);throw Error('O fechamento recebe todo o saldo restante. Confira o valor atualizado e confirme novamente.');}

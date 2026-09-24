@@ -859,12 +859,16 @@ function crvOrganizarSidebarPorSecoes() {
 
   const secoes = [
     {
+      titulo: "Visão geral",
+      rotas: ["dashboard.html"]
+    },
+    {
       titulo: "Operação",
-      rotas: ["dashboard.html", "caixa.html", "agenda.html"]
+      rotas: ["caixa.html"]
     },
     {
       titulo: "Cadastros",
-      rotas: ["produtos.html", "clientes.html", "comandas.html"]
+      rotas: ["agenda.html", "produtos.html", "clientes.html", "comandas.html"]
     },
     {
       titulo: "Gestão",

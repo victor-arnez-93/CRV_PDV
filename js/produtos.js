@@ -23,6 +23,106 @@ let categoriasPersonalizadasProdutos = [];
 let produtoEstoqueOriginal = null;
 let produtoMovimentacaoSelecionado = null;
 let movimentacaoEstoqueEmProcessamento = false;
+let modoEdicaoMassaProdutos = false;
+const produtosSelecionadosMassa = new Set();
+
+function contaPrincipalProdutos() {
+  return !sessionStorage.getItem("CRV_OPERADOR_ID");
+}
+
+function atualizarControlesEdicaoMassaProdutos() {
+  const botao = document.getElementById("btnEdicaoMassa");
+  const aplicar = document.getElementById("btnAplicarEdicaoMassa");
+  if (botao) {
+    botao.hidden = !contaPrincipalProdutos();
+    botao.querySelector("span").textContent = modoEdicaoMassaProdutos ? "Cancelar seleção" : "Editar preços em massa";
+  }
+  if (aplicar) {
+    aplicar.hidden = !modoEdicaoMassaProdutos;
+    aplicar.disabled = produtosSelecionadosMassa.size === 0;
+    aplicar.textContent = `Alterar selecionados (${produtosSelecionadosMassa.size})`;
+  }
+}
+
+function alternarEdicaoMassaProdutos() {
+  if (!contaPrincipalProdutos()) return;
+  modoEdicaoMassaProdutos = !modoEdicaoMassaProdutos;
+  produtosSelecionadosMassa.clear();
+  renderProdutos();
+}
+
+function selecionarProdutoMassa(id, marcado) {
+  if (!contaPrincipalProdutos()) return;
+  if (marcado) produtosSelecionadosMassa.add(id);
+  else produtosSelecionadosMassa.delete(id);
+  atualizarControlesEdicaoMassaProdutos();
+}
+
+async function abrirEdicaoMassaProdutos() {
+  if (!contaPrincipalProdutos() || !modoEdicaoMassaProdutos) return;
+  const selecionados = produtos.filter(item => produtosSelecionadosMassa.has(String(item.id)));
+  if (!selecionados.length) return;
+  const dialogo = document.createElement("dialog");
+  dialogo.className = "modal-edicao-massa-produtos";
+  dialogo.innerHTML = `
+    <form method="dialog">
+      <h3>Alterar preço de venda</h3>
+      <p>${selecionados.length} item(ns) selecionado(s). O custo e o estoque não serão alterados.</p>
+      <label for="precoMassaProdutos">Novo preço de venda</label>
+      <input id="precoMassaProdutos" class="input" inputmode="decimal" placeholder="Ex.: 7,00" required />
+      <div class="edicao-massa-acoes">
+        <button type="button" class="btn-ghost" data-cancelar>Cancelar</button>
+        <button type="submit" class="btn-primary">Conferir alteração</button>
+      </div>
+    </form>`;
+  document.body.appendChild(dialogo);
+  dialogo.addEventListener("close", () => dialogo.remove(), { once: true });
+  dialogo.querySelector("[data-cancelar]").onclick = () => dialogo.close();
+  dialogo.querySelector("form").onsubmit = async event => {
+    event.preventDefault();
+    const novoPreco = normalizarPreco(dialogo.querySelector("#precoMassaProdutos").value);
+    if (!Number.isFinite(novoPreco) || novoPreco <= 0) {
+      dialogo.querySelector("#precoMassaProdutos").setCustomValidity("Informe um preço maior que zero.");
+      dialogo.querySelector("#precoMassaProdutos").reportValidity();
+      return;
+    }
+    dialogo.close();
+    const confirmado = await abrirAlertaProduto({
+      titulo: "Confirmar alteração de preços",
+      mensagem: `Aplicar ${fmt(novoPreco)} em ${selecionados.length} item(ns)? Confira os selecionados antes de confirmar.`,
+      mostrarCancelar: true,
+      textoConfirmar: "Alterar preços"
+    });
+    if (!confirmado || !contaPrincipalProdutos() || !sistemaOnline()) return;
+    const falhas = [];
+    let alterados = 0;
+    for (const item of selecionados) {
+      try {
+        if (!sistemaOnline()) throw new Error("Conexão indisponível");
+        const { data, error } = await sb.from("produtos")
+          .update({ preco: novoPreco, updated_at: new Date().toISOString() })
+          .eq("empresa_id", obterEmpresaId())
+          .eq("id", item.id)
+          .eq("preco", item.preco)
+          .select("id");
+        if (error || data?.length !== 1) throw error || new Error("Preço alterado por outra sessão");
+        alterados++;
+      } catch (_) {
+        falhas.push(item.nome);
+      }
+    }
+    await carregarProdutos();
+    produtosSelecionadosMassa.clear();
+    modoEdicaoMassaProdutos = false;
+    renderProdutos();
+    await abrirAlertaProduto({
+      titulo: falhas.length ? "Alteração parcial" : "Preços atualizados",
+      mensagem: `${alterados} item(ns) atualizado(s).${falhas.length ? ` Não atualizados: ${falhas.join(", ")}. Confira alterações concorrentes ou permissões.` : ""}`
+    });
+  };
+  dialogo.showModal();
+  dialogo.querySelector("#precoMassaProdutos").focus();
+}
 const LIMITE_DIGITOS_MOEDA = 9;
 const LIMITE_DIGITOS_ESTOQUE = 6;
 const LIMITE_DIGITOS_CODIGO_BARRAS = 13;
@@ -1240,6 +1340,7 @@ function renderProdutos() {
   const subtitle = document.getElementById("subtitleProdutos");
 
   if (!grid) return;
+  atualizarControlesEdicaoMassaProdutos();
 
   const lista = getProdutosFiltrados();
 
@@ -1312,6 +1413,7 @@ function renderProdutos() {
 
     return `
       <div class="produto-card tipo-${tipoItem} ${produto.ativo ? "" : "inativo"}">
+        ${modoEdicaoMassaProdutos ? `<label class="produto-selecao-massa"><input type="checkbox" ${produtosSelecionadosMassa.has(String(produto.id)) ? "checked" : ""} onchange="selecionarProdutoMassa('${produto.id}', this.checked)" /> Selecionar</label>` : ""}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div class="produto-badges">
             <span class="produto-tipo-badge tipo-${tipoItem}">

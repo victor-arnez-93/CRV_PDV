@@ -465,6 +465,23 @@ body .pdv-cart .cart-header .btn-ghost {
 .cc-receber input[readonly] {
   opacity: 0.75;
 }
+
+.cc-receber input[hidden] {
+  display: none;
+}
+
+.cc-obrigatorio {
+  color: var(--crv-orange, #d4a017);
+  font-weight: 700;
+}
+
+.cc-receber .cc-campos-legenda {
+  grid-column: 1 / -1;
+  order: 3;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
 .cc-resumo > div {
   display: flex;
   justify-content: space-between;
