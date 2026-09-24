@@ -42,7 +42,7 @@ function criarDataVendaBrasil(valor) {
   if (
     dataNormalizada.includes("T") &&
     !dataNormalizada.endsWith("Z") &&
-    !dataNormalizada.includes("+")
+    !/[+-]\d{2}:?\d{2}$/.test(dataNormalizada)
   ) {
     dataNormalizada += "Z";
   }
@@ -517,7 +517,7 @@ function renderizarUltimasVendas(ultimas) {
 
 // ===== GRÁFICO =====
 function initChart(vendas) {
-  const canvas = document.getElementById("chartFaturamento");
+  const canvas = document.getElementById("chartRecebimentos");
   if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
