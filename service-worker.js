@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "crv-pdv-caixa";
-const CACHE_NAME = `${CACHE_PREFIX}-v13-20260924-permissoes-operacionais`;
+const CACHE_NAME = `${CACHE_PREFIX}-v14-20260924-produtos-tabela-massa`;
 
 const APP_SHELL = [
   "./caixa.html",

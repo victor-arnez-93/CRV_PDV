@@ -24,6 +24,7 @@ let produtoEstoqueOriginal = null;
 let produtoMovimentacaoSelecionado = null;
 let movimentacaoEstoqueEmProcessamento = false;
 let visualizacaoProdutos = "cards";
+const produtosSelecionadosLista = new Set();
 try {
   visualizacaoProdutos = localStorage.getItem("crv-produtos-visualizacao") === "lista" ? "lista" : "cards";
 } catch (_) {
@@ -93,7 +94,13 @@ async function confirmarPermissaoAtualProdutos(acao, especiais = []) {
 
 function atualizarControlesEdicaoMassaProdutos() {
   const botao = document.getElementById("btnEdicaoMassa");
-  if (botao) botao.hidden = !podeEditarProdutosEmMassa();
+  if (botao) {
+    botao.hidden = !podeEditarProdutosEmMassa();
+    const texto = botao.querySelector("span");
+    if (texto) texto.textContent = produtosSelecionadosLista.size
+      ? `Edição em massa (${produtosSelecionadosLista.size})`
+      : "Edição em massa";
+  }
 }
 
 function tipoEstoqueEdicaoMassa(tipo) {
@@ -140,7 +147,8 @@ async function abrirEdicaoMassaProdutos() {
     return;
   }
   await carregarProdutos();
-  const selecionados = new Set();
+  const idsAtuais = new Set(produtos.map(item => String(item.id)));
+  const selecionados = new Set([...produtosSelecionadosLista].filter(id => idsAtuais.has(id)));
   let filtroModal = "todos";
   const categoriasModal = [...new Set(produtos.map(item => String(item.categoria || "").trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -154,7 +162,7 @@ async function abrirEdicaoMassaProdutos() {
           <h3 id="edicaoMassaTitulo">Edição em massa</h3>
           <p>Escolha os itens e uma alteração para aplicar a todos.</p>
         </div>
-        <button type="button" class="btn-ghost" data-cancelar aria-label="Fechar">✕</button>
+        <button type="button" class="edicao-massa-fechar" data-cancelar aria-label="Fechar edição em massa"><i data-lucide="x" width="18" height="18"></i></button>
       </header>
       <div class="edicao-massa-corpo">
         <section class="edicao-massa-secao" aria-label="Selecionar itens">
@@ -169,7 +177,7 @@ async function abrirEdicaoMassaProdutos() {
           </div>
           <select id="edicaoMassaCategoria" class="input" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option>${categoriasModal.map(categoria => `<option value="${escaparHTMLProduto(categoria)}">${escaparHTMLProduto(categoriaLabel[categoria] || categoria)}</option>`).join("")}</select>
           <div class="edicao-massa-lista" id="edicaoMassaLista"></div>
-          <div class="edicao-massa-selecao"><button type="button" class="btn-ghost" id="edicaoMassaSelecionarVisiveis">Selecionar visíveis</button><button type="button" class="btn-ghost" id="edicaoMassaLimpar">Limpar</button></div>
+          <div class="edicao-massa-selecao"><button type="button" class="btn-ghost" id="edicaoMassaSelecionarVisiveis">Selecionar todos</button><button type="button" class="btn-ghost" id="edicaoMassaLimpar">Limpar seleção</button></div>
         </section>
         <section class="edicao-massa-secao" aria-label="Definir alteração">
           <h4>2. Alteração</h4>
@@ -182,7 +190,7 @@ async function abrirEdicaoMassaProdutos() {
             <option value="ajuste">Definir estoque final</option>
           </select>
           <label for="edicaoMassaValor" id="edicaoMassaValorLabel">Novo preço de venda <span class="edicao-massa-obrigatorio">*</span></label>
-          <input id="edicaoMassaValor" class="input" inputmode="decimal" placeholder="Ex.: 7,00" required />
+          <input id="edicaoMassaValor" class="input input-money" inputmode="decimal" placeholder="Ex.: 7,00" autocomplete="off" required />
           <label for="edicaoMassaMotivo">Motivo <span class="edicao-massa-obrigatorio">*</span></label>
           <textarea id="edicaoMassaMotivo" class="input" rows="3" minlength="3" maxlength="240" placeholder="Ex.: reajuste do fornecedor" required></textarea>
           <p class="edicao-massa-ajuda" id="edicaoMassaAjuda">O mesmo valor será aplicado aos itens selecionados.</p>
@@ -190,7 +198,7 @@ async function abrirEdicaoMassaProdutos() {
       </div>
       <footer class="edicao-massa-rodape">
         <div id="edicaoMassaResumo" aria-live="polite">Nenhum item selecionado.</div>
-        <div class="edicao-massa-acoes"><button type="button" class="btn-ghost" data-cancelar>Cancelar</button><button type="submit" class="btn-primary">Revisar alteração</button></div>
+        <div class="edicao-massa-acoes"><button type="button" class="btn-ghost" data-cancelar>Cancelar</button><button type="submit" class="btn-primary">Confirmar alterações</button></div>
       </footer>
     </form>`;
   document.body.appendChild(dialogo);
@@ -201,6 +209,12 @@ async function abrirEdicaoMassaProdutos() {
   });
   const campo = seletor => dialogo.querySelector(seletor);
   const tipoAtual = () => campo("#edicaoMassaTipo").value;
+  campo("#edicaoMassaValor").addEventListener("input", event => {
+    const input = event.currentTarget;
+    input.value = tipoEstoqueEdicaoMassa(tipoAtual())
+      ? formatarEstoqueInput(input.value)
+      : formatarMoedaInput(input.value);
+  });
   const elegiveis = () => produtos.filter(item => !tipoEstoqueEdicaoMassa(tipoAtual()) || itemControlaEstoque(item));
   const filtrados = () => {
     const busca = campo("#edicaoMassaBusca").value.toLocaleLowerCase("pt-BR").trim();
@@ -216,19 +230,24 @@ async function abrirEdicaoMassaProdutos() {
     });
   };
   function renderizarLista() {
-    campo("#edicaoMassaLista").innerHTML = filtrados().map(item => `
+    const visiveis = filtrados();
+    const topoLista = campo("#edicaoMassaLista").scrollTop;
+    campo("#edicaoMassaLista").innerHTML = visiveis.map(item => `
       <label class="edicao-massa-item">
         <input type="checkbox" value="${escaparHTMLProduto(item.id)}" ${selecionados.has(String(item.id)) ? "checked" : ""} />
         <span><strong>${escaparHTMLProduto(item.nome)}</strong><small>${escaparHTMLProduto(item.codigo || "Sem código")} · Venda ${fmt(item.preco)} · Custo ${fmt(item.preco_custo)}${itemControlaEstoque(item) ? ` · Estoque ${Number(item.estoque || 0)}` : ""}</small></span>
       </label>`).join("") || '<p class="edicao-massa-vazio">Nenhum item encontrado.</p>';
+    campo("#edicaoMassaLista").scrollTop = topoLista;
     campo("#edicaoMassaResumo").textContent = `${selecionados.size} item(ns) selecionado(s).`;
+    const todosMarcados = visiveis.length > 0 && visiveis.every(item => selecionados.has(String(item.id)));
+    campo("#edicaoMassaSelecionarVisiveis").textContent = todosMarcados ? "Remover todos" : "Selecionar todos";
   }
   campo("#edicaoMassaLista").addEventListener("change", event => {
     const input = event.target.closest('input[type="checkbox"]');
     if (!input) return;
     if (input.checked) selecionados.add(input.value);
     else selecionados.delete(input.value);
-    campo("#edicaoMassaResumo").textContent = `${selecionados.size} item(ns) selecionado(s).`;
+    renderizarLista();
   });
   campo("#edicaoMassaBusca").oninput = renderizarLista;
   campo("#edicaoMassaCategoria").onchange = renderizarLista;
@@ -238,7 +257,12 @@ async function abrirEdicaoMassaProdutos() {
     renderizarLista();
   });
   campo("#edicaoMassaSelecionarVisiveis").onclick = () => {
-    filtrados().forEach(item => selecionados.add(String(item.id)));
+    const visiveis = filtrados();
+    const todosMarcados = visiveis.length > 0 && visiveis.every(item => selecionados.has(String(item.id)));
+    visiveis.forEach(item => {
+      if (todosMarcados) selecionados.delete(String(item.id));
+      else selecionados.add(String(item.id));
+    });
     renderizarLista();
   };
   campo("#edicaoMassaLimpar").onclick = () => {
@@ -273,7 +297,7 @@ async function abrirEdicaoMassaProdutos() {
       return;
     }
     const textoValor = campo("#edicaoMassaValor").value.trim();
-    const valor = tipoEstoqueEdicaoMassa(tipo) ? Number(textoValor) : normalizarPreco(textoValor);
+    const valor = tipoEstoqueEdicaoMassa(tipo) ? Number(textoValor.replace(/\./g, "")) : normalizarPreco(textoValor);
     const motivo = campo("#edicaoMassaMotivo").value.trim();
     const itens = produtos.filter(item => selecionados.has(String(item.id)) && (!tipoEstoqueEdicaoMassa(tipo) || itemControlaEstoque(item)));
     if (!itens.length) {
@@ -328,11 +352,11 @@ async function abrirEdicaoMassaProdutos() {
       if (error) {
         processando = false;
         botaoConfirmar.disabled = false;
-        botaoConfirmar.textContent = "Revisar alteração";
+        botaoConfirmar.textContent = "Confirmar alterações";
         campo("#edicaoMassaResumo").textContent = `Preços não alterados: ${error.message || "Confira se a migração SQL foi aplicada."}`;
         return;
       }
-      alterados = Number(data?.alterados || itens.length);
+      alterados = Number(data?.alterados ?? itens.length);
     } else {
       for (const item of itens) {
         try {
@@ -348,16 +372,24 @@ async function abrirEdicaoMassaProdutos() {
         }
       }
     }
+    produtosSelecionadosLista.clear();
     await carregarProdutos();
     renderProdutos();
     dialogo.close();
-    await abrirAlertaProduto({
-      titulo: falhas.length ? "Alteração parcial" : "Edição concluída",
-      mensagem: `${alterados} item(ns) atualizado(s).${falhas.length ? ` Não atualizados: ${escaparHTMLProduto(falhas.join(", "))}. Confira conexão, saldo de estoque ou permissões.` : ""}`
-    });
+    if (typeof crvToast === "function") {
+      crvToast({
+        titulo: falhas.length ? "Alteração parcialmente confirmada" : "Alterações confirmadas",
+        mensagem: falhas.length
+          ? `${alterados} item(ns) atualizado(s); ${falhas.length} não atualizado(s). Confira o estoque e tente novamente.`
+          : `${alterados} item(ns) atualizado(s) com sucesso.`,
+        tipo: falhas.length ? "warn" : "success",
+        tempo: 6000
+      });
+    }
   };
   renderizarLista();
   dialogo.showModal();
+  if (window.lucide) lucide.createIcons();
   campo("#edicaoMassaBusca").focus();
 }
 const LIMITE_DIGITOS_MOEDA = 9;
@@ -1572,6 +1604,68 @@ function getProdutosFiltrados() {
 // ======================================================
 // RENDER
 // ======================================================
+function alternarSelecaoProdutosLista(id, marcado) {
+  if (!podeEditarProdutosEmMassa()) return;
+  if (marcado) produtosSelecionadosLista.add(String(id));
+  else produtosSelecionadosLista.delete(String(id));
+  renderizarTabelaProdutosPreservandoScroll();
+}
+
+function alternarSelecaoTodosProdutosLista(marcado) {
+  if (!podeEditarProdutosEmMassa()) return;
+  getProdutosFiltrados().forEach(item => {
+    if (marcado) produtosSelecionadosLista.add(String(item.id));
+    else produtosSelecionadosLista.delete(String(item.id));
+  });
+  renderizarTabelaProdutosPreservandoScroll();
+}
+
+function renderizarTabelaProdutosPreservandoScroll() {
+  const anterior = document.querySelector(".produtos-tabela-wrap");
+  const topo = anterior?.scrollTop || 0;
+  const esquerda = anterior?.scrollLeft || 0;
+  renderProdutos();
+  const atual = document.querySelector(".produtos-tabela-wrap");
+  if (atual) {
+    atual.scrollTop = topo;
+    atual.scrollLeft = esquerda;
+  }
+}
+
+function renderizarTabelaProdutos(lista, { podeCriar, podeEditar, podeExcluir }) {
+  const podeSelecionar = podeEditarProdutosEmMassa();
+  const todosSelecionados = lista.every(item => produtosSelecionadosLista.has(String(item.id)));
+  return `
+    <div class="produtos-tabela-wrap">
+      <table class="produtos-tabela">
+        <thead><tr>
+          ${podeSelecionar ? `<th class="col-selecao"><input type="checkbox" aria-label="Selecionar todos os itens filtrados" title="Selecionar todos os itens filtrados" onchange="alternarSelecaoTodosProdutosLista(this.checked)" ${todosSelecionados ? "checked" : ""}></th>` : ""}
+          <th class="col-item">Item</th><th>Código</th><th>Venda</th><th>Custo / lucro</th><th>Estoque</th><th class="col-acoes">Ações</th>
+        </tr></thead>
+        <tbody>${lista.map(produto => {
+          const tipo = obterTipoItemProduto(produto);
+          const controlaEstoque = itemControlaEstoque(produto);
+          const quantidade = Number(produto.estoque || 0);
+          const estoqueBaixo = controlaEstoque && quantidade <= estoqueMinimoProduto(produto);
+          return `<tr class="${produto.ativo ? "" : "produto-linha-inativa"} ${produtosSelecionadosLista.has(String(produto.id)) ? "produto-linha-selecionada" : ""}">
+            ${podeSelecionar ? `<td class="col-selecao"><input type="checkbox" aria-label="Selecionar ${escaparHTMLProduto(produto.nome)}" onchange="alternarSelecaoProdutosLista(this.value, this.checked)" value="${escaparHTMLProduto(produto.id)}" ${produtosSelecionadosLista.has(String(produto.id)) ? "checked" : ""}></td>` : ""}
+            <td class="produto-tabela-nome"><strong>${escaparHTMLProduto(produto.nome)}</strong><small>${escaparHTMLProduto(tiposItemCatalogo[tipo].singular)} · ${escaparHTMLProduto(categoriaLabel[produto.categoria] || produto.categoria || "Sem categoria")}${produto.produto_rapido ? " · Rápido" : ""}${!produto.ativo ? " · Inativo" : ""}</small></td>
+            <td><span class="produto-tabela-codigo">${escaparHTMLProduto(produto.codigo || "—")}</span></td>
+            <td class="produto-tabela-preco">${fmt(produto.preco)}</td>
+            <td><span class="produto-tabela-custo">${fmt(produto.preco_custo || 0)}</span><small>Lucro: ${fmt(Number(produto.preco || 0) - Number(produto.preco_custo || 0))}</small></td>
+            <td>${controlaEstoque ? `<span class="produto-tabela-estoque ${estoqueBaixo ? "baixo" : ""}">${quantidade} ${escaparHTMLProduto(labelUnidadeVendaProduto(unidadeVendaProduto(produto), quantidade))}</span><small>Mín. ${estoqueMinimoProduto(produto)}</small>` : `<span class="produto-tabela-custo">Sem controle</span>`}</td>
+            <td class="col-acoes"><div class="produto-actions">
+              ${controlaEstoque && featureProdutosAtiva("estoque_operacional") && podeEditar && operadorPodeMovimentarEstoqueProduto() ? `<button type="button" class="produto-btn estoque" onclick="abrirModalMovimentacaoEstoque('${produto.id}')" title="Movimentar estoque" aria-label="Movimentar estoque de ${escaparHTMLProduto(produto.nome)}"><i data-lucide="package-open" width="15" height="15"></i></button>` : ""}
+              ${podeEditar ? `<button type="button" class="produto-btn" onclick="abrirModalEditar('${produto.id}')" title="Editar" aria-label="Editar ${escaparHTMLProduto(produto.nome)}"><i data-lucide="pencil" width="15" height="15"></i></button>` : ""}
+              ${podeCriar ? `<button type="button" class="produto-btn" onclick="duplicarProduto('${produto.id}')" title="Duplicar" aria-label="Duplicar ${escaparHTMLProduto(produto.nome)}"><i data-lucide="copy" width="15" height="15"></i></button>` : ""}
+              ${podeExcluir ? `<button type="button" class="produto-btn danger" onclick="confirmarExcluir('${produto.id}')" title="Excluir" aria-label="Excluir ${escaparHTMLProduto(produto.nome)}"><i data-lucide="trash-2" width="15" height="15"></i></button>` : ""}
+            </div></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
 function renderProdutos() {
   const grid = document.getElementById("produtosGrid");
   const subtitle = document.getElementById("subtitleProdutos");
@@ -1638,6 +1732,12 @@ function renderProdutos() {
       lucide.createIcons();
     }
 
+    return;
+  }
+
+  if (visualizacaoProdutos === "lista") {
+    grid.innerHTML = renderizarTabelaProdutos(lista, { podeCriar, podeEditar, podeExcluir });
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
