@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "crv-pdv-caixa";
-const CACHE_NAME = `${CACHE_PREFIX}-v17-20260925-saldo-parcial`;
+const CACHE_NAME = `${CACHE_PREFIX}-v18-20260925-aviso-parcial-scroll`;
 
 const APP_SHELL = [
   "./caixa.html",

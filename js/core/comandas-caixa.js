@@ -1,6 +1,6 @@
 /* Recebimentos de comanda: online, transacionais e com confirmação idempotente. */
 window.crvComandasCaixa = (() => {
-  let dialogo, detalhe, ocupado = false, abrindo = false, foco, contexto;
+  let dialogo, avisoIntegral, detalhe, ocupado = false, abrindo = false, foco, contexto;
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const moeda = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
   const valor = v => {
@@ -36,6 +36,28 @@ window.crvComandasCaixa = (() => {
     document.body.appendChild(dialogo);
     dialogo.addEventListener('cancel',e=>{if(ocupado)e.preventDefault();});
     dialogo.addEventListener('close',()=>{foco?.focus?.();});
+  }
+  function avisarQuitacaoIntegral() {
+    if (!avisoIntegral) {
+      avisoIntegral = document.createElement('dialog');
+      avisoIntegral.className = 'crv-comanda-aviso-integral';
+      avisoIntegral.setAttribute('aria-labelledby', 'ccAvisoTitulo');
+      avisoIntegral.setAttribute('aria-describedby', 'ccAvisoTexto');
+      avisoIntegral.innerHTML = `<div class="cc-aviso-integral-icone" aria-hidden="true">!</div>
+        <h2 id="ccAvisoTitulo">Este valor quita a comanda</h2>
+        <p id="ccAvisoTexto">Para receber o saldo total, use <strong>Finalizar comanda</strong>.</p>
+        <button type="button" class="btn-secondary" id="ccAvisoVoltar">Voltar aos detalhes</button>`;
+      document.body.appendChild(avisoIntegral);
+      avisoIntegral.querySelector('#ccAvisoVoltar').addEventListener('click', () => avisoIntegral.close());
+    }
+    if (avisoIntegral.open) return;
+    const origem = document.activeElement;
+    avisoIntegral.addEventListener('close', () => {
+      if (dialogo.open && origem?.isConnected) origem.focus();
+    }, {once:true});
+    $('ccErro').textContent = '';
+    avisoIntegral.showModal();
+    avisoIntegral.querySelector('#ccAvisoVoltar').focus();
   }
   function pendente() {try{return JSON.parse(sessionStorage.getItem(chave())||'null');}catch{return null;}}
   async function consultar(id) {
@@ -140,8 +162,10 @@ window.crvComandasCaixa = (() => {
       const desconto=valor($('ccDesconto').value),saldo=saldoAtual(),pagar=fechar?saldo:valor($('ccValor').value),forma=$('ccForma').value;
       if(!window.crvOperadorPodeEspecial?.('desconto')&&Math.round(desconto*100)!==Math.round(Number(detalhe.desconto)*100))throw Error('Este operador não pode alterar o desconto da comanda.');
       const entregue=pagar===0?0:forma==='dinheiro'&&$('ccEntregue').value.trim()?valor($('ccEntregue').value):pagar;
+      if(!fechar && Number.isFinite(pagar) && Number.isFinite(saldo) && saldo>0 && Math.round(pagar*100)===Math.round(saldo*100)){
+        avisarQuitacaoIntegral();return;
+      }
       if(![desconto,saldo,pagar,entregue].every(Number.isFinite)||desconto<0||saldo<0||pagar<0||pagar>saldo||(!fechar&&pagar===0)||entregue<pagar)throw Error('Confira o desconto, o valor a pagar e o dinheiro entregue.');
-      if(!fechar&&pagar>=saldo)throw Error('Este valor quita o saldo. Use Finalizar comanda para encerrar sem deixar a comanda aberta.');
       if(pagar>0&&detalhe.itens.length&&!$('ccPagador').value.trim()){
         ($('ccPagadorOpcao').value==='outro'?$('ccPagador'):$('ccPagadorOpcao')).focus();
         throw Error('Informe o nome de quem pagou para registrar o pagamento.');
