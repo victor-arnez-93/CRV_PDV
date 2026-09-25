@@ -2163,7 +2163,8 @@
 }
 
 .edicao-massa-lista {
-  max-height: min(300px, 40dvh);
+  height: min(320px, 40dvh);
+  max-height: min(320px, 40dvh);
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg-elevated);
@@ -2173,6 +2174,9 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
+  box-sizing: border-box;
+  height: 80px;
+  overflow: hidden;
   padding: 10px;
   cursor: pointer;
 }
@@ -2198,6 +2202,14 @@
 .edicao-massa-vazio {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.edicao-massa-item strong,
+.edicao-massa-item small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .edicao-massa-vazio {
@@ -2311,7 +2323,7 @@
 
 .produtos-tabela-wrap {
   width: 100%;
-  max-height: 570px;
+  max-height: min(432px, 58dvh);
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -2337,6 +2349,7 @@
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  height: 42px;
 }
 
 .produtos-tabela td {
@@ -2345,6 +2358,10 @@
   color: var(--text-secondary);
   font-size: 0.83rem;
   vertical-align: middle;
+}
+
+.produtos-tabela tbody tr {
+  height: 78px;
 }
 
 .produtos-tabela tbody tr:last-child td {
@@ -2443,6 +2460,7 @@
   }
 
   .edicao-massa-lista {
+    height: 170px;
     max-height: 170px;
   }
 

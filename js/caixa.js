@@ -7851,12 +7851,12 @@ function renderComandasAbertasNoCaixa() {
 
           <span class="comanda-aberta-cliente">
             ${window.crvComandasCaixa.esc(comanda.nome_cliente || "Sem identificação")}
+            ${comanda._crvParcial ? '<span class="comanda-aberta-parcial">Parcial recebida</span>' : ''}
           </span>
 
           <span class="comanda-aberta-total">
             ${fmt(comanda.total || 0)}
           </span>
-          ${comanda._crvParcial ? '<span class="comanda-aberta-parcial">Parcial recebida</span>' : ''}
           <small class="comanda-aberta-selecao">${comandaAtiva?.id === comanda.id ? "Selecionada" : "Selecionar"}</small>
         </button>
       `).join("")}
@@ -8335,7 +8335,8 @@ function renderComandasCaixa() {
         </strong>
 
 <span class="comanda-caixa-cliente">
-  ${comanda.nome_cliente || "Sem identificação"}
+  ${window.crvComandasCaixa.esc(comanda.nome_cliente || "Sem identificação")}
+  ${comanda._crvParcial && comanda.status === "aberta" ? '<span class="comanda-caixa-parcial">Parcial recebida</span>' : ''}
 </span>
 
 ${comanda.observacoes ? `

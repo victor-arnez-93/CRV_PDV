@@ -63,6 +63,7 @@ window.crvComandasCaixa = (() => {
           await sincronizar();await alertaCaixa('Confirmação recuperada','O fechamento foi confirmado. Nenhum recebimento foi duplicado.');return;
         }
         await sincronizar();
+        await alertaCaixa('Pagamento parcial confirmado', `Recebimento recuperado: ${moeda(data.valor)}. A comanda continua aberta. Nenhum pagamento foi duplicado.`);
       }
       const dados=await consultar(id); criar(); detalhe=dados;
       contexto={empresa:obterEmpresaId(),operador:obterOperadorAtualId(),caixa:caixa?.id};
@@ -167,7 +168,11 @@ window.crvComandasCaixa = (() => {
       if(data.fechada&&comandaAtiva?.id===pedido.p_comanda_id){comandaAtiva=null;carrinho=[];comandaOculta=false;}
       await sincronizar();
       if(data.fechada){dialogo.close();await alertaCaixa('Comanda encerrada',`Recebido neste fechamento: ${moeda(data.valor)}. Troco: ${moeda(data.troco)}.`);}
-      else{detalhe=await consultar(pedido.p_comanda_id);desenhar(`Pagamento registrado: ${moeda(data.valor)}. Troco: ${moeda(data.troco)}. A comanda continua aberta.`);}
+      else{
+        detalhe=await consultar(pedido.p_comanda_id);
+        dialogo.close();
+        await alertaCaixa('Pagamento parcial confirmado',`Recebido: ${moeda(data.valor)}. Troco: ${moeda(data.troco)}. A comanda continua aberta.`);
+      }
     }catch(e){
       if(confirmado){dialogo.close();await alertaCaixa('Recebimento confirmado', 'O pagamento foi salvo, mas a tela não foi atualizada. Atualize o Caixa antes de continuar. Não repita a cobrança.');}
       else{desenhar(e.message);}
