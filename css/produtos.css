@@ -2323,7 +2323,7 @@
 
 .produtos-tabela-wrap {
   width: 100%;
-  max-height: min(432px, 58dvh);
+  max-height: min(276px, 58dvh); /* cabeçalho de 42px + 3 linhas de 78px */
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;

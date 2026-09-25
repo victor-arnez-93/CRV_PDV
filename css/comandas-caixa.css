@@ -349,9 +349,23 @@ body .pdv-cart .cart-header .btn-ghost {
   line-height: 1.5;
 }
 .crv-comanda-aviso-integral button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  max-width: 100%;
   min-height: 42px;
+  padding: 10px 16px;
+  white-space: normal;
+  text-align: center;
   cursor: pointer;
+}
+
+/* Também mantém o botão OK dos avisos de confirmação dentro do modal. */
+#modalConfirmCaixa .modal-footer .btn-secondary {
+  box-sizing: border-box;
+  max-width: 100%;
 }
 .crv-comanda-dialog *,
 .crv-comanda-dialog button {
