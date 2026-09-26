@@ -7840,10 +7840,10 @@ function renderComandasAbertasNoCaixa() {
       ${abertas.map(comanda => `
         <button
           type="button"
-          class="comanda-aberta-item ${comandaAtiva?.id === comanda.id ? "active" : ""}"
+          class="comanda-aberta-item ${comandaAtiva?.id === comanda.id ? "active" : ""} ${comanda._crvParcial ? "comanda-aberta-com-parcial" : ""}"
           data-comanda-id="${comanda.id}"
           aria-pressed="${comandaAtiva?.id === comanda.id}"
-          title="Selecionar comanda para lançar produtos"
+          title="${comanda._crvParcial ? "Pagamento parcial recebido; " : ""}Selecionar comanda para lançar produtos"
         >
           <strong class="comanda-aberta-codigo">
             ${window.crvComandasCaixa.esc(comanda.codigo || "—")}
@@ -7851,13 +7851,12 @@ function renderComandasAbertasNoCaixa() {
 
           <span class="comanda-aberta-cliente">
             ${window.crvComandasCaixa.esc(comanda.nome_cliente || "Sem identificação")}
-            ${comanda._crvParcial ? '<span class="comanda-aberta-parcial">Parcial recebida</span>' : ''}
           </span>
 
           <span class="comanda-aberta-total">
             ${fmt(comanda.total || 0)}
           </span>
-          <small class="comanda-aberta-selecao">${comandaAtiva?.id === comanda.id ? "Selecionada" : "Selecionar"}</small>
+          <small class="comanda-aberta-selecao ${comanda._crvParcial ? "com-parcial" : ""}">${comanda._crvParcial ? "Parcial recebida" : comandaAtiva?.id === comanda.id ? "Selecionada" : "Selecionar"}</small>
         </button>
       `).join("")}
     </div>
@@ -8215,21 +8214,19 @@ async function carregarComandasCaixa(opcoes = {}) {
       try {
         const { data: eventos, error: erroEventos } = await sb
           .from("vendas")
-          .select("comanda_id, comanda_evento, status_operacional, data")
+          .select("comanda_id, comanda_atendimento_id, comanda_evento, status_operacional, total")
           .eq("empresa_id", obterEmpresaId())
           .in("comanda_id", abertasComId.map(item => item.id))
-          .in("comanda_evento", ["parcial", "fechamento"])
-          .order("data", { ascending: false });
+          .eq("comanda_evento", "parcial");
         if (erroEventos) throw erroEventos;
-        const ultimoEvento = new Map();
+        const recebidosPorAtendimento = new Map();
         for (const evento of eventos || []) {
-          const id = String(evento.comanda_id);
-          if (!ultimoEvento.has(id) && evento.status_operacional !== "cancelada") {
-            ultimoEvento.set(id, evento.comanda_evento);
-          }
+          if (evento.status_operacional === "cancelada") continue;
+          const chave = `${evento.comanda_id}:${evento.comanda_atendimento_id}`;
+          recebidosPorAtendimento.set(chave, (recebidosPorAtendimento.get(chave) || 0) + Number(evento.total || 0));
         }
         abertasComId.forEach(item => {
-          item._crvParcial = ultimoEvento.get(String(item.id)) === "parcial";
+          item._crvParcial = (recebidosPorAtendimento.get(`${item.id}:${item.crv_atendimento_id}`) || 0) > 0;
         });
       } catch (erroParciais) {
         console.warn("Não foi possível identificar recebimentos parciais nos atalhos.", erroParciais);
@@ -8946,6 +8943,16 @@ const { data: aberta, error: erroAbrir } =
 // ======================================================
 // ITENS DA COMANDA
 // ======================================================
+async function mostrarErroEstoqueComanda(erro, mensagemPadrao) {
+  const mensagem = String(erro?.message || "");
+  if (mensagem.startsWith("Estoque insuficiente para ") || mensagem.startsWith("Estoque reservado em comandas para ")) {
+    const seguro = mensagem.replace(/[&<>"']/g, caractere => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[caractere]));
+    await alertaCaixa("Estoque insuficiente", seguro);
+  } else {
+    await alertaCaixa("Erro na comanda", mensagemPadrao);
+  }
+}
+
 async function adicionarProdutoNaComandaInterno(produto) {
   if (!comandaAtiva?.id) {
     await alertaCaixa(
@@ -9114,10 +9121,7 @@ async function adicionarProdutoNaComandaInterno(produto) {
       .eq("empresa_id", empresaId);
 
     if (erroUpdate) {
-      await alertaCaixa(
-        "Erro na comanda",
-        "Erro ao atualizar item da comanda."
-      );
+      await mostrarErroEstoqueComanda(erroUpdate, "Erro ao atualizar item da comanda.");
       console.error(erroUpdate);
       return;
     }
@@ -9142,10 +9146,7 @@ async function adicionarProdutoNaComandaInterno(produto) {
       ]);
 
     if (erroInsert) {
-      await alertaCaixa(
-        "Erro na comanda",
-        "Erro ao adicionar item na comanda."
-      );
+      await mostrarErroEstoqueComanda(erroInsert, "Erro ao adicionar item na comanda.");
       console.error(erroInsert);
       return;
     }
@@ -9616,10 +9617,7 @@ async function alterarQuantidadeCarrinhoInterno(index, delta) {
       .eq("empresa_id", obterEmpresaId());
 
     if (error) {
-      await alertaCaixa(
-        "Erro na comanda",
-        "Erro ao atualizar quantidade da comanda."
-      );
+      await mostrarErroEstoqueComanda(error, "Erro ao atualizar quantidade da comanda.");
       console.error(error);
       return;
     }

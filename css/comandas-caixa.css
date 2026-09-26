@@ -37,18 +37,6 @@
   overflow-wrap: anywhere;
   line-height: 1.35;
 }
-.comanda-aberta-parcial {
-  display: inline-block;
-  margin-left: 3px;
-  vertical-align: middle;
-  padding: 2px 6px;
-  border: 1px solid var(--crv-golden);
-  border-radius: var(--radius-pill);
-  color: var(--crv-golden);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.2;
-}
 .comanda-aberta-selecao {
   font-size: 10px;
   color: var(--text-muted);
@@ -56,6 +44,13 @@
 .comanda-aberta-item.active .comanda-aberta-selecao {
   color: var(--crv-golden);
   font-weight: 700;
+}
+.comanda-aberta-item .comanda-aberta-selecao.com-parcial {
+  color: var(--crv-golden);
+  font-weight: 800;
+}
+[data-theme="light"] .comanda-aberta-item .comanda-aberta-selecao.com-parcial {
+  color: var(--crv-blue);
 }
 .comanda-card {
   box-sizing: border-box;
@@ -548,6 +543,20 @@ body .pdv-cart .cart-header .btn-ghost {
   gap: 10px;
   margin: 0 0 7px;
   font-size: 12px;
+}
+.cc-resumo .cc-recebido,
+.cc-resumo .cc-saldo {
+  color: var(--crv-golden);
+  font-weight: 700;
+}
+.cc-resumo .cc-recebido b,
+.cc-resumo .cc-saldo strong {
+  color: inherit;
+  font-weight: 800;
+}
+[data-theme="light"] .cc-resumo .cc-recebido,
+[data-theme="light"] .cc-resumo .cc-saldo {
+  color: var(--crv-blue);
 }
 .cc-resumo label {
   grid-template-columns: 1fr 90px;

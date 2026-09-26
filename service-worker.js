@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "crv-pdv-caixa";
-const CACHE_NAME = `${CACHE_PREFIX}-v19-20260925-avisos-estoque`;
+const CACHE_NAME = `${CACHE_PREFIX}-v21-20260926-reserva-estoque`;
 
 const APP_SHELL = [
   "./caixa.html",
