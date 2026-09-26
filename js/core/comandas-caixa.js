@@ -28,7 +28,10 @@ window.crvComandasCaixa = (() => {
   }
   const $ = id => dialogo.querySelector('#'+id);
   const chave = () => `crv:comanda:pendente:${contexto.empresa}:${detalhe.comanda.id}`;
-  const erro = e => { $('ccErro').textContent = e?.message || String(e); };
+  const erro = e => {
+    const mensagem = e?.message || String(e);
+    avisarComanda(/estoque insuficiente|sem estoque/i.test(mensagem) ? 'Estoque insuficiente' : 'Confira a comanda', mensagem);
+  };
   function criar() {
     if(dialogo) return;
     dialogo=document.createElement('dialog');dialogo.className='crv-comanda-dialog';
@@ -37,28 +40,31 @@ window.crvComandasCaixa = (() => {
     dialogo.addEventListener('cancel',e=>{if(ocupado)e.preventDefault();});
     dialogo.addEventListener('close',()=>{foco?.focus?.();});
   }
-  function avisarQuitacaoIntegral() {
+  function avisarComanda(titulo, mensagem) {
     if (!avisoIntegral) {
       avisoIntegral = document.createElement('dialog');
       avisoIntegral.className = 'crv-comanda-aviso-integral';
       avisoIntegral.setAttribute('aria-labelledby', 'ccAvisoTitulo');
       avisoIntegral.setAttribute('aria-describedby', 'ccAvisoTexto');
       avisoIntegral.innerHTML = `<div class="cc-aviso-integral-icone" aria-hidden="true">!</div>
-        <h2 id="ccAvisoTitulo">Este valor quita a comanda</h2>
-        <p id="ccAvisoTexto">Para receber o saldo total, use <strong>Finalizar comanda</strong>.</p>
+        <h2 id="ccAvisoTitulo"></h2>
+        <p id="ccAvisoTexto"></p>
         <button type="button" class="btn-secondary" id="ccAvisoVoltar">Voltar aos detalhes</button>`;
       document.body.appendChild(avisoIntegral);
       avisoIntegral.querySelector('#ccAvisoVoltar').addEventListener('click', () => avisoIntegral.close());
     }
     if (avisoIntegral.open) return;
     const origem = document.activeElement;
+    avisoIntegral.querySelector('#ccAvisoTitulo').textContent = titulo;
+    avisoIntegral.querySelector('#ccAvisoTexto').textContent = mensagem;
     avisoIntegral.addEventListener('close', () => {
       if (dialogo.open && origem?.isConnected) origem.focus();
     }, {once:true});
-    $('ccErro').textContent = '';
     avisoIntegral.showModal();
     avisoIntegral.querySelector('#ccAvisoVoltar').focus();
   }
+  const avisarQuitacaoIntegral = () => avisarComanda('Este valor quita a comanda',
+    'Para receber o saldo total, use Finalizar comanda.');
   function pendente() {try{return JSON.parse(sessionStorage.getItem(chave())||'null');}catch{return null;}}
   async function consultar(id) {
     if(!sistemaOnline())throw Error('Conecte-se à internet para consultar e receber comandas.');
@@ -92,7 +98,7 @@ window.crvComandasCaixa = (() => {
       foco=document.activeElement; desenhar();dialogo.showModal();$('ccFechar').focus();
     }catch(e){await alertaCaixa('Detalhes da comanda',e.message);}finally{abrindo=false;}
   }
-  function desenhar(aviso='') {
+  function desenhar() {
     const d=detalhe, c=d.comanda, aberto=caixa?.status==='aberto', pend=pendente();
     dialogo.innerHTML=`<header class="cc-header"><div><small>COMANDA ABERTA</small><h2 id="ccTitulo">${esc(c.codigo)} <span>${esc(c.nome_cliente||'Sem identificação')}</span></h2></div><button type="button" id="ccFechar" class="btn-ghost" aria-label="Fechar detalhes">✕</button></header>
     <div class="cc-corpo"><div class="cc-consumo"><p class="cc-sub">${c.data_abertura?'Aberta em '+esc(new Date(c.data_abertura).toLocaleString('pt-BR')):''}</p>${c.observacoes?`<p>${esc(c.observacoes)}</p>`:''}
@@ -100,7 +106,7 @@ window.crvComandasCaixa = (() => {
     <div class="cc-itens">${d.itens.length?d.itens.map(i=>`<div class="cc-item"><span><b>${esc(i.quantidade)} × ${esc(i.nome)}</b><small>${moeda(i.preco)} cada</small></span><strong>${moeda(i.preco*i.quantidade)}</strong></div>`).join(''):'<p class="cc-vazio">Nenhum item lançado. Use Editar consumo para selecionar esta comanda e adicionar produtos.</p>'}</div>
     <h3>Pagamentos</h3><div class="cc-historico">${d.pagamentos.length?d.pagamentos.map(p=>`<div class="cc-item ${p.status_operacional==='cancelada'?'cc-cancelado':''}"><span><b>${moeda(p.total)} · ${esc(p.forma_pagamento)}</b><small>${esc(new Date(p.data).toLocaleString('pt-BR'))}${p.comanda_pagador?' · '+esc(p.comanda_pagador):''} · ${p.status_operacional==='cancelada'?'Estornado':'Recebido'} · ${esc(p.id.slice(0,8))}</small></span>${window.crvEstornos?.permitido(p,caixa?.id)?`<button type="button" class="btn-ghost" data-estorno="${esc(p.id)}">Estornar</button>`:''}</div>`).join(''):'<p class="cc-vazio">Nenhum pagamento registrado.</p>'}</div>
     <p class="cc-sub">${Number(d.saldo)===0&&Number(d.recebido)>0?'Saldo quitado. Finalize a comanda para encerrá-la, sem receber novamente.':'Pagamentos parciais mantêm a comanda aberta.'}</p></div>
-    <form id="ccForm" class="cc-receber"><div class="cc-resumo"><div><span>Consumo</span><b>${moeda(d.consumo)}</b></div><div><span>Já recebido</span><b>${moeda(d.recebido)}</b></div><label>Desconto total${d.recebido>0?" (fixo após parcial)":""}<input id="ccDesconto" inputmode="decimal" value="${campoMoeda(d.desconto)}" ${d.recebido>0||!window.crvOperadorPodeEspecial?.('desconto')?'readonly':''} /></label><div class="cc-saldo"><span>Falta pagar</span><strong id="ccSaldo">${moeda(d.saldo)}</strong></div></div>
+    <form id="ccForm" class="cc-receber" novalidate><div class="cc-resumo"><div><span>Consumo</span><b>${moeda(d.consumo)}</b></div><div><span>Já recebido</span><b>${moeda(d.recebido)}</b></div><label>Desconto total${d.recebido>0?" (fixo após parcial)":""}<input id="ccDesconto" inputmode="decimal" value="${campoMoeda(d.desconto)}" ${d.recebido>0||!window.crvOperadorPodeEspecial?.('desconto')?'readonly':''} /></label><div class="cc-saldo"><span>Falta pagar</span><strong id="ccSaldo">${moeda(d.saldo)}</strong></div></div>
     ${!aberto?'<p class="cc-aviso">Abra o caixa para receber.</p>':''}
     ${pend?'<p class="cc-aviso">Há uma confirmação sem resposta neste dispositivo. Consulte o resultado antes de fazer outro recebimento.</p><button type="button" class="btn-primary" id="ccRetomar">Consultar confirmação pendente</button>':''}
     ${Number(d.saldo)===0&&d.itens.length?'<p class="cc-aviso">O saldo já está quitado. Finalize para encerrar a comanda sem cobrar novamente.</p>':''}
@@ -113,7 +119,7 @@ window.crvComandasCaixa = (() => {
     <div class="cc-acoes"><button class="btn-ghost" id="ccParcial" type="submit" ${d.itens.length && d.saldo>0?'':'disabled'}><span>Receber pagamento parcial</span></button><button class="btn-secondary" id="ccQuitar" type="button" ${d.itens.length?'':'hidden'}><span>Finalizar comanda</span></button></div></fieldset>
     ${!d.itens.length?'<p class="cc-sub">Adicione produtos para registrar um pagamento.</p><button type="button" id="ccEncerrarVazia" class="btn-ghost" '+(!aberto||pend?'disabled':'')+'>Encerrar comanda vazia</button>':''}
     <p class="cc-sub">${Number(d.saldo)===0?'Finalizar encerra a comanda sem novo recebimento.':'Pagamentos parciais devem ser menores que o saldo. Finalizar recebe o saldo restante e encerra a comanda. Confira cartão/Pix antes de registrar.'}</p>
-    <p id="ccErro" role="alert">${esc(aviso)}</p><button type="button" id="ccAtualizar" class="btn-ghost">Atualizar detalhes</button></form></div>`;
+    <button type="button" id="ccAtualizar" class="btn-ghost">Atualizar detalhes</button></form></div>`;
     $('ccFechar').onclick=()=>{if(!ocupado)dialogo.close();};
     $('ccAtualizar').onclick=atualizar;
     $('ccConsumir').onclick=async()=>{
@@ -165,12 +171,13 @@ window.crvComandasCaixa = (() => {
       if(!fechar && Number.isFinite(pagar) && Number.isFinite(saldo) && saldo>0 && Math.round(pagar*100)===Math.round(saldo*100)){
         avisarQuitacaoIntegral();return;
       }
-      if(![desconto,saldo,pagar,entregue].every(Number.isFinite)||desconto<0||saldo<0||pagar<0||pagar>saldo||(!fechar&&pagar===0)||entregue<pagar)throw Error('Confira o desconto, o valor a pagar e o dinheiro entregue.');
+      if(![desconto,saldo,pagar,entregue].every(Number.isFinite)||desconto<0||saldo<0||pagar<0||pagar>saldo||(!fechar&&pagar===0))throw Error('Confira o desconto, o valor a pagar e o dinheiro entregue.');
+      if(fechar&&valor($('ccValor').value)!==saldo&&detalhe.itens.length)throw Error(`Finalizar comanda recebe o saldo total de ${moeda(saldo)}. Para pagar menos, use Receber pagamento parcial.`);
+      if(entregue<pagar)throw Error('O dinheiro entregue é menor que o valor a receber.');
       if(pagar>0&&detalhe.itens.length&&!$('ccPagador').value.trim()){
         ($('ccPagadorOpcao').value==='outro'?$('ccPagador'):$('ccPagadorOpcao')).focus();
         throw Error('Informe o nome de quem pagou para registrar o pagamento.');
       }
-      if(fechar&&valor($('ccValor').value)!==saldo&&detalhe.itens.length){$('ccValor').value=campoMoeda(saldo);throw Error('O fechamento recebe todo o saldo restante. Confira o valor atualizado e confirme novamente.');}
       const c=detalhe.comanda;
       const pedido={p_comanda_id:c.id,p_caixa_id:contexto.caixa,p_atendimento_id:c.crv_atendimento_id,p_revisao:c.crv_revisao,p_valor:pagar,p_forma:forma,p_desconto:desconto,p_entregue:entregue,p_fechar:fechar,p_operacao_id:novaConfirmacao(),p_operador_id:contexto.operador,p_pagador:pagar>0?formatarPagador($('ccPagador').value.trim())||null:null};
       sessionStorage.setItem(chave(),JSON.stringify(pedido));await enviar(pedido);
@@ -178,7 +185,9 @@ window.crvComandasCaixa = (() => {
   }
   async function enviar(pedido) {
     if(ocupado||!pedido)return;
-    ocupado=true;dialogo.querySelectorAll('button,input,select').forEach(b=>b.disabled=true);
+    ocupado=true;
+    const controles=[...dialogo.querySelectorAll('button,input,select')].map(b=>[b,b.disabled]);
+    controles.forEach(([b])=>b.disabled=true);
     let confirmado=false;
     try {
       if(!sistemaOnline())throw Error('Sem conexão. Reconecte e consulte esta mesma confirmação; não registre novamente.');
@@ -201,8 +210,12 @@ window.crvComandasCaixa = (() => {
       }
     }catch(e){
       if(confirmado){dialogo.close();await alertaCaixa('Recebimento confirmado', 'O pagamento foi salvo, mas a tela não foi atualizada. Atualize o Caixa antes de continuar. Não repita a cobrança.');}
-      else{desenhar(e.message);}
-    }finally{ocupado=false;if(dialogo.open){$('ccFechar').disabled=false;$('ccAtualizar').disabled=false;}}
+      else{
+        if(pendente()) desenhar();
+        else controles.forEach(([b,desabilitado])=>{if(b.isConnected)b.disabled=desabilitado;});
+        erro(e);
+      }
+    }finally{ocupado=false;}
   }
   async function sincronizar() {
     await carregarDadosSupabase();

@@ -43,6 +43,19 @@
   box-shadow: var(--shadow-md);
 }
 
+.dash-op-produto.dash-estoque-urgente {
+  border-color: #d9303e;
+  box-shadow: 0 0 0 1px rgb(217 48 62 / 28%), 0 0 16px rgb(217 48 62 / 14%);
+}
+.dash-op-produto.dash-estoque-urgente #dashEstoqueResumo { color: #c52435; font-weight: 800; }
+[data-theme="dark"] .dash-op-produto.dash-estoque-urgente #dashEstoqueResumo { color: #ff6673; }
+.dash-op-produto.dash-estoque-baixo {
+  border-color: #c88e11;
+  box-shadow: 0 0 0 1px rgb(200 142 17 / 22%), 0 0 14px rgb(200 142 17 / 12%);
+}
+.dash-op-produto.dash-estoque-baixo #dashEstoqueResumo { color: #9b6700; font-weight: 700; }
+[data-theme="dark"] .dash-op-produto.dash-estoque-baixo #dashEstoqueResumo { color: #ffc857; }
+
 .dash-op-icon {
   position: relative;
   width: 42px;

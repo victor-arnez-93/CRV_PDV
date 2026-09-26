@@ -2323,7 +2323,7 @@
 
 .produtos-tabela-wrap {
   width: 100%;
-  max-height: min(276px, 58dvh); /* cabeçalho de 42px + 3 linhas de 78px */
+  max-height: min(276px, 58dvh);
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -2451,6 +2451,47 @@
   width: 30px;
   height: 30px;
 }
+
+/* Alerta de estoque em cards e lista: zero tem prioridade sobre baixo. */
+.produto-card.produto-alerta-zerado {
+  border-color: #d9303e;
+  box-shadow: 0 0 0 1px rgb(217 48 62 / 32%), 0 0 18px rgb(217 48 62 / 16%);
+}
+.produto-card.produto-alerta-baixo {
+  border-color: #c88e11;
+  box-shadow: 0 0 0 1px rgb(200 142 17 / 24%), 0 0 16px rgb(200 142 17 / 13%);
+}
+.produto-card.produto-alerta-zerado:hover { border-color: #d9303e; }
+.produto-card.produto-alerta-baixo:hover { border-color: #c88e11; }
+.produto-card.produto-alerta-zerado .estoque-zero { color: #c52435; }
+.produto-card.produto-alerta-baixo .estoque-low { color: #9b6700; }
+[data-theme="dark"] .produto-card.produto-alerta-zerado .estoque-zero { color: #ff6673; }
+[data-theme="dark"] .produto-card.produto-alerta-baixo .estoque-low { color: #ffc857; }
+.produto-card .produto-estoque-alerta {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.produto-estoque-alerta {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: .69rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.produto-estoque-alerta.zerado,
+.produto-tabela-estoque.zerado { color: #c52435; }
+.produto-estoque-alerta.baixo,
+.produto-tabela-estoque.baixo { color: #9b6700; }
+[data-theme="dark"] .produto-estoque-alerta.zerado,
+[data-theme="dark"] .produto-tabela-estoque.zerado { color: #ff6673; }
+[data-theme="dark"] .produto-estoque-alerta.baixo,
+[data-theme="dark"] .produto-tabela-estoque.baixo { color: #ffc857; }
+.produtos-tabela .produto-linha-zerada td { background: color-mix(in srgb, #d9303e 8%, var(--bg-card)); }
+.produtos-tabela .produto-linha-baixa td { background: color-mix(in srgb, #d9a121 7%, var(--bg-card)); }
+.produtos-tabela .produto-linha-zerada td:first-child { box-shadow: inset 4px 0 #d9303e; }
+.produtos-tabela .produto-linha-baixa td:first-child { box-shadow: inset 4px 0 #c88e11; }
+.produtos-tabela .produto-linha-zerada:hover td { background: color-mix(in srgb, #d9303e 13%, var(--bg-card)); }
+.produtos-tabela .produto-linha-baixa:hover td { background: color-mix(in srgb, #d9a121 12%, var(--bg-card)); }
 
 @media (max-width: 620px) {
   .edicao-massa-corpo {

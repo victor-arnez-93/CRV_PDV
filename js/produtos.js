@@ -1646,14 +1646,15 @@ function renderizarTabelaProdutos(lista, { podeCriar, podeEditar, podeExcluir })
           const tipo = obterTipoItemProduto(produto);
           const controlaEstoque = itemControlaEstoque(produto);
           const quantidade = Number(produto.estoque || 0);
-          const estoqueBaixo = controlaEstoque && quantidade <= estoqueMinimoProduto(produto);
-          return `<tr class="${produto.ativo ? "" : "produto-linha-inativa"} ${produtosSelecionadosLista.has(String(produto.id)) ? "produto-linha-selecionada" : ""}">
+          const estoqueZerado = produto.ativo && controlaEstoque && quantidade <= 0;
+          const estoqueBaixo = produto.ativo && controlaEstoque && quantidade > 0 && quantidade <= estoqueMinimoProduto(produto);
+          return `<tr class="${produto.ativo ? "" : "produto-linha-inativa"} ${estoqueZerado ? "produto-linha-zerada" : estoqueBaixo ? "produto-linha-baixa" : ""} ${produtosSelecionadosLista.has(String(produto.id)) ? "produto-linha-selecionada" : ""}">
             ${podeSelecionar ? `<td class="col-selecao"><input type="checkbox" aria-label="Selecionar ${escaparHTMLProduto(produto.nome)}" onchange="alternarSelecaoProdutosLista(this.value, this.checked)" value="${escaparHTMLProduto(produto.id)}" ${produtosSelecionadosLista.has(String(produto.id)) ? "checked" : ""}></td>` : ""}
             <td class="produto-tabela-nome"><strong>${escaparHTMLProduto(produto.nome)}</strong><small>${escaparHTMLProduto(tiposItemCatalogo[tipo].singular)} · ${escaparHTMLProduto(categoriaLabel[produto.categoria] || produto.categoria || "Sem categoria")}${produto.produto_rapido ? " · Rápido" : ""}${!produto.ativo ? " · Inativo" : ""}</small></td>
             <td><span class="produto-tabela-codigo">${escaparHTMLProduto(produto.codigo || "—")}</span></td>
             <td class="produto-tabela-preco">${fmt(produto.preco)}</td>
             <td><span class="produto-tabela-custo">${fmt(produto.preco_custo || 0)}</span><small>Lucro: ${fmt(Number(produto.preco || 0) - Number(produto.preco_custo || 0))}</small></td>
-            <td>${controlaEstoque ? `<span class="produto-tabela-estoque ${estoqueBaixo ? "baixo" : ""}">${quantidade} ${escaparHTMLProduto(labelUnidadeVendaProduto(unidadeVendaProduto(produto), quantidade))}</span><small>Mín. ${estoqueMinimoProduto(produto)}</small>` : `<span class="produto-tabela-custo">Sem controle</span>`}</td>
+            <td>${controlaEstoque ? `<span class="produto-tabela-estoque ${estoqueZerado ? "zerado" : estoqueBaixo ? "baixo" : ""}">${quantidade} ${escaparHTMLProduto(labelUnidadeVendaProduto(unidadeVendaProduto(produto), quantidade))}</span>${estoqueZerado ? '<strong class="produto-estoque-alerta zerado">SEM ESTOQUE · URGENTE</strong>' : estoqueBaixo ? '<strong class="produto-estoque-alerta baixo">ESTOQUE BAIXO</strong>' : ''}<small>Mín. ${estoqueMinimoProduto(produto)}</small>` : `<span class="produto-tabela-custo">Sem controle</span>`}</td>
             <td class="col-acoes"><div class="produto-actions">
               ${controlaEstoque && featureProdutosAtiva("estoque_operacional") && podeEditar && operadorPodeMovimentarEstoqueProduto() ? `<button type="button" class="produto-btn estoque" onclick="abrirModalMovimentacaoEstoque('${produto.id}')" title="Movimentar estoque" aria-label="Movimentar estoque de ${escaparHTMLProduto(produto.nome)}"><i data-lucide="package-open" width="15" height="15"></i></button>` : ""}
               ${podeEditar ? `<button type="button" class="produto-btn" onclick="abrirModalEditar('${produto.id}')" title="Editar" aria-label="Editar ${escaparHTMLProduto(produto.nome)}"><i data-lucide="pencil" width="15" height="15"></i></button>` : ""}
@@ -1750,14 +1751,14 @@ function renderProdutos() {
     const unidadeVenda = unidadeVendaProduto(produto);
 
     const estoqueClass =
-      estoque === 0
+      estoque <= 0
         ? "estoque-zero"
         : estoque <= estoqueMinimo
           ? "estoque-low"
           : "estoque-ok";
 
     const estoqueIcon =
-      estoque === 0
+      estoque <= 0
         ? "alert-circle"
         : estoque <= estoqueMinimo
           ? "alert-triangle"
@@ -1766,7 +1767,7 @@ function renderProdutos() {
     const categoria = produto.categoria || "";
 
     return `
-      <div class="produto-card tipo-${tipoItem} ${produto.ativo ? "" : "inativo"}">
+      <div class="produto-card tipo-${tipoItem} ${produto.ativo ? "" : "inativo"} ${produto.ativo && controlaEstoque ? (estoque <= 0 ? "produto-alerta-zerado" : estoque <= estoqueMinimo ? "produto-alerta-baixo" : "") : ""}">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div class="produto-badges">
             <span class="produto-tipo-badge tipo-${tipoItem}">
@@ -1816,6 +1817,7 @@ function renderProdutos() {
                    <i data-lucide="${estoqueIcon}" width="13" height="13"></i>
                    <span>${estoque} ${escaparHTMLProduto(labelUnidadeVendaProduto(unidadeVenda, estoque))}</span>
                    <small>Mín. ${estoqueMinimo}</small>
+                   ${produto.ativo && estoque <= 0 ? '<strong class="produto-estoque-alerta zerado">SEM ESTOQUE · URGENTE</strong>' : produto.ativo && estoque <= estoqueMinimo ? '<strong class="produto-estoque-alerta baixo">ESTOQUE BAIXO</strong>' : ''}
                  </div>`
               : `<div class="produto-sem-estoque">
                    <i data-lucide="infinity" width="13" height="13"></i>
@@ -3071,45 +3073,22 @@ setTimeout(() => {
 function verificarEstoqueBaixo() {
   if (!Array.isArray(produtos) || !produtos.length) return;
 
-  const baixos = produtos.filter(produto => {
+  const controlados = produtos.filter(produto => itemControlaEstoque(produto) && produto.ativo !== false);
+  const zerados = controlados.filter(produto => Number(produto.estoque || 0) <= 0);
+  const baixos = controlados.filter(produto => {
     const estoque = Number(produto.estoque || 0);
-
-    return itemControlaEstoque(produto) &&
-      estoque <= estoqueMinimoProduto(produto) &&
-      produto.ativo !== false;
+    return estoque > 0 && estoque <= estoqueMinimoProduto(produto);
   });
 
-  if (!baixos.length) return;
-
-  const nomes = baixos
-    .slice(0, 3)
-    .map(produto => `${produto.nome} (${produto.estoque})`)
-    .join(", ");
-
-  const extras = baixos.length > 3
-    ? ` e mais ${baixos.length - 3}`
-    : "";
-
-  const mensagem = `${nomes}${extras}`;
-
-  if (typeof crvToast === "function") {
-    crvToast({
-      titulo: "Itens com estoque baixo",
-      mensagem,
-      tipo: "warn",
-      tempo: 7000
-    });
-    return;
+  for (const [itens, titulo, tipo] of [
+    [zerados, "SEM ESTOQUE · URGENTE", "error"],
+    [baixos, "Estoque baixo", "warn"]
+  ]) {
+    if (!itens.length) continue;
+    const nomes = itens.slice(0, 3).map(produto => `${produto.nome} (${produto.estoque})`).join(", ");
+    const mensagem = nomes + (itens.length > 3 ? ` e mais ${itens.length - 3}` : "");
+    if (typeof crvToast === "function") crvToast({titulo, mensagem, tipo, tempo: 8000});
+    else if (typeof mostrarToast === "function") mostrarToast({titulo, mensagem, tipo});
+    else console.warn(`[CRV PDV] ${titulo}: ${mensagem}`);
   }
-
-  if (typeof mostrarToast === "function") {
-    mostrarToast({
-      tipo: "warn",
-      titulo: "Itens com estoque baixo",
-      mensagem
-    });
-    return;
-  }
-
-  console.warn("[CRV PDV] Itens com estoque baixo:", mensagem);
 }

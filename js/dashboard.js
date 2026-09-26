@@ -238,15 +238,16 @@ async function initDashboard() {
 
 const { data: produtosBaixoData, error: produtosBaixoError } = await sb
   .from("produtos")
-  .select("id,nome,estoque,estoque_minimo,controla_estoque")
+  .select("id,nome,estoque,estoque_minimo,controla_estoque,tipo_item")
   .eq("empresa_id", APP_EMPRESA_ID)
-  .eq("ativo", true)
-  .eq("controla_estoque", true);
+  .eq("ativo", true);
 
 if (produtosBaixoError) throw produtosBaixoError;
 
 produtosBaixo = (produtosBaixoData || []).filter(produto => {
-  return Number(produto.estoque || 0) <= Number(produto.estoque_minimo ?? 5);
+  const controla = typeof produto.controla_estoque === "boolean"
+    ? produto.controla_estoque : (produto.tipo_item || "produto") === "produto";
+  return controla && Number(produto.estoque || 0) <= Number(produto.estoque_minimo ?? 5);
 });
 
 if (empresaUsaAgendaEsportivaDashboard()) {
@@ -454,10 +455,16 @@ function atualizarAtalhoCaixaDashboard(caixaAtual) {
 }
 
 function atualizarAtencaoHojeDashboard({ produtosBaixo, jogosHoje }) {
-  const elEstoque = document.getElementById("dashEstoqueBaixo");
+  const elResumo = document.getElementById("dashEstoqueResumo");
   const elJogos = document.getElementById("dashJogosHoje");
 
-  if (elEstoque) elEstoque.textContent = produtosBaixo.length;
+  const zerados = produtosBaixo.filter(produto => Number(produto.estoque || 0) <= 0).length;
+  const baixos = produtosBaixo.length - zerados;
+  if (elResumo) elResumo.textContent = zerados || baixos
+    ? `${zerados} sem estoque · ${baixos} com estoque baixo`
+    : "Estoque em dia";
+  elResumo?.closest(".dash-op-produto")?.classList.toggle("dash-estoque-urgente", zerados > 0);
+  elResumo?.closest(".dash-op-produto")?.classList.toggle("dash-estoque-baixo", !zerados && baixos > 0);
   if (elJogos) elJogos.textContent = jogosHoje.length;
 
   document.documentElement.classList.toggle(

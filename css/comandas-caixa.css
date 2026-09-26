@@ -361,8 +361,6 @@ body .pdv-cart .cart-header .btn-ghost {
   text-align: center;
   cursor: pointer;
 }
-
-/* Também mantém o botão OK dos avisos de confirmação dentro do modal. */
 #modalConfirmCaixa .modal-footer .btn-secondary {
   box-sizing: border-box;
   max-width: 100%;
