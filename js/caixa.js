@@ -4672,6 +4672,11 @@ if (origem !== "agenda") {
 
 return Number(venda.total || 0) > 0;
     })
+    .sort((a, b) => {
+      const dataA = Date.parse(a.data || a.created_at || "") || 0;
+      const dataB = Date.parse(b.data || b.created_at || "") || 0;
+      return dataB - dataA;
+    })
     .forEach(venda => {
     const origem = String(venda.origem || "pdv").toLowerCase();
     const cancelada = vendaCanceladaCaixa(venda);
