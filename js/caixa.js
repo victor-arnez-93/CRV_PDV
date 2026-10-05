@@ -2697,7 +2697,10 @@ function setupBusca() {
       !comandaAtiva
     ) {
 
-      await processarLeituraComanda(termo);
+      await alertaCaixa(
+        "Selecione uma comanda",
+        "Clique em uma comanda aberta ou use Buscar comanda antes de adicionar produtos."
+      );
 
       return;
     }
@@ -5120,7 +5123,7 @@ function atualizarInterfaceModoPDV() {
       comandaCard.style.display = "none";
     }
 
-    inputBusca.placeholder = "Buscar produto ou código de barras...";
+    inputBusca.placeholder = "Ler produto ou digitar código de barras...";
     inputBusca.focus();
 
     renderComandasAbertasNoCaixa();
@@ -5234,7 +5237,7 @@ function atualizarInterfaceModoPDV() {
     }
   }
 
-  inputBusca.placeholder = `Adicionar produto na comanda ${comandaAtiva.codigo}...`;
+  inputBusca.placeholder = "Ler produto ou digitar código de barras...";
   inputBusca.focus();
 
   renderComandasAbertasNoCaixa();
@@ -8125,9 +8128,9 @@ async function abrirModalSelecionarComanda() {
   if (inputBusca) {
     inputBusca.value = "";
   }
-  filtroComandasCaixa = "todas";
+  filtroComandasCaixa = "abertas";
   document.querySelectorAll("#filtrosComandasCaixa [data-filtro]").forEach(botao => {
-    const ativo = botao.dataset.filtro === "todas";
+    const ativo = botao.dataset.filtro === "abertas";
     botao.classList.toggle("active", ativo);
     botao.setAttribute("aria-pressed", String(ativo));
   });
