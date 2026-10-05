@@ -5168,7 +5168,7 @@ function atualizarInterfaceModoPDV() {
       comandaCard.style.display = "none";
     }
 
-    inputBusca.placeholder = "Ler ou digitar código da comanda...";
+    inputBusca.placeholder = "Ler produto ou digitar código de barras...";
     inputBusca.focus();
 
     renderComandasAbertasNoCaixa();
@@ -7836,7 +7836,7 @@ function renderComandasAbertasNoCaixa() {
           class="btn-abrir-modal-comandas"
           id="btnAbrirModalComandasCaixa"
         >
-          Ver todas
+          Buscar comanda
         </button>
       </div>
     </div>
