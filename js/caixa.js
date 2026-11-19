@@ -23,6 +23,8 @@ let modoBalcaoCaixa = false;
 let rapidosBalcaoOcultos = false;
 let comandaAtiva = null;
 let comandaOculta = false;
+let consultaResumoComandaCaixa = 0;
+let agendamentoResumoComandaCaixa;
 let filaOperacoesComandaCaixa = Promise.resolve();
 function executarOperacaoComandaCaixa(operacao) {
   const proxima = filaOperacoesComandaCaixa.then(operacao);
@@ -3076,6 +3078,8 @@ function renderCarrinho() {
 
   if (!box) return;
 
+  atualizarResumoComandaCaixa();
+
   if (count) {
     const quantidadeTotal = carrinho.reduce((acc, item) => {
       return acc + Number(item.quantidade || 0);
@@ -3088,7 +3092,7 @@ function renderCarrinho() {
     box.innerHTML = `
       <div class="empty-state">
         <i data-lucide="shopping-cart" width="28" height="28"></i>
-        <p>Carrinho vazio</p>
+        <p>${modoPDV === "comanda" && comandaAtiva ? "Nenhum item lançado na comanda" : "Carrinho vazio"}</p>
       </div>
     `;
 
@@ -3165,11 +3169,8 @@ if (btnPlus) {
 }
 
 async function limparCarrinho() {
-  if (modoPDV === "comanda" && comandaAtiva) {
-    await alertaCaixa(
-      "Comanda ativa",
-      "Para ocultar sem fechar a comanda, use o botão <strong>Ocultar comanda</strong> no card da comanda ativa."
-    );
+  if (modoPDV === "comanda") {
+    if (comandaAtiva) await limparComandaAtiva();
     return;
   }
 
@@ -3277,6 +3278,70 @@ function atualizarTotais() {
 
   calcularTroco();
 }
+
+function atualizarResumoComandaCaixa() {
+  const resumo = document.getElementById("cartResumoComanda");
+  if (!resumo) return;
+
+  clearTimeout(agendamentoResumoComandaCaixa);
+  const consultaAtual = ++consultaResumoComandaCaixa;
+  const comanda = modoPDV === "comanda" ? comandaAtiva : null;
+  resumo.hidden = !comanda?.id;
+  if (!comanda?.id) return;
+
+  const status = document.getElementById("cartResumoComandaStatus");
+  const valores = document.getElementById("cartResumoComandaValores");
+  valores.hidden = true;
+  status.hidden = false;
+  if (!sistemaOnline()) {
+    status.textContent = "Conecte-se para consultar o saldo.";
+    return;
+  }
+
+  status.textContent = "Consultando saldo…";
+  const empresa = obterEmpresaId();
+  const atendimento = comanda.crv_atendimento_id;
+  const consultaVigente = () => consultaAtual === consultaResumoComandaCaixa &&
+    modoPDV === "comanda" && comandaAtiva?.id === comanda.id &&
+    comandaAtiva.crv_atendimento_id === atendimento && obterEmpresaId() === empresa && sistemaOnline();
+
+  agendamentoResumoComandaCaixa = setTimeout(async () => {
+    if (!consultaVigente()) return;
+    try {
+      const dados = await window.crvComandasCaixa.consultar(comanda.id);
+      if (!consultaVigente()) return;
+
+      const registro = dados?.comanda;
+      const totais = [dados?.consumo, dados?.desconto, dados?.recebido, dados?.saldo];
+      if (registro?.id !== comanda.id || (registro.status && registro.status !== "aberta") ||
+        (atendimento && registro.crv_atendimento_id !== atendimento) ||
+        totais.some(valor => valor == null || !Number.isFinite(Number(valor)))) {
+        status.textContent = "Saldo indisponível. Confira os detalhes da comanda.";
+        return;
+      }
+
+      const [consumo, desconto, recebido, saldo] = totais.map(Number);
+      document.getElementById("cartComandaConsumo").textContent = fmt(consumo);
+      document.getElementById("cartComandaDesconto").textContent = fmt(desconto);
+      document.getElementById("cartComandaRecebido").textContent = fmt(recebido);
+      document.getElementById("cartComandaSaldo").textContent = fmt(saldo);
+      document.getElementById("cartComandaConsumoLinha").hidden = recebido <= 0 && desconto <= 0;
+      document.getElementById("cartComandaDescontoLinha").hidden = desconto <= 0;
+      document.getElementById("cartComandaRecebidoLinha").hidden = recebido <= 0;
+      status.hidden = true;
+      valores.hidden = false;
+    } catch (erro) {
+      if (consultaVigente()) {
+        status.textContent = "Saldo indisponível. Confira os detalhes da comanda.";
+        console.warn("[CAIXA] Falha ao consultar o saldo da comanda.", erro);
+      }
+    }
+  }, 80);
+}
+
+["crv:online", "crv:offline"].forEach(evento => {
+  document.addEventListener(evento, atualizarResumoComandaCaixa);
+});
 
 function atualizarInfobar() {
   const infoQtdVendas = document.getElementById("infoQtdVendas");
@@ -4759,6 +4824,7 @@ return Number(venda.total || 0) > 0;
           if (atual) Object.assign(atual, alterada);
         }
         await salvarCacheCaixa("caixa_vendas", vendas);
+        if (venda.comanda_id && venda.comanda_id === comandaAtiva?.id) atualizarResumoComandaCaixa();
         atualizarInfobar();
         renderHistorico();
         await carregarProdutos();
@@ -5090,7 +5156,16 @@ if (modo === "jogos") {
 }
 
 function atualizarInterfaceModoPDV() {
-  document.body.classList.toggle("caixa-em-comanda", modoPDV === "comanda");
+  const modoComanda = modoPDV === "comanda";
+  document.body.classList.toggle("caixa-em-comanda", modoComanda);
+  const btnLimpar = document.getElementById("btnLimparCarrinho");
+  if (btnLimpar) {
+    btnLimpar.hidden = modoComanda && !comandaAtiva;
+    btnLimpar.title = modoComanda ? "Os itens continuam salvos na comanda" : "";
+    document.getElementById("cartRotuloLimpar").textContent = modoComanda ? "Desselecionar comanda" : "Limpar";
+    document.getElementById("cartIconeLimpar").hidden = modoComanda;
+    document.getElementById("cartIconeDesselecionar").hidden = !modoComanda;
+  }
   document.querySelectorAll(".pdv-mode-btn[data-mode]").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.mode === modoPDV);
   });
@@ -5233,7 +5308,7 @@ function atualizarInterfaceModoPDV() {
     const span = btnFinalizar.querySelector("span");
 
     if (span) {
-      span.textContent = "Abrir consumo e pagamentos";
+      span.textContent = "Consumo e pagamentos";
     }
   }
 
@@ -7230,6 +7305,8 @@ async function finalizarEnvioJogadorParaComandaCaixa(comanda) {
     modalComanda.style.zIndex = "";
   }
 
+  if (comandaAtiva?.id === comandaAtualizada.id) await carregarItensComanda();
+
   await carregarComandasCaixa({ forcar: true });
   await carregarJogosCaixa();
   await verificarJogosPendentesSincronizacaoCaixa();
@@ -7804,7 +7881,7 @@ function renderComandasAbertasNoCaixa() {
             class="btn-abrir-modal-comandas"
             id="btnAbrirModalComandasCaixa"
           >
-            Ver todas
+            Buscar comanda
           </button>
         </div>
       </div>
@@ -7825,6 +7902,7 @@ function renderComandasAbertasNoCaixa() {
     return;
   }
 
+  const posicaoLista = box.querySelector(".comandas-abertas-lista")?.scrollLeft || 0;
   box.style.display = "block";
 
   box.innerHTML = `
@@ -7869,6 +7947,8 @@ function renderComandasAbertasNoCaixa() {
       `).join("")}
     </div>
   `;
+
+  box.querySelector(".comandas-abertas-lista").scrollLeft = posicaoLista;
 
   box.querySelectorAll(".comanda-aberta-item").forEach(btn => {
     btn.onclick = async () => {
@@ -8127,24 +8207,20 @@ async function abrirModalSelecionarComanda() {
 
   if (inputBusca) {
     inputBusca.value = "";
+    inputBusca.focus({ preventScroll: true });
   }
-  filtroComandasCaixa = "abertas";
+  filtroComandasCaixa = comandasCaixa.length && !comandasCaixa.some(comanda => comanda.status === "aberta")
+    ? "todas" : "abertas";
   document.querySelectorAll("#filtrosComandasCaixa [data-filtro]").forEach(botao => {
-    const ativo = botao.dataset.filtro === "abertas";
+    const ativo = botao.dataset.filtro === filtroComandasCaixa;
     botao.classList.toggle("active", ativo);
     botao.setAttribute("aria-pressed", String(ativo));
   });
 
-await carregarComandasCaixa({
-  forcar: true,
-  mostrarLoading: true
-});
-
-filtrarComandasCaixa("");
-
-  setTimeout(() => {
-    inputBusca?.focus();
-  }, 80);
+  await carregarComandasCaixa({
+    forcar: true,
+    mostrarLoading: true
+  });
 
   if (window.lucide) {
     lucide.createIcons();
@@ -8271,18 +8347,22 @@ async function carregarComandasCaixa(opcoes = {}) {
 
   } finally {
     carregandoComandasCaixa = false;
+    if (document.getElementById("modalSelecionarComanda")?.style.display === "flex") {
+      filtrarComandasCaixa(document.getElementById("inputBuscaModalComanda")?.value || "");
+    }
   }
 }
 
 let filtroComandasCaixa = "todas";
 
 function filtrarComandasCaixa(termoBusca) {
-  const termo = String(termoBusca || "").toLowerCase().trim();
+  const normalizar = texto => String(texto ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const termo = normalizar(termoBusca).trim();
 
   comandasCaixaFiltradas = comandasCaixa.filter(comanda => {
-    const codigo = String(comanda.codigo || "").toLowerCase();
-    const nome = String(comanda.nome_cliente || "").toLowerCase();
-    const obs = String(comanda.observacoes || "").toLowerCase();
+    const codigo = normalizar(comanda.codigo);
+    const nome = normalizar(comanda.nome_cliente);
+    const obs = normalizar(comanda.observacoes);
 
     const status = String(comanda.status || "livre").toLowerCase();
     const correspondeFiltro = {
@@ -8329,31 +8409,35 @@ function renderComandasCaixa() {
 
   comandasCaixaFiltradas.forEach(comanda => {
     const btn = document.createElement("button");
+    const selecionada = comanda.status === "aberta" && comandaAtiva?.id === comanda.id;
+    const esc = window.crvComandasCaixa.esc;
 
     btn.className = "comanda-caixa-item";
     btn.type = "button";
+    if (selecionada) btn.setAttribute("aria-current", "true");
 
     btn.innerHTML = `
       <div>
         <strong class="comanda-caixa-codigo">
-          ${comanda.codigo || "—"}
+          ${esc(comanda.codigo || "—")}
         </strong>
 
 <span class="comanda-caixa-cliente">
-  ${window.crvComandasCaixa.esc(comanda.nome_cliente || "Sem identificação")}
+  ${esc(comanda.nome_cliente || "Sem identificação")}
   ${comanda._crvParcial && comanda.status === "aberta" ? '<span class="comanda-caixa-parcial">Parcial recebida</span>' : ''}
 </span>
+${selecionada ? '<span class="comanda-caixa-selecionada">Selecionada</span>' : ''}
 
 ${comanda.observacoes ? `
   <span class="comanda-caixa-origem">
-    ${comanda.observacoes}
+    ${esc(comanda.observacoes)}
   </span>
 ` : ""}
       </div>
 
       <div>
-        <span class="comanda-caixa-status ${comanda.status || "livre"}">
-          ${comanda.status || "livre"}
+        <span class="comanda-caixa-status ${esc(comanda.status || "livre")}">
+          ${esc(comanda.status || "livre")}
         </span>
 
         <div class="comanda-caixa-total">
@@ -8363,7 +8447,7 @@ ${comanda.observacoes ? `
     `;
 
     btn.onclick = () => {
-      if (comanda.status === "aberta") {
+      if (comanda.status === "aberta" && !jogadorComandaPendenteCaixa) {
         fecharModalSelecionarComanda();
         window.crvComandasCaixa.abrir(comanda.id);
       } else if (comanda.status === "fechada") {

@@ -265,16 +265,65 @@ body .pdv-cart .cart-header .btn-ghost {
 .caixa-em-comanda .cart-total-row.discount {
   display: none !important;
 }
-.caixa-em-comanda .cart-totals > .cart-total-row:first-child {
-  display: none;
+/* Resumo da comanda selecionada no painel do caixa */
+.caixa-em-comanda .cart-totals,
+.pdv-cart #btnLimparCarrinho[hidden],
+.pdv-cart #btnLimparCarrinho [hidden],
+.pdv-cart #cartResumoComanda[hidden],
+.pdv-cart #cartResumoComanda [hidden] {
+  display: none !important;
 }
-.caixa-em-comanda .cart-totals::after {
-  content: "Itens salvos na comanda. Pagamentos em “Abrir consumo e pagamentos”.";
-  display: block;
-  font-size: 11px;
-  line-height: 1.4;
+.cart-resumo-comanda {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+}
+.cart-resumo-comanda > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.cart-resumo-comanda dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cart-resumo-comanda .cart-comanda-recebido {
+  color: var(--text-accent);
+}
+[data-theme="light"] .cart-resumo-comanda .cart-comanda-recebido {
+  color: color-mix(in srgb, var(--crv-golden-dim) 60%, black);
+}
+.cart-resumo-comanda .cart-comanda-saldo {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text-accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+.cart-resumo-comanda-status {
+  margin: 0;
+  font-size: 12px;
   color: var(--text-muted);
-  margin: 6px 0 0;
+}
+.pdv-cart .cart-header {
+  flex-wrap: wrap;
+}
+.comanda-caixa-item[aria-current="true"] {
+  border-color: var(--border-focus);
+  box-shadow: inset 0 0 0 1px var(--border-focus);
+}
+.comanda-caixa-selecionada {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--text-accent);
+  font-weight: 700;
 }
 
 /* Detalhes da comanda */
@@ -364,25 +413,12 @@ body .pdv-cart .cart-header .btn-ghost {
 .crv-comanda-dialog button {
   min-height: 36px;
   padding: 8px 10px;
-  border-radius: 8px;
   cursor: pointer;
-  font: 600 12px/1.3 var(--font-body);
+  font-size: 12px;
+  line-height: 1.3;
   justify-content: center;
   text-align: center;
   white-space: normal;
-}
-.crv-comanda-dialog .btn-primary {
-  border: 1px solid color-mix(in srgb, var(--crv-golden) 65%, var(--border));
-  background: var(--bg-card);
-}
-.crv-comanda-dialog .btn-primary::before,
-.crv-comanda-dialog .btn-primary::after {
-  content: none;
-}
-.crv-comanda-dialog .btn-primary:hover:not(:disabled),
-.crv-comanda-dialog .btn-primary:hover:not(:disabled) span {
-  color: var(--cc-dourado-texto);
-  background: color-mix(in srgb, var(--crv-golden) 12%, var(--bg-card));
 }
 .crv-comanda-dialog #ccFechar {
   flex: 0 0 36px;
@@ -558,18 +594,12 @@ body .pdv-cart .cart-header .btn-ghost {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
-.cc-modos .btn-primary {
-  border-color: var(--border);
-}
-.cc-modos .btn-primary[aria-pressed="true"] {
-  border-color: var(--cc-azul-texto);
-  box-shadow: inset 0 0 0 1px var(--cc-azul-texto);
-  color: var(--cc-azul-texto);
-  background: color-mix(in srgb, var(--crv-blue) 12%, var(--bg-card));
-}
-.cc-modos .btn-primary[aria-pressed="true"] span {
-  color: inherit;
-  background: transparent;
+.cc-modos .pdv-mode-btn,
+body.caixa-modo-balcao .cc-modos .pdv-mode-btn {
+  max-width: none;
+  min-height: 44px;
+  height: auto;
+  padding: 8px 10px;
 }
 .cc-parcial-valor,
 .cc-pagador-nome,
@@ -602,14 +632,6 @@ body .pdv-cart .cart-header .btn-ghost {
 #ccConfirmar {
   min-height: 44px;
   font-size: 13px;
-  background-image: linear-gradient(135deg,
-    var(--btn-secondary-from),
-    var(--btn-secondary-mid, var(--crv-blue-light)),
-    color-mix(in srgb, var(--btn-secondary-to) 76%, black)
-  );
-}
-#ccConfirmar:hover {
-  transform: none;
 }
 .crv-comanda-dialog button:disabled,
 .crv-comanda-dialog fieldset:disabled button {
@@ -689,7 +711,9 @@ body .pdv-cart .cart-header .btn-ghost {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .crv-comanda-dialog .btn-secondary {
+  .crv-comanda-dialog .btn-secondary,
+  .crv-comanda-dialog .btn-primary::before,
+  .crv-comanda-dialog .btn-primary::after {
     animation: none;
   }
 }

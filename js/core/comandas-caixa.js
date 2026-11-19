@@ -110,8 +110,8 @@ window.crvComandasCaixa = (() => {
           <fieldset class="cc-campos" ${!temItens || pend ? 'hidden' : ''} ${!caixaAberto || pend ? 'disabled' : ''}>
             <legend class="cc-visually-hidden">Recebimento</legend>
             <div id="ccModos" class="cc-modos" role="group" aria-label="Tipo de recebimento">
-              <button type="button" class="btn-primary" id="ccModoIntegral" aria-pressed="true"><span>Quitar saldo</span></button>
-              <button type="button" class="btn-primary" id="ccModoParcial" aria-pressed="false"><span>Pagamento parcial</span></button>
+              <button type="button" class="pdv-mode-btn active" id="ccModoIntegral" aria-pressed="true"><span>Quitar saldo</span></button>
+              <button type="button" class="pdv-mode-btn" id="ccModoParcial" aria-pressed="false"><span>Pagamento parcial</span></button>
             </div>
             <div id="ccDados" class="cc-dados">
               <label id="ccParcialLabel" class="cc-parcial-valor" hidden>Valor do pagamento parcial
@@ -247,10 +247,18 @@ window.crvComandasCaixa = (() => {
     return Math.round((Number(detalhe.consumo) - desconto - Number(detalhe.recebido)) * 100) / 100;
   }
 
+  function marcarModoPagamento(parcial) {
+    const integral = $('ccModoIntegral');
+    const fracionado = $('ccModoParcial');
+    integral.setAttribute('aria-pressed', String(!parcial));
+    fracionado.setAttribute('aria-pressed', String(parcial));
+    integral.classList.toggle('active', !parcial);
+    fracionado.classList.toggle('active', parcial);
+  }
+
   function selecionarModo(parcial) {
     if (parcial !== pagamentoParcial()) $('ccEntregue').value = '';
-    $('ccModoIntegral').setAttribute('aria-pressed', String(!parcial));
-    $('ccModoParcial').setAttribute('aria-pressed', String(parcial));
+    marcarModoPagamento(parcial);
     $('ccErro').textContent = '';
     atualizarPagamento();
     if (parcial) $('ccValor').focus();
@@ -261,8 +269,7 @@ window.crvComandasCaixa = (() => {
     const saldoValido = Number.isFinite(saldo) && saldo >= 0;
     const temSaldo = saldo > 0;
     if (!temSaldo) {
-      $('ccModoIntegral').setAttribute('aria-pressed', 'true');
-      $('ccModoParcial').setAttribute('aria-pressed', 'false');
+      marcarModoPagamento(false);
       $('ccEntregue').value = '';
     }
     const parcial = temSaldo && pagamentoParcial();
@@ -440,5 +447,5 @@ window.crvComandasCaixa = (() => {
     if(comandaAtiva?.id)await carregarItensComanda();else renderCarrinho();
     atualizarInfobar();renderHistorico();atualizarInterfaceModoPDV();await atualizarBadgesModosCaixa();await carregarProdutos();renderProdutosRapidos();
   }
-  return {abrir,esc};
+  return {abrir,consultar,esc};
 })();

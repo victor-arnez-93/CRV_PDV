@@ -303,7 +303,7 @@
 
   <div class="comanda-meta" id="comandaMeta" style="display:none;"></div>
   <div class="comanda-total">
-    Total atual:
+    Consumo:
     <strong id="comandaTotal">
       R$ 0,00
     </strong>
@@ -317,7 +317,7 @@
       id="btnFecharComanda"
     >
       <i data-lucide="check-circle" width="15" height="15"></i>
-      <span>Detalhes da comanda</span>
+      <span>Consumo e pagamentos</span>
     </button>
 
     <button
@@ -326,7 +326,7 @@
       id="btnCancelarComanda"
     >
       <i data-lucide="log-out" width="15" height="15"></i>
-      <span>Desselecionar</span>
+      <span>Desselecionar comanda</span>
     </button>
 
   </div>
@@ -511,9 +511,10 @@
                   Carrinho
                   <span class="cart-count" id="cartCount">0</span>
                 </h3>
-                <button class="btn-ghost" style="padding:6px 12px;font-size:0.75rem;" onclick="limparCarrinho()">
-                  <i data-lucide="trash-2" width="13" height="13"></i>
-                  Limpar
+                <button type="button" class="btn-ghost" id="btnLimparCarrinho" style="padding:6px 12px;font-size:0.75rem;" onclick="limparCarrinho()">
+                  <span id="cartIconeLimpar" aria-hidden="true"><i data-lucide="trash-2" width="13" height="13"></i></span>
+                  <span id="cartIconeDesselecionar" aria-hidden="true" hidden><i data-lucide="log-out" width="13" height="13"></i></span>
+                  <span id="cartRotuloLimpar">Limpar</span>
                 </button>
               </div>
 
@@ -560,6 +561,28 @@
                   <span>TOTAL</span>
                   <span id="totalGeral">R$ 0,00</span>
                 </div>
+              </div>
+
+              <div id="cartResumoComanda" aria-live="polite" hidden>
+                <dl class="cart-resumo-comanda" id="cartResumoComandaValores" hidden>
+                  <div id="cartComandaConsumoLinha">
+                    <dt>Consumo</dt>
+                    <dd id="cartComandaConsumo"></dd>
+                  </div>
+                  <div id="cartComandaDescontoLinha">
+                    <dt>Desconto</dt>
+                    <dd id="cartComandaDesconto"></dd>
+                  </div>
+                  <div class="cart-comanda-recebido" id="cartComandaRecebidoLinha">
+                    <dt>Já recebido</dt>
+                    <dd id="cartComandaRecebido"></dd>
+                  </div>
+                  <div class="cart-comanda-saldo">
+                    <dt>Falta pagar</dt>
+                    <dd id="cartComandaSaldo"></dd>
+                  </div>
+                </dl>
+                <p class="cart-resumo-comanda-status" id="cartResumoComandaStatus"></p>
               </div>
 
               <!-- Formas de pagamento -->
@@ -626,7 +649,7 @@
 
     <div class="modal-header">
       <div>
-        <h3>Selecionar Comanda</h3>
+        <h3>Buscar comanda</h3>
         <p class="modal-subtitle">
           Escolha uma comanda livre ou aberta para operar no caixa.
         </p>
@@ -645,6 +668,7 @@
           class="input pdv-search"
           type="text"
           id="inputBuscaModalComanda"
+          aria-label="Buscar comanda por número ou nome"
           placeholder="Buscar por número ou nome…"
           autocomplete="off"
         />
