@@ -277,13 +277,13 @@ body .pdv-cart .cart-header .btn-ghost {
   margin: 6px 0 0;
 }
 
-/* Modal nativo: centralização, cabeçalho fixo e rolagem somente no corpo. */
+/* Detalhes da comanda */
 .crv-comanda-dialog {
+  --cc-azul-texto: color-mix(in srgb, var(--crv-cyan) 68%, white);
+  --cc-dourado-texto: var(--crv-golden);
   box-sizing: border-box;
-  width: min(800px, calc(100vw - 32px));
-  max-width: 800px;
-  max-height: min(640px, calc(100dvh - 32px));
-  height: max-content;
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
   padding: 0;
   margin: auto;
   border: 1px solid var(--border);
@@ -292,97 +292,60 @@ body .pdv-cart .cart-header .btn-ghost {
   color: var(--text-primary);
   box-shadow: 0 20px 64px #0008;
   overflow: hidden;
-  font-family: var(--font-body);
-  font-size: 13px;
+  font: 13px/1.4 var(--font-body);
+}
+[data-theme="light"] .crv-comanda-dialog {
+  --cc-azul-texto: var(--crv-blue);
+  --cc-dourado-texto: color-mix(in srgb, var(--crv-golden-dim) 60%, black);
 }
 .crv-comanda-dialog[open] {
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 .crv-comanda-dialog::backdrop {
   background: #0009;
   backdrop-filter: blur(3px);
 }
-/* Aviso acima dos detalhes, mantendo o formulário e a seleção intactos. */
-.crv-comanda-aviso-integral {
-  box-sizing: border-box;
-  width: min(390px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  margin: auto;
-  padding: 24px;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 20px 64px #0008;
-  text-align: center;
-  font-family: var(--font-body);
-}
-.crv-comanda-aviso-integral::backdrop {
-  background: #0009;
-}
-.cc-aviso-integral-icone {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: 0 auto 14px;
-  border: 1px solid var(--border-focus);
-  border-radius: 50%;
-  color: var(--border-focus);
-  font-size: 23px;
-  font-weight: 700;
-}
-.crv-comanda-aviso-integral h2 {
-  margin: 0 0 8px;
-  font-size: 19px;
-  line-height: 1.3;
-}
-.crv-comanda-aviso-integral p {
-  margin: 0 0 20px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-.crv-comanda-aviso-integral button {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 100%;
-  min-height: 42px;
-  padding: 10px 16px;
-  white-space: normal;
-  text-align: center;
-  cursor: pointer;
-}
+.crv-comanda-dialog *,
+.crv-comanda-dialog button,
 #modalConfirmCaixa .modal-footer .btn-secondary {
   box-sizing: border-box;
-  max-width: 100%;
 }
-.crv-comanda-dialog *,
-.crv-comanda-dialog button {
-  box-sizing: border-box;
+#modalConfirmCaixa .modal-footer .btn-secondary {
+  max-width: 100%;
 }
 .crv-comanda-dialog [hidden] {
   display: none !important;
 }
-.cc-header {
+.cc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.cc-header,
+.cc-header-acoes {
   display: flex;
-  flex: 0 0 auto;
   align-items: center;
+  gap: 8px;
+}
+.cc-header {
+  flex-shrink: 0;
   justify-content: space-between;
-  gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
-.cc-header > div,
+.cc-header > div:first-child,
 .cc-consumo {
   min-width: 0;
 }
 .cc-header small {
   font-size: 10px;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 .cc-header h2 {
@@ -391,238 +354,291 @@ body .pdv-cart .cart-header .btn-ghost {
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
+.cc-header h2 b {
+  color: var(--cc-azul-texto);
+}
 .cc-header h2 span {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
 }
 .crv-comanda-dialog button {
-  box-sizing: border-box;
   min-height: 36px;
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
   font: 600 12px/1.3 var(--font-body);
   justify-content: center;
-  letter-spacing: 0;
+  text-align: center;
+  white-space: normal;
+}
+.crv-comanda-dialog .btn-primary {
+  border: 1px solid color-mix(in srgb, var(--crv-golden) 65%, var(--border));
+  background: var(--bg-card);
+}
+.crv-comanda-dialog .btn-primary::before,
+.crv-comanda-dialog .btn-primary::after {
+  content: none;
+}
+.crv-comanda-dialog .btn-primary:hover:not(:disabled),
+.crv-comanda-dialog .btn-primary:hover:not(:disabled) span {
+  color: var(--cc-dourado-texto);
+  background: color-mix(in srgb, var(--crv-golden) 12%, var(--bg-card));
 }
 .crv-comanda-dialog #ccFechar {
-  display: flex;
   flex: 0 0 36px;
   width: 36px;
-  min-width: 36px;
   height: 36px;
-  min-height: 36px;
   padding: 0;
-  align-items: center;
-  justify-content: center;
   font-size: 17px;
   border-radius: 50%;
 }
+.crv-comanda-dialog #ccAtualizar {
+  max-width: 125px;
+}
 .cc-corpo {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+  align-items: start;
   gap: 16px;
-  padding: 14px 16px;
+  padding: 16px;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-gutter: stable;
 }
-.cc-corpo h3 {
-  font-size: 14px;
-  margin: 10px 0 8px;
+.cc-consumo {
+  grid-area: 1 / 1;
+}
+.cc-painel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 10px;
+  margin: 8px 0 0;
 }
 .cc-section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px 8px;
   flex-wrap: wrap;
+  padding: 8px 0;
+}
+.cc-section-title h3 {
+  font-size: 15px;
+  margin: 0;
 }
 .cc-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
   font-size: 12px;
-  line-height: 1.4;
 }
-.cc-item span {
+.cc-item span,
+.cc-observacoes {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .cc-item strong {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .cc-item small {
   display: block;
   margin-top: 3px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 11px;
+}
+.cc-itens,
+.cc-historico {
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 .cc-itens {
-  max-height: 200px;
-  overflow: auto;
-  scrollbar-width: thin;
-  overscroll-behavior: contain;
-  padding-right: 4px;
+  max-height: 220px;
 }
 .cc-historico {
-  max-height: 140px;
-  overflow: auto;
-  scrollbar-width: thin;
-  overscroll-behavior: contain;
-  padding-right: 4px;
+  max-height: 155px;
 }
-.cc-sub {
-  font-size: 11px;
-  line-height: 1.4;
+.cc-sub,
+.cc-vazio,
+.cc-observacoes {
+  margin: 0;
+  font-size: 12px;
   color: var(--text-muted);
-  margin: 6px 0;
 }
 .cc-vazio {
-  margin: 6px 0 12px;
-  padding: 12px;
-  background: var(--bg-elevated);
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+  padding: 0 0 10px;
 }
 .cc-receber {
-  border-left: 1px solid var(--border);
-  padding-left: 16px;
+  grid-area: 1 / 2;
   min-width: 0;
   margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
 }
 .cc-receber label {
-  display: grid;
-  gap: 4px;
-  font-size: 11px;
-  line-height: 1.3;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
   margin: 0;
-  min-width: 0;
 }
 .cc-receber input,
 .cc-receber select {
+  display: block;
   width: 100%;
   min-width: 0;
-  height: 38px;
+  min-height: 40px;
+  margin-top: 4px;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 9px;
-  background: var(--bg-elevated);
+  background: var(--bg-card);
   color: var(--text-primary);
-  font: 12px var(--font-body);
+  font: 13px var(--font-body);
 }
-.cc-receber input[readonly] {
-  opacity: 0.75;
-}
-
-.cc-receber input[hidden] {
-  display: none;
-}
-
-.cc-obrigatorio {
-  color: var(--crv-orange, #d4a017);
-  font-weight: 700;
-}
-
-.cc-receber .cc-campos-legenda {
-  grid-column: 1 / -1;
-  order: 3;
+.cc-resumo {
+  display: grid;
+  gap: 5px;
   margin: 0;
-  color: var(--text-muted);
-  font-size: 11px;
 }
 .cc-resumo > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 7px;
-  font-size: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 7px;
 }
-.cc-resumo .cc-recebido,
+.cc-resumo dd {
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cc-resumo .cc-consumo-total {
+  color: var(--cc-azul-texto);
+  background: color-mix(in srgb, var(--crv-blue) 9%, var(--bg-card));
+}
+.cc-resumo .cc-recebido {
+  color: var(--cc-dourado-texto);
+  background: color-mix(in srgb, var(--crv-golden) 14%, var(--bg-card));
+}
+.cc-resumo .cc-desconto input {
+  width: 118px;
+  margin: 0;
+  text-align: right;
+}
 .cc-resumo .cc-saldo {
-  color: var(--crv-golden);
+  gap: 4px 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--crv-blue) 46%, var(--border));
+  background: var(--bg-card);
+  color: var(--cc-azul-texto);
+  font-size: 17px;
   font-weight: 700;
 }
-.cc-resumo .cc-recebido b,
-.cc-resumo .cc-saldo strong {
-  color: inherit;
-  font-weight: 800;
-}
-[data-theme="light"] .cc-resumo .cc-recebido,
-[data-theme="light"] .cc-resumo .cc-saldo {
-  color: var(--crv-blue);
-}
-.cc-resumo label {
-  grid-template-columns: 1fr 90px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.cc-resumo .cc-saldo {
-  font-size: 17px;
-  padding: 9px 0 4px;
-  border-top: 1px solid var(--border);
-}
-.cc-receber fieldset {
+.cc-campos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 9px;
   border: 0;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   min-width: 0;
 }
-.cc-receber fieldset label {
-  align-content: start;
-}
-#ccTroco {
-  grid-column: 1/-1;
-  order: 1;
-  margin: 0;
-}
-.cc-acoes {
-  grid-column: 1/-1;
-  order: 2;
+.cc-modos,
+.cc-dados,
+.cc-dinheiro {
   display: grid;
-  gap: 6px;
-  margin-top: 2px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
-.cc-acoes button {
-  width: 100%;
-  min-height: 38px;
+.cc-modos .btn-primary {
+  border-color: var(--border);
 }
-.crv-comanda-dialog button:disabled {
-  opacity: 0.45;
+.cc-modos .btn-primary[aria-pressed="true"] {
+  border-color: var(--cc-azul-texto);
+  box-shadow: inset 0 0 0 1px var(--cc-azul-texto);
+  color: var(--cc-azul-texto);
+  background: color-mix(in srgb, var(--crv-blue) 12%, var(--bg-card));
+}
+.cc-modos .btn-primary[aria-pressed="true"] span {
+  color: inherit;
+  background: transparent;
+}
+.cc-parcial-valor,
+.cc-pagador-nome,
+.cc-dinheiro,
+.cc-dinheiro p {
+  grid-column: 1 / -1;
+}
+.cc-opcional {
+  font-weight: 400;
+}
+.cc-troco {
+  display: grid;
+  align-content: end;
+  gap: 4px;
+  font-size: 12px;
+}
+.cc-troco strong {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  color: var(--cc-dourado-texto);
+  background: color-mix(in srgb, var(--crv-golden) 14%, var(--bg-card));
+  font-variant-numeric: tabular-nums;
+}
+.cc-dinheiro p {
+  margin-top: -3px;
+}
+#ccConfirmar {
+  min-height: 44px;
+  font-size: 13px;
+  background-image: linear-gradient(135deg,
+    var(--btn-secondary-from),
+    var(--btn-secondary-mid, var(--crv-blue-light)),
+    color-mix(in srgb, var(--btn-secondary-to) 76%, black)
+  );
+}
+#ccConfirmar:hover {
+  transform: none;
+}
+.crv-comanda-dialog button:disabled,
+.crv-comanda-dialog fieldset:disabled button {
+  opacity: 0.5;
   cursor: not-allowed;
 }
-.cc-aviso {
+.cc-aviso,
+.cc-feedback {
+  margin: 8px 0 0;
   padding: 8px;
   border: 1px solid var(--crv-golden);
   border-radius: 8px;
+  background: var(--bg-card);
   font-size: 12px;
-  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
-#ccErro {
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  margin: 6px 0;
-}
-#ccErro:empty {
+.cc-feedback:empty {
   display: none;
 }
-#ccAtualizar {
-  font-size: 11px;
-  min-height: 30px;
-  padding: 5px 8px;
+.cc-feedback-erro {
+  border-left: 4px solid var(--crv-golden);
 }
-.cc-cancelado {
-  opacity: 0.65;
+#ccAjudaVazia,
+#ccEncerrarVazia,
+#ccRetomar {
+  margin-top: 8px;
+}
+.cc-cancelado small {
+  color: var(--cc-dourado-texto);
 }
 .cc-cancelado b {
   text-decoration: line-through;
@@ -633,36 +649,48 @@ body .pdv-cart .cart-header .btn-ghost {
   outline: 2px solid var(--crv-golden);
   outline-offset: 2px;
 }
-@media (max-width: 620px) {
+@media (max-width: 660px) {
   .crv-comanda-dialog {
     width: calc(100vw - 20px);
     max-height: calc(100dvh - 20px);
     border-radius: 12px;
   }
   .cc-header {
-    padding: 10px 12px;
+    padding: 8px 10px;
+  }
+  .crv-comanda-dialog #ccAtualizar {
+    max-width: 86px;
   }
   .cc-corpo {
-    grid-template-columns: 1fr;
-    padding: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 10px;
     gap: 12px;
   }
+  .cc-consumo,
   .cc-receber {
-    border-left: 0;
-    border-top: 1px solid var(--border);
-    padding: 12px 0 0;
+    grid-area: auto;
+  }
+  .cc-receber {
+    padding: 9px;
   }
   .cc-itens {
-    max-height: 150px;
+    max-height: 180px;
   }
   .cc-historico {
-    max-height: 100px;
+    max-height: 130px;
   }
+}
+@media (max-width: 620px) {
   .comanda-card .comanda-actions {
     margin-left: 0 !important;
   }
   .comanda-aberta-item {
     flex-basis: 144px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crv-comanda-dialog .btn-secondary {
+    animation: none;
   }
 }
 @media (pointer: coarse) {
@@ -680,6 +708,9 @@ body .pdv-cart .cart-header .btn-ghost {
   .cc-receber select {
     height: 44px;
     font-size: 16px;
+  }
+  .cc-troco strong {
+    min-height: 44px;
   }
   body .pdv-cart .qty-btn,
   body .pdv-cart .cart-item-remove {
