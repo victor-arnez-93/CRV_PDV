@@ -41,8 +41,20 @@
   font-size: 10px;
   color: var(--text-muted);
 }
+.comanda-aberta-item:hover,
+.comanda-aberta-item.active {
+  background: var(--bg-card);
+  border-color: var(--text-accent);
+  box-shadow: none;
+}
+
+.comanda-aberta-item:hover .comanda-aberta-cliente,
+.comanda-aberta-item:hover .comanda-aberta-total {
+  color: var(--text-accent);
+}
+
 .comanda-aberta-item.active .comanda-aberta-selecao {
-  color: var(--crv-golden);
+  color: var(--text-accent);
   font-weight: 700;
 }
 .comanda-aberta-item .comanda-aberta-selecao.com-parcial {
